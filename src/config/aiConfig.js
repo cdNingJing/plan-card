@@ -113,7 +113,7 @@ export const claudeAPICall = async (requestData) => {
       choices: [{
         message: {
           role: 'assistant',
-          content: claudeResponse.content || '抱歉，我无法处理您的请求。'
+          content: claudeResponse.content?.[0]?.text || '抱歉，我无法处理您的请求。'
         }
       }]
     }
