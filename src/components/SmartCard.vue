@@ -83,6 +83,86 @@
         @collapse="handleBasicInfoCollapse"
       />
       
+      <!-- 行程卡片 -->
+      <GenericCard 
+        v-else-if="card.type === 'itinerary'"
+        :data="card.data"
+        :type="card.type"
+        @update="handleUpdate"
+      />
+      
+      <!-- 打包清单卡片 -->
+      <GenericCard 
+        v-else-if="card.type === 'packing'"
+        :data="card.data"
+        :type="card.type"
+        @update="handleUpdate"
+      />
+      
+      <!-- 画像卡片 -->
+      <GenericCard 
+        v-else-if="card.type === 'profile'"
+        :data="card.data"
+        :type="card.type"
+        @update="handleUpdate"
+      />
+      
+      <!-- 提示卡片 -->
+      <GenericCard 
+        v-else-if="card.type === 'tips'"
+        :data="card.data"
+        :type="card.type"
+        @update="handleUpdate"
+      />
+      
+      <!-- 参与者卡片 -->
+      <GenericCard 
+        v-else-if="card.type === 'participants'"
+        :data="card.data"
+        :type="card.type"
+        @update="handleUpdate"
+      />
+      
+      <!-- 提醒设置卡片 -->
+      <GenericCard 
+        v-else-if="card.type === 'reminder'"
+        :data="card.data"
+        :type="card.type"
+        @update="handleUpdate"
+      />
+      
+      <!-- 执行反馈卡片 -->
+      <GenericCard 
+        v-else-if="card.type === 'feedback'"
+        :data="card.data"
+        :type="card.type"
+        @update="handleUpdate"
+      />
+      
+      <!-- 附件管理卡片 -->
+      <GenericCard 
+        v-else-if="card.type === 'attachments'"
+        :data="card.data"
+        :type="card.type"
+        @update="handleUpdate"
+      />
+      
+      <!-- 建议方案卡片 -->
+      <GenericCard 
+        v-else-if="card.type === 'suggestions'"
+        :data="card.data"
+        :type="card.type"
+        @update="handleUpdate"
+      />
+      
+      <!-- 相关资源卡片 -->
+      <GenericCard 
+        v-else-if="card.type === 'resources'"
+        :data="card.data"
+        :type="card.type"
+        @update="handleUpdate"
+      />
+      
       <!-- 通用卡片 -->
       <GenericCard 
         v-else

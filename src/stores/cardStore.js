@@ -392,15 +392,13 @@ export const useCardStore = defineStore('card', () => {
 
       case 'flight':
         return {
-          flights: [
+          recommendations: [
             {
               airline: '中国国际航空',
               flightNumber: 'CA183',
               departure: '成都 (CTU)',
               arrival: '东京成田 (NRT)',
-              departureTime: '08:30',
-              arrivalTime: '14:15',
-              duration: '4小时45分钟',
+              time: '08:30 - 14:15',
               price: 2580,
               stops: '直飞'
             },
@@ -409,9 +407,7 @@ export const useCardStore = defineStore('card', () => {
               flightNumber: '3U8086',
               departure: '成都 (CTU)',
               arrival: '东京成田 (NRT)',
-              departureTime: '14:20',
-              arrivalTime: '20:05',
-              duration: '4小时45分钟',
+              time: '14:20 - 20:05',
               price: 2380,
               stops: '直飞'
             }
@@ -419,7 +415,7 @@ export const useCardStore = defineStore('card', () => {
         }
       case 'hotel':
         return {
-          hotels: [
+          recommendations: [
             {
               name: '东京帝国酒店',
               rating: 5,
@@ -521,7 +517,7 @@ export const useCardStore = defineStore('card', () => {
         }
       case 'suggestions':
         return {
-          suggestions: [
+          recommendations: [
             {
               title: '建议方案一',
               description: '基于您的需求，我们推荐以下解决方案...',
@@ -536,7 +532,7 @@ export const useCardStore = defineStore('card', () => {
         }
       case 'resources':
         return {
-          resources: [
+          recommendations: [
             {
               title: '相关文档',
               type: 'document',

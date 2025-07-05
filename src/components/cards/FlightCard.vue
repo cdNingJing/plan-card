@@ -457,32 +457,4 @@ watch(() => props.data, (newData) => {
   color: #666666;
 }
 
-@media (max-width: 768px) {
-  .filter-row {
-    grid-template-columns: 1fr;
-  }
-  
-  .flight-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-    position: relative;
-  }
-  
-  .time-info {
-    width: 100%;
-    justify-content: space-between;
-  }
-  
-  .flight-price {
-    width: 100%;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .flight-actions {
-    flex-direction: row;
-  }
-}
 </style> 

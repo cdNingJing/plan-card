@@ -15,8 +15,20 @@
     <div class="input-panel" ref="inputPanel">
       <!-- 头部 - 只在展开和全屏状态显示 -->
       <div v-if="currentState !== 'default'" class="panel-header">
-        <h3 class="panel-title">对话历史</h3>
+        <div class="panel-title-section">
+          <h3 class="panel-title">对话历史</h3>
+          <div class="ai-status" :class="{ 'connected': agentStore.isInitialized, 'processing': agentStore.isProcessing }">
+            <div class="status-dot"></div>
+          </div>
+        </div>
         <div class="header-actions">
+          <button 
+            @click="clearHistory"
+            class="action-btn"
+            title="清空对话"
+          >
+            <Trash2 :size="20" />
+          </button>
           <button 
             v-if="currentState === 'expanded'"
             @click="toggleFullscreen"
@@ -32,13 +44,6 @@
             title="退出全屏"
           >
             <Minimize2 :size="20" />
-          </button>
-          <button 
-            @click="collapse"
-            class="action-btn"
-            title="收起"
-          >
-            <ChevronDown :size="20" />
           </button>
         </div>
       </div>
@@ -56,29 +61,26 @@
           <div v-else class="history-list">
             <div 
               v-for="(item, index) in chatHistory" 
-              :key="index"
+              :key="item.id"
               class="history-item"
             >
-              <div class="history-input">
-                <div class="message-content">
-                  <span>{{ item.input }}</span>
-                </div>
-                <div class="message-avatar">
-                  <User :size="16" />
-                </div>
+              <div v-if="item.role === 'user'" class="history-input">
+                <span>{{ item.content }}</span>
               </div>
-              <div class="history-response">
-                <div class="message-avatar">
-                  <Bot :size="16" />
-                </div>
-                <div class="message-content">
-                  <span>{{ item.response }}</span>
-                  <div v-if="item.response === '正在处理您的请求...'" class="loading-dots">
+              <div v-else class="history-response">
+                <template v-if="item.status === 'loading'">
+                  <div class="loading-dots">
                     <div class="dot"></div>
                     <div class="dot"></div>
                     <div class="dot"></div>
                   </div>
-                </div>
+                </template>
+                <template v-else-if="item.status === 'done'">
+                  <span>{{ item.content }}</span>
+                </template>
+                <template v-else-if="item.status === 'error'">
+                  <span class="error-message">{{ item.errorMsg || '请求失败，请重试' }}</span>
+                </template>
               </div>
             </div>
           </div>
@@ -112,17 +114,21 @@
 </template>
 
 <script setup>
-import { ref, reactive, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, nextTick, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAgentStore } from '@/stores/agentStore.js'
+// import ConfirmDialog from './ConfirmDialog.vue' // 暂时移除
 import { 
   Maximize2, 
   Minimize2, 
-  ChevronDown, 
+  Trash2,
   MessageCircle, 
   User, 
   Bot, 
-  Send 
+  Send,
+  RefreshCw
 } from 'lucide-vue-next'
+import { ProjectStorage } from '../utils/storage.js'
 
 const props = defineProps({
   placeholder: {
@@ -135,28 +141,28 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['submit'])
-
 const router = useRouter()
+const agentStore = useAgentStore()
+
 const inputValue = ref(props.initialValue)
 const currentState = ref('default') // 'default', 'expanded', 'fullscreen'
 const inputRef = ref(null)
 const inputPanel = ref(null)
 const chatHistoryRef = ref(null)
 const isFocused = ref(false)
+const lastUserInput = ref('')
+const aiResponseComplete = ref(false) // 跟踪AI回复是否完成
+const historyVersion = ref(0)
 
-// 对话历史
-const chatHistory = reactive([
-  // 示例数据
-  {
-    input: '我想和朋友一起去东京玩五天',
-    response: '已为您生成东京5日游计划，包含目的地、航班、酒店等卡片'
-  },
-  {
-    input: '我想送妈妈一个园艺相关的礼物，预算500元以内',
-    response: '已为您推荐适合的园艺礼物，并设置了预算筛选'
-  }
-])
+// 使用 Agent Store 的消息历史
+const chatHistory = computed(() => {
+  historyVersion.value // 依赖，强制刷新
+  const projectId = ProjectStorage.getCurrentProjectId()
+  if (!projectId) return []
+  const project = ProjectStorage.getProject(projectId)
+  if (!project || !project.conversationHistory) return []
+  return project.conversationHistory
+})
 
 // 滚动到底部
 const scrollToBottom = () => {
@@ -186,6 +192,11 @@ const expand = () => {
     }
     // 展开后滚动到底部
     scrollToBottom()
+    
+    // 如果输入框有内容，自动提交
+    if (inputValue.value.trim()) {
+      handleSubmit()
+    }
   })
 }
 
@@ -212,48 +223,163 @@ const toggleFullscreen = () => {
   })
 }
 
+const clearHistory = () => {
+  const projectId = ProjectStorage.getCurrentProjectId()
+  if (projectId) {
+    const project = ProjectStorage.getProject(projectId)
+    if (!project) return
+    project.conversationHistory = []
+    saveProjectAndTrigger(project)
+  } else {
+    // 没有当前项目，清空所有项目的对话历史
+    const projects = ProjectStorage.getProjects()
+    projects.forEach(p => { p.conversationHistory = [] })
+    localStorage.setItem('plan-card-projects', JSON.stringify(projects))
+    historyVersion.value++
+  }
+}
+
 const handleOverlayClick = () => {
   if (!inputValue.value.trim()) {
     collapse()
   }
 }
 
-const handleSubmit = () => {
+function saveProjectAndTrigger(project) {
+  ProjectStorage.saveProject(project)
+  historyVersion.value++
+}
+
+// 发送消息
+function sendUserMessage(input) {
+  const projectId = ProjectStorage.getCurrentProjectId()
+  if (!projectId) return
+  const project = ProjectStorage.getProject(projectId)
+  if (!project) return
+  if (!project.conversationHistory) project.conversationHistory = []
+
+  const userMsg = {
+    id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+    role: 'user',
+    content: input,
+    timestamp: new Date().toISOString(),
+    status: 'done'
+  }
+  project.conversationHistory.push(userMsg)
+
+  const aiMsg = {
+    id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+    role: 'assistant',
+    content: '',
+    timestamp: new Date().toISOString(),
+    status: 'loading'
+  }
+  project.conversationHistory.push(aiMsg)
+
+  saveProjectAndTrigger(project)
+}
+
+// AI接口返回后写入AI回复
+function onAIResponse(aiText) {
+  const projectId = ProjectStorage.getCurrentProjectId()
+  if (!projectId) return
+  const project = ProjectStorage.getProject(projectId)
+  if (!project || !project.conversationHistory) return
+  let inserted = false
+  for (let i = project.conversationHistory.length - 1; i >= 0; i--) {
+    const msg = project.conversationHistory[i]
+    if (msg.role === 'assistant' && msg.status === 'loading') {
+      msg.content = aiText
+      msg.status = 'done'
+      inserted = true
+      break
+    }
+  }
+  // AI回复后，插入一条"即将为您生成计划卡片..."的assistant消息
+  if (inserted) {
+    const tipMsg = {
+      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      role: 'assistant',
+      content: '即将为您生成计划卡片...',
+      timestamp: new Date().toISOString(),
+      status: 'done'
+    }
+    project.conversationHistory.push(tipMsg)
+  }
+  saveProjectAndTrigger(project)
+}
+
+// 错误处理
+function onAIError(errorMsg) {
+  const projectId = ProjectStorage.getCurrentProjectId()
+  if (!projectId) return
+  const project = ProjectStorage.getProject(projectId)
+  if (!project || !project.conversationHistory) return
+  for (let i = project.conversationHistory.length - 1; i >= 0; i--) {
+    const msg = project.conversationHistory[i]
+    if (msg.role === 'assistant' && msg.status === 'loading') {
+      msg.status = 'error'
+      msg.errorMsg = errorMsg
+      break
+    }
+  }
+  saveProjectAndTrigger(project)
+}
+
+// 辅助函数：提取AI回复文本
+function extractAITextFromResponse(aiMessage) {
+  if (typeof aiMessage === 'string') return aiMessage
+  if (typeof aiMessage?.content === 'string') return aiMessage.content
+  if (Array.isArray(aiMessage?.content)) {
+    const text = aiMessage.content
+      .filter(item => item.type === 'text')
+      .map(item => item.text)
+      .join('\n')
+    return text
+  }
+  if (aiMessage?.content?.text) return aiMessage.content.text
+  return ''
+}
+
+// 发送消息入口
+const handleSubmit = async () => {
   if (inputValue.value.trim()) {
     const input = inputValue.value.trim()
-    
-    // 添加到对话历史
-    chatHistory.push({
-      input: input,
-      response: '正在处理您的请求...'
-    })
-    
-    // 发送消息后立即滚动到底部
-    scrollToBottom()
-    
-    emit('submit', input)
-    
-    // 如果没有父组件处理，默认跳转到计划页面
-    if (!props.onSubmit) {
-      router.push({
-        name: 'Plan',
-        query: { input: input }
-      })
-    }
-    
-    // 清空输入框
     inputValue.value = ''
-    
-    // 模拟响应更新
-    setTimeout(() => {
-      if (chatHistory.length > 0) {
-        chatHistory[chatHistory.length - 1].response = '已为您生成相应的功能卡片'
-        // 响应更新后再次滚动到底部
-        scrollToBottom()
-      }
-    }, 1000)
+    lastUserInput.value = input
+    sendUserMessage(input)
+    nextTick(() => { scrollToBottom() })
+    try {
+      await agentStore.sendMessage(input)
+    } catch (error) {
+      onAIError('请求失败，请重试')
+    }
+    nextTick(() => { scrollToBottom() })
   }
 }
+
+// 监听AI回复
+watch(
+  () => agentStore.messages.length,
+  (newLen, oldLen) => {
+    if (newLen > oldLen) {
+      const newMessage = agentStore.messages[agentStore.messages.length - 1]
+      if (newMessage.role === 'assistant') {
+        const aiText = extractAITextFromResponse(newMessage)
+        onAIResponse(aiText)
+        nextTick(() => { scrollToBottom() })
+      }
+    }
+  }
+)
+
+// 监听AI处理状态
+watch(() => agentStore.isProcessing, (isProcessing) => {
+  if (!isProcessing && aiResponseComplete.value) {
+    // AI处理完成且回复已显示，重置状态
+    aiResponseComplete.value = false
+  }
+})
 
 // 点击外部区域处理
 const handleClickOutside = (event) => {
@@ -266,6 +392,10 @@ const handleClickOutside = (event) => {
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  
+  // 初始化 AI Agent
+  agentStore.initializeAgent()
+  
   // 组件挂载后滚动到底部并检查滚动位置
   nextTick(() => {
     scrollToBottom()
@@ -282,10 +412,11 @@ defineExpose({
     inputValue.value = value
   },
   getValue: () => inputValue.value,
-  submit: handleSubmit,
+  handleSubmit,
   expand,
   collapse,
-  toggleFullscreen
+  toggleFullscreen,
+  clearHistory
 })
 </script>
 
@@ -477,7 +608,7 @@ defineExpose({
   background: #F0F0F0;
   align-self: flex-end;
   border-bottom-right-radius: 4px;
-  flex-direction: row-reverse;
+  flex-direction: row;
 }
 
 .history-response {
@@ -525,7 +656,7 @@ defineExpose({
 }
 
 .history-input .message-content {
-  text-align: right;
+  text-align: left;
 }
 
 .history-response .message-content {
@@ -640,58 +771,21 @@ defineExpose({
   background: #000000;
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .state-expanded .input-panel {
-    height: 60vh;
-    max-height: none;
-    min-height: 300px;
-  }
-  
-  .panel-header {
-    padding: 12px 16px;
-  }
-  
-  .panel-title {
-    font-size: 1rem;
-  }
-  
-  .chat-history {
-    padding: 16px;
-  }
-  
-  .input-section {
-    padding: 12px 16px;
-  }
-  
-  .state-default .input-section {
-    padding: 12px 16px;
-  }
-  
-  .history-list {
-    gap: 12px;
-  }
-  
-  .history-input,
-  .history-response {
-    max-width: 90%;
-    padding: 10px 12px;
-    gap: 8px;
-  }
-  
-  .history-input .message-avatar {
-    margin-left: 8px;
-    margin-right: 0;
-  }
-  
-  .history-response .message-avatar {
-    margin-right: 8px;
-    margin-left: 0;
-  }
-  
-  .message-avatar {
-    width: 20px;
-    height: 20px;
-  }
+.error-message {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: #FFE5E5;
+  border: 1px solid #FFB2B2;
+}
+
+.retry-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #333333;
 }
 </style> 

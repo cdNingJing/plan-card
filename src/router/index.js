@@ -20,4 +20,7 @@ const router = createRouter({
   routes
 })
 
+// 设置全局 router 引用，供 Agent 使用
+window.router = router
+
 export default router 

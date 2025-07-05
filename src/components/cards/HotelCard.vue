@@ -558,36 +558,4 @@ watch(() => props.data, (newData) => {
   color: #666666;
 }
 
-@media (max-width: 768px) {
-  .filter-row {
-    grid-template-columns: 1fr;
-  }
-  
-  .hotel-item {
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .hotel-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .hotel-booking {
-    width: 100%;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .booking-actions {
-    flex-direction: row;
-  }
-  
-  .image-placeholder {
-    width: 100%;
-    height: 120px;
-  }
-}
 </style> 

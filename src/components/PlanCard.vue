@@ -486,23 +486,4 @@ const formatDate = (dateString) => {
   color: #999999;
 }
 
-@media (max-width: 768px) {
-  .stats-panel {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .plans-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .plan-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .plan-actions {
-    margin-left: 0;
-  }
-}
 </style> 

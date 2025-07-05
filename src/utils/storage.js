@@ -82,6 +82,14 @@ export class ProjectStorage {
       return false
     }
   }
+
+  // 当前活跃项目ID管理
+  static setCurrentProjectId(id) {
+    localStorage.setItem('plan-card-current-project-id', id)
+  }
+  static getCurrentProjectId() {
+    return localStorage.getItem('plan-card-current-project-id')
+  }
 }
 
 // 项目数据模型
@@ -91,6 +99,7 @@ export class ProjectModel {
     this.title = this.generateTitle(input)
     this.description = input
     this.cards = cards
+    this.conversationHistory = [] // 添加对话历史支持
     this.createdAt = new Date().toISOString()
     this.updatedAt = new Date().toISOString()
     this.cardCount = cards.length
@@ -125,6 +134,7 @@ export class ProjectModel {
       title: this.title,
       description: this.description,
       cards: this.cards,
+      conversationHistory: this.conversationHistory, // 包含对话历史
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
       cardCount: this.cardCount

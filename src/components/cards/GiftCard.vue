@@ -240,16 +240,4 @@ const handleUpdate = () => {
   border-color: #333333;
 }
 
-@media (max-width: 768px) {
-  .gift-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-  
-  .gift-actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
-}
 </style> 

@@ -1,0 +1,279 @@
+import { defineStore } from 'pinia'
+import { ref, reactive } from 'vue'
+import { AIAgent, defaultTools } from '@/services/aiAgent.js'
+import { useCardStore } from './cardStore.js'
+
+export const useAgentStore = defineStore('agent', () => {
+  // Agent 实例
+  const agent = ref(null)
+  
+  // 对话历史
+  const messages = reactive([])
+  
+  // Agent 状态
+  const isProcessing = ref(false)
+  const isInitialized = ref(false)
+  const error = ref(null)
+  
+  // 工具调用历史
+  const toolCalls = reactive([])
+  
+  // 初始化 Agent
+  const initializeAgent = (config = {}) => {
+    if (agent.value) {
+      return agent.value
+    }
+    
+    const cardStore = useCardStore()
+    
+    // 创建 Agent 实例
+    agent.value = new AIAgent({
+      systemPrompt: `你是一个智能的计划助手，专门帮助用户规划和管理各种任务。你的主要职责包括：
+
+1. **理解用户需求**：仔细分析用户的描述，识别他们的真实意图和需求
+2. **智能工具调用**：根据用户需求选择合适的工具来完成任务
+3. **创建计划卡片**：为不同类型的需求创建相应的功能卡片
+4. **提供专业建议**：基于用户的具体情况给出个性化的建议
+
+**可用工具说明：**
+- createPlanCard: 创建计划卡片（支持旅行、礼物、会议、通用四种类型）
+- viewPlanCards: 查看已创建的计划详情（仅当用户明确要求查看时使用）
+- searchInfo: 搜索相关信息
+- generateSuggestions: 生成建议
+
+**工具使用规则：**
+- 当用户提到旅行、旅游、出行等需求时，使用 createPlanCard 工具，type 设为 'travel'
+- 当用户提到礼物、送礼、购买等需求时，使用 createPlanCard 工具，type 设为 'gift'  
+- 当用户提到会议、开会、讨论等需求时，使用 createPlanCard 工具，type 设为 'meeting'
+- 当用户提到其他计划、安排、规划等需求时，使用 createPlanCard 工具，type 设为 'general'
+- 只有当用户明确说要"查看"、"打开"、"进入"计划页面时，才使用 viewPlanCards 工具
+
+**重要提醒：**
+- 创建计划后，不要自动跳转到计划页面
+- 继续在对话中与用户交流，询问是否需要调整或补充
+- 让用户主动选择是否查看详细计划
+- 保持对话的连续性和自然性
+- **重要**：请先完整回复用户的问题，然后再使用工具。确保用户能看到你的完整回答。
+
+请以友好、专业的方式与用户交流，主动理解用户的需求，并及时使用合适的工具来帮助用户完成任务。`,
+      ...config
+    })
+    
+    // 不再注册模拟的默认工具，只使用真实的集成工具
+    
+    // 注册简化的计划创建工具
+    agent.value.registerTool('createPlanCard', {
+      description: '创建计划卡片并跳转到计划页面',
+      parameters: {
+        type: 'object',
+        properties: {
+          title: {
+            type: 'string',
+            description: '计划标题'
+          },
+          description: {
+            type: 'string',
+            description: '计划描述'
+          },
+          type: {
+            type: 'string',
+            enum: ['travel', 'gift', 'meeting', 'general'],
+            description: '计划类型'
+          }
+        },
+        required: ['title', 'description', 'type']
+      },
+      execute: async (args) => {
+        try {
+          // 直接跳转到计划页面，传递计划信息
+          const planData = {
+            title: args.title,
+            description: args.description,
+            type: args.type
+          }
+          
+          // 延迟跳转，让用户看到AI的回复
+          setTimeout(() => {
+            if (typeof window !== 'undefined') {
+              const url = new URL(window.location)
+              url.pathname = '/plan'
+              url.searchParams.set('planData', JSON.stringify(planData))
+              window.location.href = url.toString()
+            }
+          }, 3000)
+          
+          return {
+            success: true,
+            message: '正在为您创建计划，即将跳转到计划页面...'
+          }
+        } catch (error) {
+          console.error('创建计划失败:', error)
+          return {
+            success: false,
+            message: '创建计划失败，请重试'
+          }
+        }
+      }
+    })
+    
+    // 设置回调函数
+    agent.value.setCallback('onMessage', (message) => {
+      // 直接添加到messages数组
+      messages.push({
+        id: Date.now() + Math.random(),
+        role: message.role,
+        content: message.content,
+        timestamp: message.timestamp,
+        isStreaming: false
+      })
+      
+      if (message.role === 'assistant' && message.toolResult) {
+        messages[messages.length - 1].toolResult = message.toolResult
+      }
+    })
+    
+    agent.value.setCallback('onToolCall', (toolCall) => {
+      toolCalls.push({
+        id: toolCall.id,
+        name: toolCall.name,
+        arguments: toolCall.arguments,
+        timestamp: new Date().toISOString()
+      })
+    })
+    
+    agent.value.setCallback('onError', (err) => {
+      error.value = err
+      isProcessing.value = false
+    })
+    
+    agent.value.setCallback('onComplete', (message) => {
+      isProcessing.value = false
+    })
+    
+    isInitialized.value = true
+    return agent.value
+  }
+  
+  // 立即添加用户消息到显示历史
+  const addUserMessage = (content) => {
+    messages.push({
+      id: Date.now() + Math.random(),
+      role: 'user',
+      content: content,
+      timestamp: new Date().toISOString(),
+      isStreaming: false
+    })
+  }
+  
+  // 立即添加助手消息到显示历史
+  const addAssistantMessage = (content) => {
+    messages.push({
+      id: Date.now() + Math.random(),
+      role: 'assistant',
+      content: content,
+      timestamp: new Date().toISOString(),
+      isStreaming: false
+    })
+  }
+  
+  // 发送消息（不添加到显示历史，因为已经通过addUserMessage添加了）
+  const sendMessage = async (message) => {
+    if (!agent.value) {
+      initializeAgent()
+    }
+    
+    error.value = null
+    isProcessing.value = true
+    
+    try {
+      // 直接调用 Agent 的内部处理，跳过重复的消息添加
+      await agent.value.processMessage(message)
+    } catch (err) {
+      error.value = err
+      console.error('发送消息失败:', err)
+      isProcessing.value = false
+    }
+  }
+  
+  // 清除对话历史
+  const clearHistory = () => {
+    messages.splice(0, messages.length)
+    toolCalls.splice(0, toolCalls.length)
+    
+    if (agent.value) {
+      agent.value.clearHistory()
+    }
+    
+    error.value = null
+  }
+  
+  // 获取对话历史
+  const getMessages = () => {
+    return messages
+  }
+  
+  // 获取工具调用历史
+  const getToolCalls = () => {
+    return toolCalls
+  }
+  
+  // 重试最后一条消息
+  const retryLastMessage = async () => {
+    const lastUserMessage = messages
+      .filter(msg => msg.role === 'user')
+      .pop()
+    
+    if (lastUserMessage) {
+      await sendMessage(lastUserMessage.content)
+    }
+  }
+  
+  // 设置自定义 AI API 调用函数
+  const setCustomAPICall = (apiCallFunction) => {
+    if (agent.value) {
+      agent.value.callAIAPI = apiCallFunction
+    }
+  }
+  
+  // 添加自定义工具
+  const addTool = (name, tool) => {
+    if (agent.value) {
+      agent.value.registerTool(name, tool)
+    }
+  }
+  
+  // 获取 Agent 状态
+  const getAgentStatus = () => {
+    return {
+      isProcessing: isProcessing.value,
+      isInitialized: isInitialized.value,
+      error: error.value,
+      messageCount: messages.length,
+      toolCallCount: toolCalls.length
+    }
+  }
+  
+  // 暂时移除卡片生成相关逻辑，专注于对话功能
+
+  return {
+    // 状态
+    messages,
+    isProcessing,
+    isInitialized,
+    error,
+    toolCalls,
+    
+    // 方法
+    initializeAgent,
+    sendMessage,
+    addUserMessage,
+    addAssistantMessage,
+    clearHistory,
+    getMessages,
+    getToolCalls,
+    retryLastMessage,
+    setCustomAPICall,
+    addTool,
+    getAgentStatus
+  }
+}) 

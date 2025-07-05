@@ -40,17 +40,16 @@
     <BottomInput 
       ref="bottomInputRef"
       placeholder="描述您的需求，如：我想和朋友一起去东京玩五天..."
-      @submit="handleSubmit"
     />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import BottomInput from '../components/BottomInput.vue'
 import ProjectList from '../components/ProjectList.vue'
-import { ProjectStorage } from '../utils/storage.js'
+import { ProjectStorage, ProjectModel } from '../utils/storage.js'
 
 const router = useRouter()
 const bottomInputRef = ref(null)
@@ -74,18 +73,33 @@ const examples = ref([
   }
 ])
 
-const handleExample = (text) => {
-  // 设置输入框的值
-  bottomInputRef.value.setValue(text)
-  // 提交
-  bottomInputRef.value.submit()
+// 新增：首次对话时创建项目
+function ensureCurrentProject(input) {
+  let projectId = ProjectStorage.getCurrentProjectId()
+  let project = projectId ? ProjectStorage.getProject(projectId) : null
+  if (!project) {
+    // 创建新项目
+    const newProject = new ProjectModel(input)
+    ProjectStorage.saveProject(newProject)
+    ProjectStorage.setCurrentProjectId(newProject.id)
+    project = newProject
+  }
+  return project
 }
 
-const handleSubmit = (input) => {
-  // 跳转到计划页面
-  router.push({
-    name: 'Plan',
-    query: { input }
+const handleExample = (text) => {
+  // 新增：确保有当前项目
+  ensureCurrentProject(text)
+  // 设置输入框的值
+  bottomInputRef.value.setValue(text)
+  // 展开输入框以显示对话界面
+  bottomInputRef.value.expand()
+  // 聚焦到输入框
+  nextTick(() => {
+    const inputRef = bottomInputRef.value.$refs?.inputRef
+    if (inputRef) {
+      inputRef.focus()
+    }
   })
 }
 

@@ -161,24 +161,4 @@ const handleUpdateData = (cardId, newData) => {
   transition: transform 0.3s ease;
 }
 
-@media (max-width: 768px) {
-  .card-system {
-    padding: 16px;
-  }
-  
-  .cards-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-  
-  .example-tags {
-    flex-direction: column;
-    align-items: center;
-  }
-  
-  .example-tag {
-    width: 100%;
-    max-width: 300px;
-  }
-}
 </style> 

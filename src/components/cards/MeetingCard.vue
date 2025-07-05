@@ -632,28 +632,4 @@ watch(() => props.data, (newData) => {
   color: #333333;
 }
 
-@media (max-width: 768px) {
-  .meeting-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-  
-  .meeting-actions {
-    flex-direction: column;
-  }
-  
-  .action-btn {
-    justify-content: center;
-  }
-  
-  .agenda-item {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .agenda-time {
-    min-width: auto;
-  }
-}
 </style> 

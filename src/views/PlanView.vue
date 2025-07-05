@@ -13,11 +13,11 @@
           :key="card.id"
           class="card-wrapper"
         >
-                  <SmartCard 
-          :card="card"
-          @update-state="handleCardStateUpdate"
-          @update-data="handleCardDataUpdate"
-        />
+          <SmartCard 
+            :card="card"
+            @update-state="handleCardStateUpdate"
+            @update-data="handleCardDataUpdate"
+          />
         </div>
       </div>
     </main>
@@ -33,7 +33,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft } from 'lucide-vue-next'
+import { ArrowLeft, User, Bot } from 'lucide-vue-next'
 import SmartCard from '../components/SmartCard.vue'
 import BottomInput from '../components/BottomInput.vue'
 import { ProjectStorage, ProjectModel } from '../utils/storage.js'
@@ -46,6 +46,8 @@ const cardStore = useCardStore()
 const userInput = ref('')
 const cards = ref([])
 const currentProject = ref(null)
+const conversationHistory = ref([])
+const showConversation = ref(true)
 
 const planTitle = computed(() => {
   if (userInput.value.length > 30) {
@@ -97,6 +99,20 @@ const loadProject = (projectId) => {
       currentProject.value = Object.assign(new ProjectModel(''), project)
       userInput.value = project.description
       cards.value = project.cards || []
+      
+      // 如果项目没有卡片，根据描述生成默认卡片
+      if (!cards.value || cards.value.length === 0) {
+        console.log('项目没有卡片，根据描述生成默认卡片...')
+        const defaultCards = cardStore.generateCards(project.description)
+        cards.value = defaultCards
+        // 保存生成的卡片到项目
+        if (defaultCards.length > 0) {
+          saveProject()
+        }
+      }
+      
+      // 加载对话历史
+      conversationHistory.value = project.conversationHistory || []
     }
   }
 }
@@ -152,6 +168,19 @@ const goBack = () => {
   router.push('/')
 }
 
+// 切换对话显示
+const toggleConversation = () => {
+  showConversation.value = !showConversation.value
+}
+
+// 保存对话历史到项目
+const saveConversationHistory = () => {
+  if (currentProject.value && conversationHistory.value.length > 0) {
+    currentProject.value.conversationHistory = conversationHistory.value
+    ProjectStorage.saveProject(currentProject.value.toJSON())
+  }
+}
+
 
 
 // 查找已存在的项目
@@ -161,15 +190,24 @@ const findExistingProject = (input) => {
 }
 
 onMounted(() => {
-  const projectId = route.query.projectId
-  const input = route.query.input
-  
+  const projectId = ProjectStorage.getCurrentProjectId()
   if (projectId) {
+    const project = ProjectStorage.getProject(projectId)
+    if (project && project.conversationHistory) {
+      // 移除"即将为您生成计划卡片..."的assistant消息
+      const filtered = project.conversationHistory.filter(
+        msg => !(msg.role === 'assistant' && msg.content === '即将为您生成计划卡片...')
+      )
+      if (filtered.length !== project.conversationHistory.length) {
+        project.conversationHistory = filtered
+        ProjectStorage.saveProject(project)
+      }
+    }
     // 加载现有项目
     loadProject(projectId)
-  } else if (input) {
+  } else if (route.query.input) {
     // 检查是否已有相同描述的项目
-    const existingProject = findExistingProject(input)
+    const existingProject = findExistingProject(route.query.input)
     
     if (existingProject) {
       // 加载已存在的项目
@@ -177,6 +215,17 @@ onMounted(() => {
       currentProject.value = Object.assign(new ProjectModel(''), existingProject)
       userInput.value = existingProject.description
       cards.value = existingProject.cards || []
+      
+      // 如果项目没有卡片，根据描述生成默认卡片
+      if (!cards.value || cards.value.length === 0) {
+        console.log('已存在项目没有卡片，根据描述生成默认卡片...')
+        const defaultCards = cardStore.generateCards(existingProject.description)
+        cards.value = defaultCards
+        // 保存生成的卡片到项目
+        if (defaultCards.length > 0) {
+          saveProject()
+        }
+      }
       
       // 更新URL添加projectId参数
       const newUrl = new URL(window.location)
@@ -186,8 +235,8 @@ onMounted(() => {
     } else {
       // 新建项目
       console.log('创建新项目...')
-      userInput.value = input
-      const newCards = cardStore.generateCards(input)
+      userInput.value = route.query.input
+      const newCards = cardStore.generateCards(route.query.input)
       cards.value = newCards
       
       // 生成卡片后自动保存项目
@@ -195,6 +244,11 @@ onMounted(() => {
         saveProject()
       }
     }
+  }
+  
+  // 确保有当前项目ID
+  if (currentProject.value && !ProjectStorage.getCurrentProjectId()) {
+    ProjectStorage.setCurrentProjectId(currentProject.value.id)
   }
 })
 </script>
@@ -261,5 +315,110 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+
+
+/* 计划标题样式已移除 */
+
+/* 对话历史区域 */
+/* conversation-section 相关样式全部删除 */
+
+.toggle-btn {
+  padding: 8px 16px;
+  background: #FFFFFF;
+  border: 1px solid #E5E5E5;
+  border-radius: 6px;
+  color: #666666;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+}
+
+.toggle-btn:hover {
+  background: #F0F0F0;
+  color: #333333;
+}
+
+.conversation-container {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.conversation-list {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.conversation-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  line-height: 1.5;
+  max-width: 85%;
+  word-wrap: break-word;
+}
+
+.conversation-item.user {
+  background: #F0F0F0;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+  flex-direction: row;
+}
+
+.conversation-item.assistant {
+  background: #FFFFFF;
+  border: 1px solid #E5E5E5;
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+
+.message-avatar {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.conversation-item.user .message-avatar {
+  background: #333333;
+  color: #FFFFFF;
+  margin-left: 10px;
+  margin-right: 0;
+}
+
+.conversation-item.assistant .message-avatar {
+  background: #F8F9FA;
+  border: 1px solid #E5E5E5;
+  color: #666666;
+  margin-right: 10px;
+  margin-left: 0;
+}
+
+.message-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.message-content span {
+  display: block;
+  word-break: break-word;
+}
+
+.conversation-item.user .message-content {
+  text-align: left;
+}
+
+.conversation-item.assistant .message-content {
+  text-align: left;
 }
 </style> 
