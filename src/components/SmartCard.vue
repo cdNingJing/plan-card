@@ -12,6 +12,22 @@
     <div class="card-header" @click="toggleState">
       <div class="card-title">
         <h3>{{ card.title }}</h3>
+        <!-- 航班卡片收起状态下的购买信息 -->
+        <div v-if="card.type === 'flight' && card.state === 'collapsed' && recentBookings.length > 0" class="flight-booking-summary">
+          <div class="booking-count">
+            <CheckCircle :size="14" />
+            <span>{{ recentBookings.length }}个航班已预订</span>
+          </div>
+          <div class="booking-preview">
+            <span v-for="(booking, index) in recentBookings.slice(0, 2)" :key="booking.id" class="booking-item">
+              {{ getBookingRouteText(booking) }}
+              <span class="booking-price">¥{{ formatPrice(booking.totalPrice) }}</span>
+            </span>
+            <span v-if="recentBookings.length > 2" class="more-bookings">
+              +{{ recentBookings.length - 2 }}个
+            </span>
+          </div>
+        </div>
       </div>
       <div class="card-actions" @click.stop>
         <!-- 已完成标识 -->
@@ -226,6 +242,7 @@ import {
   Paperclip,
   Info
 } from 'lucide-vue-next'
+import { bookingStorage } from '@/utils/bookingStorage.js'
 
 import DestinationCard from './cards/DestinationCard.vue'
 import FlightCard from './cards/FlightCard.vue'
@@ -244,6 +261,34 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update-state', 'update-data'])
+
+// 获取最近的预订记录
+const recentBookings = computed(() => {
+  if (props.card.type === 'flight') {
+    return bookingStorage.getRecentBookings(3)
+  }
+  return []
+})
+
+// 获取预订路线文本
+const getBookingRouteText = (booking) => {
+  if (!booking.flights || booking.flights.length === 0) return '未知路线'
+  
+  if (booking.isMultiTrip && booking.flights.length >= 2) {
+    const outbound = booking.flights[0]
+    const returnFlight = booking.flights[1]
+    return `${outbound.departureAirport} ↔ ${outbound.arrivalAirport}`
+  } else {
+    const flight = booking.flights[0]
+    return `${flight.departureAirport} → ${flight.arrivalAirport}`
+  }
+}
+
+// 格式化价格
+const formatPrice = (price) => {
+  if (!price) return '0'
+  return typeof price === 'number' ? price.toLocaleString() : price.toString()
+}
 
 const iconMap = {
   MapPin,
@@ -359,8 +404,11 @@ const handleBasicInfoChange = (formData) => {
 
 .card-title {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 8px;
+  flex: 1;
+  justify-content: space-between;
 }
 
 .card-title h3 {
@@ -368,6 +416,50 @@ const handleBasicInfoChange = (formData) => {
   font-size: 1rem;
   font-weight: 600;
   color: #333333;
+}
+
+/* 航班卡片收起状态下的购买信息样式 */
+.flight-booking-summary {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #E8F5E8 0%, #F0F8F0 100%);
+  border: 1px solid #4CAF50;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.booking-count {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #2E7D32;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.booking-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.booking-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #333333;
+  font-size: 0.75rem;
+}
+
+.booking-price {
+  color: #2E7D32;
+  font-weight: 500;
+}
+
+.more-bookings {
+  color: #666666;
+  font-size: 0.7rem;
+  font-style: italic;
 }
 
 .card-actions {
@@ -425,16 +517,16 @@ const handleBasicInfoChange = (formData) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 0;
   box-sizing: border-box;
   overflow: hidden;
 }
 
 .fullscreen-content {
   background: #FFFFFF;
-  border-radius: 8px;
-  width: 90vw;
-  height: 90vh;
+  border-radius: 0;
+  width: 100vw;
+  height: 100vh;
   max-width: 1200px;
   overflow: hidden;
   display: flex;
