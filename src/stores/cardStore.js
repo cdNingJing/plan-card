@@ -248,6 +248,7 @@ export const useCardStore = defineStore('card', () => {
 
   // 根据场景和卡片类型生成卡片
   const generateCardsByScene = (scene, cardTypes) => {
+    console.log('[generateCardsByScene] scene:', scene, 'cardTypes:', cardTypes)
     const cards = []
     
     // 确保包含基础信息卡片
@@ -262,6 +263,7 @@ export const useCardStore = defineStore('card', () => {
       }
     })
     
+    console.log('[generateCardsByScene] 生成的 cards:', cards)
     return cards
   }
   
@@ -292,20 +294,24 @@ export const useCardStore = defineStore('card', () => {
     }
     
     const title = cardTitles[cardType]?.[scene] || cardTitles[cardType] || cardType
-    
-    return {
+    const baseData = generateCardData(cardType)
+    // 强制覆盖 basic-info 的 scenario 字段为当前 scene
+    if (cardType === 'basic-info') {
+      baseData.scenario = scene
+    }
+    const card = {
       id: `${cardType}-${scene}-${index}`,
       type: cardType,
       title: title,
       state: 'collapsed',
-      data: {
-        scenario: scene,
-        ...generateCardData(cardType)
-      }
+      data: baseData
     }
+    console.log('[createCardByType]', cardType, 'scene:', scene, 'card:', card)
+    return card
   }
   
   const generateCards = (input, aiResponse = null) => {
+    console.log('[generateCards] input:', input, 'aiResponse:', aiResponse)
     let scene = 'general'
     let cardTypes = ['basic-info', 'suggestions', 'resources']
     
@@ -325,177 +331,183 @@ export const useCardStore = defineStore('card', () => {
     currentScene.value = scene
     currentCards.value = cardTypes
     
-    return generateCardsByScene(scene, cardTypes)
+    const cards = generateCardsByScene(scene, cardTypes)
+    console.log('[generateCards] 最终生成的 cards:', cards)
+    return cards
   }
 
   const generateCardData = (type) => {
-    switch (type) {
-      case 'basic-info':
-        // 这里不再需要返回fields，因为会在组件中根据场景自动获取
-        return {
-          scenario: 'general' // 默认场景，会在具体使用时覆盖
-        }
+    const data = (() => {
+      switch (type) {
+        case 'basic-info':
+          // 这里不再需要返回fields，因为会在组件中根据场景自动获取
+          return {
+            scenario: 'general' // 默认场景，会在具体使用时覆盖
+          }
 
-      case 'flight':
-        return {
-          recommendations: [
-            {
-              airline: '中国国际航空',
-              flightNumber: 'CA183',
-              departure: '成都 (CTU)',
-              arrival: '东京成田 (NRT)',
-              time: '08:30 - 14:15',
-              price: 2580,
-              stops: '直飞'
-            },
-            {
-              airline: '四川航空',
-              flightNumber: '3U8086',
-              departure: '成都 (CTU)',
-              arrival: '东京成田 (NRT)',
-              time: '14:20 - 20:05',
-              price: 2380,
-              stops: '直飞'
-            }
-          ]
-        }
-      case 'hotel':
-        return {
-          recommendations: [
-            {
-              name: '东京帝国酒店',
-              rating: 5,
-              price: 1200,
-              location: '银座',
-              image: '/api/placeholder/300/200',
-              amenities: ['免费WiFi', '健身房', '温泉', '商务中心'],
-              description: '位于银座中心的豪华酒店'
-            },
-            {
-              name: '新宿华盛顿酒店',
-              rating: 4,
-              price: 800,
-              location: '新宿',
-              image: '/api/placeholder/300/200',
-              amenities: ['免费WiFi', '健身房', '餐厅'],
-              description: '交通便利的商务酒店'
-            }
-          ]
-        }
-      case 'itinerary':
-        return {
-          days: [
-            {
-              day: 1,
-              title: '抵达东京',
-              activities: [
-                { time: '14:00', activity: '抵达成田机场', duration: '1小时' },
-                { time: '16:00', activity: '前往酒店办理入住', duration: '2小时' },
-                { time: '19:00', activity: '银座晚餐', duration: '2小时' }
-              ]
-            }
-          ]
-        }
-      case 'packing':
-        return {
-          categories: [
-            {
-              name: '衣物',
-              items: ['T恤 3件', '长裤 2条', '外套 1件', '内衣裤', '袜子']
-            },
-            {
-              name: '电子设备',
-              items: ['手机', '充电器', '相机', '移动电源']
-            }
-          ]
-        }
-      case 'profile':
-        return {
-          analysis: '根据您提供的信息，收礼人是一位热爱园艺的女性...',
-          tags: ['园艺爱好者', '实用主义', '自然主义']
-        }
-      case 'gift':
-        return {
-          recommendations: [
-            {
-              name: '园艺工具套装',
-              price: 288,
-              description: '包含铲子、剪刀、手套等基础工具',
-              image: '/api/placeholder/200/200',
-              rating: 4.8
-            }
-          ]
-        }
-      case 'budget':
-        return {
-          range: { min: 200, max: 500 },
-          filtered: 15
-        }
-      case 'tips':
-        return {
-          tips: ['选择实用性强的礼物', '考虑包装的精美程度']
-        }
-      case 'meeting':
-        return {
-          title: '项目进度讨论会',
-          date: '2024-01-15',
-          time: '15:00',
-          duration: '1小时'
-        }
-      case 'participants':
-        return {
-          attendees: ['张三', '李四', '王五'],
-          optional: ['赵六']
-        }
-      case 'reminder':
-        return {
-          settings: ['15分钟前', '1小时前'],
-          method: '邮件'
-        }
-      case 'feedback':
-        return {
-          status: '待执行',
-          actions: []
-        }
-      case 'attachments':
-        return {
-          files: []
-        }
-      case 'suggestions':
-        return {
-          recommendations: [
-            {
-              title: '建议方案一',
-              description: '基于您的需求，我们推荐以下解决方案...',
-              priority: 'high'
-            },
-            {
-              title: '建议方案二',
-              description: '另一种可行的解决方案是...',
-              priority: 'medium'
-            }
-          ]
-        }
-      case 'resources':
-        return {
-          recommendations: [
-            {
-              title: '相关文档',
-              type: 'document',
-              url: '#',
-              description: '详细说明文档'
-            },
-            {
-              title: '参考链接',
-              type: 'link',
-              url: '#',
-              description: '外部参考资源'
-            }
-          ]
-        }
-      default:
-        return {}
-    }
+        case 'flight':
+          return {
+            recommendations: [
+              {
+                airline: '中国国际航空',
+                flightNumber: 'CA183',
+                departure: '成都 (CTU)',
+                arrival: '东京成田 (NRT)',
+                time: '08:30 - 14:15',
+                price: 2580,
+                stops: '直飞'
+              },
+              {
+                airline: '四川航空',
+                flightNumber: '3U8086',
+                departure: '成都 (CTU)',
+                arrival: '东京成田 (NRT)',
+                time: '14:20 - 20:05',
+                price: 2380,
+                stops: '直飞'
+              }
+            ]
+          }
+        case 'hotel':
+          return {
+            recommendations: [
+              {
+                name: '东京帝国酒店',
+                rating: 5,
+                price: 1200,
+                location: '银座',
+                image: '/api/placeholder/300/200',
+                amenities: ['免费WiFi', '健身房', '温泉', '商务中心'],
+                description: '位于银座中心的豪华酒店'
+              },
+              {
+                name: '新宿华盛顿酒店',
+                rating: 4,
+                price: 800,
+                location: '新宿',
+                image: '/api/placeholder/300/200',
+                amenities: ['免费WiFi', '健身房', '餐厅'],
+                description: '交通便利的商务酒店'
+              }
+            ]
+          }
+        case 'itinerary':
+          return {
+            days: [
+              {
+                day: 1,
+                title: '抵达东京',
+                activities: [
+                  { time: '14:00', activity: '抵达成田机场', duration: '1小时' },
+                  { time: '16:00', activity: '前往酒店办理入住', duration: '2小时' },
+                  { time: '19:00', activity: '银座晚餐', duration: '2小时' }
+                ]
+              }
+            ]
+          }
+        case 'packing':
+          return {
+            categories: [
+              {
+                name: '衣物',
+                items: ['T恤 3件', '长裤 2条', '外套 1件', '内衣裤', '袜子']
+              },
+              {
+                name: '电子设备',
+                items: ['手机', '充电器', '相机', '移动电源']
+              }
+            ]
+          }
+        case 'profile':
+          return {
+            analysis: '根据您提供的信息，收礼人是一位热爱园艺的女性...',
+            tags: ['园艺爱好者', '实用主义', '自然主义']
+          }
+        case 'gift':
+          return {
+            recommendations: [
+              {
+                name: '园艺工具套装',
+                price: 288,
+                description: '包含铲子、剪刀、手套等基础工具',
+                image: '/api/placeholder/200/200',
+                rating: 4.8
+              }
+            ]
+          }
+        case 'budget':
+          return {
+            range: { min: 200, max: 500 },
+            filtered: 15
+          }
+        case 'tips':
+          return {
+            tips: ['选择实用性强的礼物', '考虑包装的精美程度']
+          }
+        case 'meeting':
+          return {
+            title: '项目进度讨论会',
+            date: '2024-01-15',
+            time: '15:00',
+            duration: '1小时'
+          }
+        case 'participants':
+          return {
+            attendees: ['张三', '李四', '王五'],
+            optional: ['赵六']
+          }
+        case 'reminder':
+          return {
+            settings: ['15分钟前', '1小时前'],
+            method: '邮件'
+          }
+        case 'feedback':
+          return {
+            status: '待执行',
+            actions: []
+          }
+        case 'attachments':
+          return {
+            files: []
+          }
+        case 'suggestions':
+          return {
+            recommendations: [
+              {
+                title: '建议方案一',
+                description: '基于您的需求，我们推荐以下解决方案...',
+                priority: 'high'
+              },
+              {
+                title: '建议方案二',
+                description: '另一种可行的解决方案是...',
+                priority: 'medium'
+              }
+            ]
+          }
+        case 'resources':
+          return {
+            recommendations: [
+              {
+                title: '相关文档',
+                type: 'document',
+                url: '#',
+                description: '详细说明文档'
+              },
+              {
+                title: '参考链接',
+                type: 'link',
+                url: '#',
+                description: '外部参考资源'
+              }
+            ]
+          }
+        default:
+          return {}
+      }
+    })()
+    console.log('[generateCardData]', type, 'data:', data)
+    return data
   }
 
   const processInput = (input) => {

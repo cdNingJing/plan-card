@@ -15,7 +15,6 @@
         >
           <SmartCard 
             :card="card"
-            :requiredFields="getRequiredFields(card)"
             @update-state="handleCardStateUpdate"
             @update-data="handleCardDataUpdate"
           />
@@ -148,13 +147,6 @@ const saveProject = () => {
     saveProject()
   }
 
-// 监听卡片变化，自动保存
-watch(cards, () => {
-  if (currentProject.value && cards.value.length > 0) {
-    saveProject()
-  }
-}, { deep: true })
-
 const handleCardStateUpdate = (cardId, newState) => {
   // 更新卡片状态
   const cardIndex = cards.value.findIndex(card => card.id === cardId)
@@ -209,17 +201,20 @@ const findExistingProject = (input) => {
   return projects.find(project => project.description === input)
 }
 
-function getRequiredFields(card) {
-  if (card.type === 'basic-info') {
-    const scenario = card.data?.scenario || 'general'
-    const allFields = getBasicInfoFields(scenario).fields
-    return allFields.filter(f => f.required)
+// 监听 projectId 路由参数变化，强制重新加载
+watch(() => route.query.projectId, (newId) => {
+  if (newId) {
+    loadProject(newId)
   }
-  return null
-}
+})
 
 onMounted(() => {
-  // 优先处理 planData 跳转
+  // 优先处理 projectId 路由参数，确保刷新时能加载项目
+  if (route.query.projectId) {
+    loadProject(route.query.projectId)
+    return
+  }
+  // 其次处理 planData 跳转
   if (route.query.planData) {
     try {
       const planData = JSON.parse(route.query.planData)
@@ -238,8 +233,6 @@ onMounted(() => {
           currentProject.value.cards = generatedCards
         }
       }
-      // 可选：保存到本地项目
-      // ...
       return
     } catch (e) {
       console.warn('planData 解析失败', e)
@@ -281,7 +274,6 @@ onMounted(() => {
       type: card.type,
       title: card.title,
       state: card.state,
-      requiredFields: getRequiredFields(card)
     })))
     loadProject(projectId)
     
