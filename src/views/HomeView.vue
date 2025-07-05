@@ -84,7 +84,7 @@ const handleExample = (text) => {
 const handleSubmit = (input) => {
   // 跳转到计划页面
   router.push({
-    name: 'plan',
+    name: 'Plan',
     query: { input }
   })
 }
@@ -137,9 +137,6 @@ onMounted(() => {
   overflow-y: auto;
   overflow-x: hidden;
   padding: 16px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 /* 当输入框展开时，调整内容区域 */
@@ -155,6 +152,8 @@ onMounted(() => {
   max-width: 800px;
   width: 100%;
   text-align: center;
+  margin: 0 auto;
+  padding-bottom: 20px; /* 底部留白 */
 }
 
 .examples-section {
@@ -227,89 +226,5 @@ onMounted(() => {
   background: #FEF2F2;
   border-color: #FECACA;
   color: #DC2626;
-}
-
-/* 桌面端样式 */
-@media (min-width: 769px) {
-  .main-content {
-    bottom: 68px;
-    padding: 64px 24px;
-  }
-  
-  .main-content.input-expanded {
-    bottom: 50vh;
-  }
-  
-  .main-content.input-fullscreen {
-    bottom: 100vh;
-  }
-  
-  .examples-section {
-    margin-bottom: 48px;
-  }
-  
-  .examples-section h2 {
-    font-size: 1.5rem;
-    margin-bottom: 24px;
-  }
-  
-  .example-list {
-    gap: 12px;
-  }
-  
-  .example-btn {
-    padding: 16px 24px;
-    font-size: 1rem;
-  }
-}
-
-/* 平板端样式 */
-@media (max-width: 768px) and (min-width: 481px) {
-  .main-content {
-    bottom: 64px;
-    padding: 24px 16px;
-  }
-  
-  .main-content.input-expanded {
-    bottom: 60vh;
-  }
-  
-  .main-content.input-fullscreen {
-    bottom: 100vh;
-  }
-}
-
-/* 手机端样式 */
-@media (max-width: 480px) {
-  .main-content {
-    bottom: 60px;
-    padding: 16px 12px;
-  }
-  
-  .main-content.input-expanded {
-    bottom: 70vh;
-  }
-  
-  .main-content.input-fullscreen {
-    bottom: 100vh;
-  }
-  
-  .examples-section {
-    margin-bottom: 24px;
-  }
-  
-  .examples-section h2 {
-    font-size: 1.125rem;
-    margin-bottom: 16px;
-  }
-  
-  .example-list {
-    gap: 8px;
-  }
-  
-  .example-btn {
-    padding: 12px 16px;
-    font-size: 0.85rem;
-  }
 }
 </style> 

@@ -226,14 +226,4 @@ watch(() => props.data, (newData) => {
   color: #666666;
   line-height: 1.4;
 }
-
-@media (max-width: 480px) {
-  .preset-buttons {
-    justify-content: center;
-  }
-  
-  .budget-amount {
-    font-size: 1.5rem;
-  }
-}
 </style> 

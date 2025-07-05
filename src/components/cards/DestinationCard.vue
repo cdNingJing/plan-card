@@ -185,14 +185,4 @@ watch(() => props.data, (newData) => {
   color: #FFFFFF;
   border-color: #333333;
 }
-
-@media (max-width: 480px) {
-  .destination-info {
-    grid-template-columns: 1fr;
-  }
-  
-  .mode-options {
-    flex-direction: column;
-  }
-}
 </style> 

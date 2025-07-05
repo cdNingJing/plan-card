@@ -4,25 +4,22 @@
     :class="[
       `state-${card.state}`,
       `type-${card.type}`,
-      { 'write-operation': card.writeOperation }
+      { 'write-operation': card.writeOperation },
+      { 'completed': card.isCompleted }
     ]"
   >
     <!-- 卡片头部 -->
-    <div class="card-header">
+    <div class="card-header" @click="toggleState">
       <div class="card-title">
-        <component :is="getIcon(card.icon)" :size="20" />
         <h3>{{ card.title }}</h3>
       </div>
-      <div class="card-actions">
+      <div class="card-actions" @click.stop>
+        <!-- 已完成标识 -->
+        <div v-if="card.isCompleted" class="completed-badge">
+          <CheckCircle :size="16" />
+        </div>
         <button 
-          v-if="card.state !== 'fullscreen'"
-          @click="toggleState"
-          class="action-btn"
-          :title="card.state === 'expanded' ? '收起' : '展开'"
-        >
-          <component :is="card.state === 'expanded' ? 'ChevronUp' : 'ChevronDown'" :size="16" />
-        </button>
-        <button 
+          v-if="card.state === 'expanded'"
           @click="enterFullscreen"
           class="action-btn"
           title="全屏"
@@ -76,6 +73,16 @@
         @update="handleUpdate"
       />
       
+      <!-- 基础信息卡片 -->
+      <BasicInfoCard 
+        v-else-if="card.type === 'basic-info'"
+        :scenario="card.data.scenario || 'general'"
+        :initialData="card.data.formData || {}"
+        @submit="handleBasicInfoSubmit"
+        @change="handleBasicInfoChange"
+        @collapse="handleBasicInfoCollapse"
+      />
+      
       <!-- 通用卡片 -->
       <GenericCard 
         v-else
@@ -96,7 +103,16 @@
         </div>
         <div class="fullscreen-body">
           <!-- 全屏内容 -->
+          <BasicInfoCard 
+            v-if="card.type === 'basic-info'"
+            :scenario="card.data.scenario || 'general'"
+            :initialData="card.data.formData || {}"
+            @submit="handleBasicInfoSubmit"
+            @change="handleBasicInfoChange"
+            @collapse="handleBasicInfoCollapse"
+          />
           <component 
+            v-else
             :is="getCardComponent(card.type)"
             :data="card.data"
             :fullscreen="true"
@@ -109,6 +125,7 @@
 </template>
 
 <script setup>
+import { ref, computed } from 'vue'
 import { 
   ChevronUp, 
   ChevronDown, 
@@ -126,7 +143,8 @@ import {
   Users,
   Bell,
   CheckCircle,
-  Paperclip
+  Paperclip,
+  Info
 } from 'lucide-vue-next'
 
 import DestinationCard from './cards/DestinationCard.vue'
@@ -136,6 +154,7 @@ import GiftCard from './cards/GiftCard.vue'
 import BudgetCard from './cards/BudgetCard.vue'
 import MeetingCard from './cards/MeetingCard.vue'
 import GenericCard from './cards/GenericCard.vue'
+import BasicInfoCard from './cards/BasicInfoCard.vue'
 
 const props = defineProps({
   card: {
@@ -159,7 +178,8 @@ const iconMap = {
   Users,
   Bell,
   CheckCircle,
-  Paperclip
+  Paperclip,
+  Info
 }
 
 const getIcon = (iconName) => {
@@ -173,9 +193,11 @@ const getCardComponent = (type) => {
     hotel: HotelCard,
     gift: GiftCard,
     budget: BudgetCard,
-    meeting: MeetingCard
+    meeting: MeetingCard,
+    'basic-info': BasicInfoCard,
+    default: GenericCard
   }
-  return componentMap[type] || GenericCard
+  return componentMap[type] || componentMap.default
 }
 
 const toggleState = () => {
@@ -193,6 +215,34 @@ const exitFullscreen = () => {
 
 const handleUpdate = (data) => {
   emit('update-data', props.card.id, data)
+}
+
+const handleBasicInfoSubmit = (formData) => {
+  // 保存表单数据到卡片
+  emit('update-data', props.card.id, {
+    ...props.card.data,
+    formData: formData,
+    isCompleted: true
+  })
+  
+  // 可以触发其他卡片的激活
+  console.log('基础信息已提交:', formData)
+}
+
+const handleBasicInfoCollapse = () => {
+  // 折叠卡片
+  emit('update-state', props.card.id, 'collapsed')
+}
+
+const handleBasicInfoChange = (formData) => {
+  console.log('SmartCard - 收到BasicInfo变化:', formData)
+  
+  // 实时保存表单数据，包括完成状态
+  emit('update-data', props.card.id, {
+    ...props.card.data,
+    formData: formData,
+    isCompleted: formData.isCompleted || false
+  })
 }
 </script>
 
@@ -221,6 +271,12 @@ const handleUpdate = (data) => {
   padding: 16px 20px;
   background: #F8F9FA;
   border-bottom: 1px solid #E5E5E5;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.card-header:hover {
+  background: #E5E5E5;
 }
 
 .card-title {
@@ -350,6 +406,111 @@ const handleUpdate = (data) => {
   min-height: 0;
 }
 
+/* 收起状态的通用样式优化 */
+.smart-card.state-collapsed {
+  background: #FAFAFA;
+  border: 1px solid #E5E5E5;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.smart-card.state-collapsed:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.smart-card.state-collapsed .card-header {
+  background: #FAFAFA;
+  border-bottom: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+}
+
+.smart-card.state-collapsed .card-header:hover {
+  background: #F5F5F5;
+}
+
+.smart-card.state-collapsed .card-title h3 {
+  font-size: 0.9rem;
+  color: #666666;
+}
+
+/* 已完成状态样式 */
+.smart-card.completed {
+  background: #F8FDF8;
+  border-color: #22C55E;
+}
+
+.smart-card.completed .card-header {
+  background: #ECFDF5;
+  border-bottom-color: #22C55E;
+}
+
+.smart-card.completed .card-title h3 {
+  color: #16A34A;
+}
+
+.completed-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+  color: #22C55E;
+  animation: completedPulse 2s ease-in-out;
+}
+
+@keyframes completedPulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 已完成状态下的收起效果 */
+.smart-card.completed.state-collapsed {
+  background: #F0FDF4;
+  border: 1px solid #22C55E;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.1);
+}
+
+.smart-card.completed.state-collapsed:hover {
+  background: #ECFDF5;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);
+  transform: translateY(-2px);
+}
+
+.smart-card.completed.state-collapsed .card-header {
+  background: transparent;
+  border-bottom: none;
+}
+
+.smart-card.completed.state-collapsed .card-header:hover {
+  background: rgba(34, 197, 94, 0.05);
+}
+
+.smart-card.completed.state-collapsed .card-title h3 {
+  color: #16A34A;
+  font-weight: 600;
+}
+
+/* 收起状态下完成图标的样式 */
+.smart-card.state-collapsed .completed-badge {
+  margin-right: 0;
+}
+
+/* 已完成卡片的绿色左边框 */
+.smart-card.completed.state-collapsed {
+  border-left: 3px solid #22C55E;
+}
+
 /* 卡片类型特定样式 */
 .type-destination {
   border-left: 4px solid #666666;
@@ -375,61 +536,4 @@ const handleUpdate = (data) => {
   border-left: 4px solid #666666;
 }
 
-@media (max-width: 768px) {
-  .card-header {
-    padding: 12px 16px;
-  }
-  
-  .card-content {
-    padding: 16px;
-  }
-  
-  .fullscreen-overlay {
-    padding: 16px;
-  }
-  
-  .fullscreen-content {
-    width: 95vw;
-    height: 95vh;
-  }
-  
-  .fullscreen-header {
-    padding: 16px;
-  }
-  
-  .fullscreen-body {
-    padding: 16px;
-  }
-}
-
-@media (max-width: 480px) {
-  .card-header {
-    padding: 10px 12px;
-  }
-  
-  .card-content {
-    padding: 12px;
-  }
-  
-  .fullscreen-overlay {
-    padding: 12px;
-  }
-  
-  .fullscreen-content {
-    width: 98vw;
-    height: 98vh;
-  }
-  
-  .fullscreen-header {
-    padding: 12px;
-  }
-  
-  .fullscreen-header h2 {
-    font-size: 1.125rem;
-  }
-  
-  .fullscreen-body {
-    padding: 12px;
-  }
-}
 </style> 

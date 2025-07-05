@@ -112,7 +112,7 @@ const loadProjects = () => {
 // 打开项目
 const openProject = (projectId) => {
   router.push({
-    name: 'plan',
+    name: 'Plan',
     query: { projectId }
   })
 }
@@ -425,47 +425,4 @@ onMounted(() => {
   background: #000000;
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .projects-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-  
-  .project-card {
-    padding: 12px;
-  }
-  
-  .project-actions {
-    opacity: 1;
-  }
-  
-  .modal-content {
-    margin: 20px;
-    padding: 20px;
-  }
-}
-
-@media (max-width: 480px) {
-  .project-list {
-    margin-top: 24px;
-  }
-  
-  .empty-projects {
-    padding: 32px 16px;
-  }
-  
-  .project-meta {
-    gap: 12px;
-  }
-  
-  .modal-actions {
-    flex-direction: column;
-  }
-  
-  .btn-secondary,
-  .btn-primary {
-    width: 100%;
-  }
-}
 </style> 

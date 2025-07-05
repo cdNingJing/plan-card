@@ -236,7 +236,7 @@ const handleSubmit = () => {
     // 如果没有父组件处理，默认跳转到计划页面
     if (!props.onSubmit) {
       router.push({
-        name: 'plan',
+        name: 'Plan',
         query: { input: input }
       })
     }
@@ -692,87 +692,6 @@ defineExpose({
   .message-avatar {
     width: 20px;
     height: 20px;
-  }
-}
-
-@media (max-width: 480px) {
-  .state-expanded .input-panel {
-    height: 70vh;
-    min-height: 250px;
-  }
-  
-  .panel-header {
-    padding: 10px 12px;
-  }
-  
-  .chat-history {
-    padding: 12px;
-  }
-  
-  .chat-history::-webkit-scrollbar {
-    width: 4px;
-  }
-  
-  .input-section {
-    padding: 8px 12px;
-  }
-  
-  .state-default .input-section {
-    padding: 8px 12px;
-  }
-  
-  .main-input {
-    height: 44px;
-    padding: 0 12px;
-    font-size: 16px;
-  }
-  
-  .send-btn {
-    width: 44px;
-    height: 44px;
-  }
-  
-  .history-list {
-    gap: 10px;
-  }
-  
-  .history-input,
-  .history-response {
-    max-width: 95%;
-    padding: 8px 10px;
-    gap: 6px;
-    font-size: 0.9rem;
-  }
-  
-  .history-input .message-avatar {
-    margin-left: 6px;
-    margin-right: 0;
-  }
-  
-  .history-response .message-avatar {
-    margin-right: 6px;
-    margin-left: 0;
-  }
-  
-  .message-avatar {
-    width: 18px;
-    height: 18px;
-  }
-  
-  .empty-history {
-    padding: 20px 10px;
-  }
-  
-  .empty-icon {
-    margin-bottom: 12px;
-  }
-  
-  .empty-history p {
-    font-size: 0.9rem;
-  }
-  
-  .empty-hint {
-    font-size: 0.8rem;
   }
 }
 </style> 

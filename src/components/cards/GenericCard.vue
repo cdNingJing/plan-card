@@ -194,18 +194,4 @@ const emit = defineEmits(['update'])
   margin-top: 8px;
 }
 
-@media (max-width: 480px) {
-  .flight-item,
-  .hotel-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .detail-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-}
 </style> 
