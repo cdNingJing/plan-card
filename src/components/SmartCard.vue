@@ -235,8 +235,6 @@ const handleBasicInfoCollapse = () => {
 }
 
 const handleBasicInfoChange = (formData) => {
-  console.log('SmartCard - 收到BasicInfo变化:', formData)
-  
   // 实时保存表单数据，包括完成状态
   emit('update-data', props.card.id, {
     ...props.card.data,
@@ -511,29 +509,6 @@ const handleBasicInfoChange = (formData) => {
   border-left: 3px solid #22C55E;
 }
 
-/* 卡片类型特定样式 */
-.type-destination {
-  border-left: 4px solid #666666;
-}
 
-.type-flight {
-  border-left: 4px solid #999999;
-}
-
-.type-hotel {
-  border-left: 4px solid #999999;
-}
-
-.type-gift {
-  border-left: 4px solid #666666;
-}
-
-.type-budget {
-  border-left: 4px solid #333333;
-}
-
-.type-meeting {
-  border-left: 4px solid #666666;
-}
 
 </style> 

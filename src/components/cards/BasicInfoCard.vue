@@ -344,8 +344,6 @@ watch(formData, (newData) => {
 
 // 监听完成状态变化
 watch(isCompleted, (newCompleted) => {
-  console.log('完成状态变化:', newCompleted)
-  
   // 通知父组件完成状态变化
   emit('change', { 
     ...formData.value,

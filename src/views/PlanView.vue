@@ -75,6 +75,12 @@ const saveProject = () => {
       const project = new ProjectModel(userInput.value, cards.value)
       currentProject.value = project
       ProjectStorage.saveProject(project.toJSON())
+      
+      // 更新URL添加projectId参数，避免刷新时重复创建
+      const newUrl = new URL(window.location)
+      newUrl.searchParams.set('projectId', project.id)
+      newUrl.searchParams.delete('input') // 移除input参数
+      window.history.replaceState({}, '', newUrl)
     }
     
     console.log('项目已保存到本地存储')
@@ -148,6 +154,12 @@ const goBack = () => {
 
 
 
+// 查找已存在的项目
+const findExistingProject = (input) => {
+  const projects = ProjectStorage.getProjects()
+  return projects.find(project => project.description === input)
+}
+
 onMounted(() => {
   const projectId = route.query.projectId
   const input = route.query.input
@@ -156,14 +168,32 @@ onMounted(() => {
     // 加载现有项目
     loadProject(projectId)
   } else if (input) {
-    // 新建项目
-    userInput.value = input
-    const newCards = cardStore.generateCards(input)
-    cards.value = newCards
+    // 检查是否已有相同描述的项目
+    const existingProject = findExistingProject(input)
     
-    // 生成卡片后自动保存项目
-    if (newCards.length > 0) {
-      saveProject()
+    if (existingProject) {
+      // 加载已存在的项目
+      console.log('找到已存在的项目，加载中...')
+      currentProject.value = Object.assign(new ProjectModel(''), existingProject)
+      userInput.value = existingProject.description
+      cards.value = existingProject.cards || []
+      
+      // 更新URL添加projectId参数
+      const newUrl = new URL(window.location)
+      newUrl.searchParams.set('projectId', existingProject.id)
+      newUrl.searchParams.delete('input')
+      window.history.replaceState({}, '', newUrl)
+    } else {
+      // 新建项目
+      console.log('创建新项目...')
+      userInput.value = input
+      const newCards = cardStore.generateCards(input)
+      cards.value = newCards
+      
+      // 生成卡片后自动保存项目
+      if (newCards.length > 0) {
+        saveProject()
+      }
     }
   }
 })

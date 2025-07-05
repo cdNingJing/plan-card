@@ -141,20 +141,6 @@ export const basicInfoFieldsConfig = {
         description: '会议开始时间'
       },
       {
-        key: 'duration',
-        label: '会议时长',
-        type: 'select',
-        required: true,
-        placeholder: '请选择会议时长',
-        options: [
-          { value: '30', label: '30分钟' },
-          { value: '60', label: '1小时' },
-          { value: '90', label: '1.5小时' },
-          { value: '120', label: '2小时' }
-        ],
-        description: '预计会议持续时间'
-      },
-      {
         key: 'participants',
         label: '参会人员邮箱',
         type: 'textarea',
@@ -162,6 +148,20 @@ export const basicInfoFieldsConfig = {
         placeholder: '请输入参会人员邮箱，每行一个...',
         required: true,
         description: '需要发送会议提醒的邮箱地址'
+      },
+      {
+        key: 'duration',
+        label: '会议时长',
+        type: 'select',
+        required: false,
+        placeholder: '请选择会议时长',
+        options: [
+          { value: '30', label: '30分钟' },
+          { value: '60', label: '1小时' },
+          { value: '120', label: '2小时' },
+          { value: '240', label: '半天' }
+        ],
+        description: '预计会议持续时间'
       },
       {
         key: 'location',
