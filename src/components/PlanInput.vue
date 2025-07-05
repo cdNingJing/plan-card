@@ -117,7 +117,9 @@
 import { ref, nextTick, onMounted, onUnmounted, computed, watch } from 'vue'
 import { usePlanAgentStore } from '@/stores/planAgentStore.js'
 import { useCardStore } from '@/stores/cardStore.js'
+import { useProjectCardStore } from '@/stores/projectCardStore.js'
 import { ProjectStorage } from '../utils/storage.js'
+import { CardModificationService } from '../services/cardModificationService.js'
 import { 
   Maximize2, 
   Minimize2, 
@@ -133,6 +135,8 @@ const props = defineProps({
 
 const planAgentStore = usePlanAgentStore()
 const cardStore = useCardStore()
+const projectCardStore = useProjectCardStore()
+const cardModificationService = new CardModificationService()
 const inputValue = ref('')
 const currentState = ref('default')
 const inputRef = ref(null)
@@ -254,6 +258,15 @@ function sendUserMessage(input) {
   // 设置当前项目ID，确保AI回复能正确关联到项目
   ProjectStorage.setCurrentProjectId(props.projectId)
   
+  // 解析用户输入中的修改意图
+  const modifications = cardModificationService.parseModificationIntent(input)
+  if (modifications.length > 0) {
+    console.log('[PlanInput] 检测到用户修改意图:', modifications)
+    
+    // 如果有明确的修改意图，可以在这里预处理
+    // 例如：如果用户说"修改目的地为北京"，可以提前准备相关的上下文信息
+  }
+  
   if (!project.conversationHistory) project.conversationHistory = []
   const userMsg = {
     id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
@@ -282,7 +295,7 @@ const handleSubmit = async () => {
     sendUserMessage(input)
     nextTick(() => { scrollToBottom() })
     try {
-      await planAgentStore.sendMessage(input, props.projectId)
+      await planAgentStore.sendMessage(input, props.projectId, true) // 使用新的对话专用提示词
     } catch (error) {
       // 错误处理略
       console.warn('[PlanInput] planAgentStore.sendMessage error', error)
@@ -293,8 +306,84 @@ const handleSubmit = async () => {
 
 // 监听AI回复并生成卡片
 const processAIResponse = (aiText) => {
+  console.log('[PlanInput] processAIResponse 开始:', aiText)
+  console.log('[PlanInput] AI回复内容长度:', aiText?.length)
+  console.log('[PlanInput] AI回复内容前200字符:', aiText?.substring(0, 200))
+  
   const project = ProjectStorage.getProject(props.projectId)
-  if (!project) return
+  if (!project) {
+    console.warn('[PlanInput] 项目不存在')
+    return
+  }
+
+  // 首先尝试解析AI回复中的卡片修改指令
+  const modification = cardModificationService.parseAIResponse(aiText)
+  console.log('[PlanInput] 解析的修改指令:', modification)
+  
+  if (modification && modification.action === 'update_card') {
+    console.log('[PlanInput] 检测到卡片修改指令:', modification)
+    
+    // 执行卡片修改
+    const result = cardModificationService.executeModification(project, modification)
+    console.log('[PlanInput] 卡片修改执行结果:', result)
+    
+    if (result.success) {
+      console.log('[PlanInput] 卡片修改成功:', result)
+      
+      // 保存修改后的项目
+      ProjectStorage.saveProject(project)
+      console.log('[PlanInput] 项目已保存到存储')
+      
+      // 触发卡片更新 - 通过emit事件通知父组件
+      if (result.updatedCards && result.updatedCards.length > 0) {
+        console.log('[PlanInput] 准备更新卡片数量:', result.updatedCards.length)
+        
+        result.updatedCards.forEach((card, index) => {
+          console.log(`[PlanInput] 处理第${index + 1}个卡片:`, card)
+          
+          // 对于basic-info卡片，需要特殊处理formData
+          if (card.type === 'basic-info' && card.data.formData) {
+            // 将formData作为更新数据传递给父组件
+            const updateData = {
+              formData: card.data.formData,
+              ...card.data // 包含其他字段如title等
+            }
+            console.log('[PlanInput] 发送basic-info卡片更新:', updateData)
+            projectCardStore.updateCardData(card.id, updateData)
+          } else {
+            // 其他卡片直接更新整个data
+            console.log('[PlanInput] 发送其他卡片更新:', card.data)
+            projectCardStore.updateCardData(card.id, card.data)
+          }
+        })
+      } else {
+        console.warn('[PlanInput] 没有需要更新的卡片')
+      }
+      
+      // 添加修改确认消息到对话历史
+      const confirmMsg = {
+        id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+        role: 'assistant',
+        content: result.message || modification.message || '已为您更新了相关信息',
+        timestamp: new Date().toISOString(),
+        status: 'done'
+      }
+      
+      if (!project.conversationHistory) project.conversationHistory = []
+      project.conversationHistory.push(confirmMsg)
+      ProjectStorage.saveProject(project)
+      console.log('[PlanInput] 确认消息已添加到对话历史')
+      
+      // 触发组件更新
+      historyVersion.value++
+      console.log('[PlanInput] 历史版本已更新:', historyVersion.value)
+      return // 如果成功修改了卡片，就不需要生成新卡片了
+    } else {
+      console.warn('[PlanInput] 卡片修改失败:', result.message)
+    }
+  } else {
+    console.log('[PlanInput] 未检测到卡片修改指令，继续处理新卡片生成')
+  }
 
   // 获取最新的用户输入
   let userInput = project.description
@@ -326,6 +415,7 @@ watch(chatHistory, (newHistory, oldHistory) => {
     oldHistory: oldHistory
   })
   
+  // 检查是否有新消息添加
   if (newHistory && oldHistory && newHistory.length > oldHistory.length) {
     // 检查是否有新的AI回复完成
     const newMessages = newHistory.slice(oldHistory.length)
@@ -336,13 +426,47 @@ watch(chatHistory, (newHistory, oldHistory) => {
     )
     
     if (completedAIResponse) {
-      console.log('[PlanInput] 检测到AI回复完成:', completedAIResponse)
+      console.log('[PlanInput] 检测到新AI回复完成:', completedAIResponse)
       const parsedContent = parseAIContent(completedAIResponse.content)
       console.log('[PlanInput] 解析后的内容:', parsedContent)
       processAIResponse(parsedContent)
       
       // AI 回复完成后自动滚动到底部
       nextTick(() => { scrollToBottom() })
+    }
+  }
+  
+  // 检查是否有现有消息状态从loading变为done
+  if (newHistory && oldHistory && newHistory.length === oldHistory.length) {
+    console.log('[PlanInput] 检查消息状态变化')
+    
+    // 找到状态从loading变为done的AI消息
+    for (let i = 0; i < newHistory.length; i++) {
+      const newMsg = newHistory[i]
+      const oldMsg = oldHistory[i]
+      
+      if (newMsg && oldMsg && 
+          newMsg.role === 'assistant' && 
+          newMsg.status === 'done' && 
+          oldMsg.status === 'loading') {
+        
+        console.log('[PlanInput] 检测到AI消息状态变化:', {
+          old: oldMsg,
+          new: newMsg
+        })
+        
+        // 添加延迟确保AI回复完全加载
+        setTimeout(() => {
+          const parsedContent = parseAIContent(newMsg.content)
+          console.log('[PlanInput] 延迟解析后的内容:', parsedContent)
+          processAIResponse(parsedContent)
+          
+          // AI 回复完成后自动滚动到底部
+          nextTick(() => { scrollToBottom() })
+        }, 100) // 延迟100ms确保内容完全加载
+        
+        break
+      }
     }
   }
 }, { deep: true })
@@ -353,6 +477,61 @@ const handleClickOutside = (event) => {
     if (!inputValue.value.trim() && !isFocused.value) {
       collapse()
     }
+  }
+}
+
+// 测试卡片修改功能
+const testCardModification = () => {
+  console.log('[PlanInput] 开始测试卡片修改功能')
+  
+  const project = ProjectStorage.getProject(props.projectId)
+  if (!project) {
+    console.warn('[PlanInput] 测试失败：项目不存在')
+    return
+  }
+  
+  console.log('[PlanInput] 项目卡片:', project.cards)
+  
+  // 查找basic-info卡片
+  const basicInfoCard = project.cards.find(card => card.type === 'basic-info')
+  if (!basicInfoCard) {
+    console.warn('[PlanInput] 测试失败：未找到basic-info卡片')
+    return
+  }
+  
+  console.log('[PlanInput] 找到basic-info卡片:', basicInfoCard)
+  console.log('[PlanInput] 当前projectCardStore状态:', {
+    projectCards: projectCardStore.projectCards,
+    updateVersion: projectCardStore.updateVersion
+  })
+  
+  // 直接使用projectCardStore更新卡片数据
+  const updateData = {
+    formData: {
+      destination: '北京',
+      title: '北京五日游',
+      duration: 5,
+      budget: 5000
+    }
+  }
+  
+  console.log('[PlanInput] 准备更新卡片数据:', updateData)
+  const success = projectCardStore.updateCardData(basicInfoCard.id, updateData)
+  
+  if (success) {
+    console.log('[PlanInput] 卡片更新成功')
+    console.log('[PlanInput] 更新后的projectCardStore状态:', {
+      projectCards: projectCardStore.projectCards,
+      updateVersion: projectCardStore.updateVersion
+    })
+    
+    // 保存到项目
+    basicInfoCard.data = { ...basicInfoCard.data, ...updateData }
+    ProjectStorage.saveProject(project)
+    
+    console.log('[PlanInput] 测试完成，请检查BasicInfoCard是否更新')
+  } else {
+    console.warn('[PlanInput] 卡片更新失败')
   }
 }
 
@@ -378,7 +557,8 @@ defineExpose({
   expand,
   collapse,
   toggleFullscreen,
-  clearHistory
+  clearHistory,
+  testCardModification
 })
 </script>
 

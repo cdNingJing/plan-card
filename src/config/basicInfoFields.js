@@ -36,10 +36,8 @@ export const basicInfoFieldsConfig = {
       {
         key: 'travelers',
         label: '出行人数',
-        type: 'number',
-        min: 1,
-        max: 10,
-        placeholder: '请输入出行人数',
+        type: 'text',
+        placeholder: '出行人数',
         required: false
       },
       {

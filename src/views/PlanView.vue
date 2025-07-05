@@ -38,17 +38,21 @@ import SmartCard from '../components/SmartCard.vue'
 import PlanInput from '../components/PlanInput.vue'
 import { ProjectStorage, ProjectModel } from '../utils/storage.js'
 import { useCardStore } from '../stores/cardStore.js'
+import { useProjectCardStore } from '../stores/projectCardStore.js'
 import { getBasicInfoFields, basicInfoFieldsConfig } from '../config/basicInfoFields.js'
 
 const route = useRoute()
 const router = useRouter()
 const cardStore = useCardStore()
+const projectCardStore = useProjectCardStore()
 
 const userInput = ref('')
-const cards = ref([])
 const currentProject = ref(null)
 const conversationHistory = ref([])
 const showConversation = ref(true)
+
+// 使用projectCardStore的卡片数据
+const cards = computed(() => projectCardStore.projectCards)
 
 const planTitle = computed(() => {
   if (userInput.value.length > 30) {
@@ -97,10 +101,12 @@ const saveProject = () => {
       if (project) {
         currentProject.value = Object.assign(new ProjectModel(''), project)
         userInput.value = project.description
-        cards.value = project.cards || []
+        
+        // 使用projectCardStore设置卡片数据
+        projectCardStore.setProjectCards(projectId, project.cards || [])
         
         // 如果项目没有卡片，根据描述和AI回复生成卡片
-        if (!cards.value || cards.value.length === 0) {
+        if (!project.cards || project.cards.length === 0) {
           console.log('项目没有卡片，根据描述和AI回复生成卡片...')
           // 尝试从对话历史中找到AI的回复来分析场景
           let aiResponse = null
@@ -114,7 +120,7 @@ const saveProject = () => {
           }
           
           const defaultCards = cardStore.generateCards(project.description, aiResponse)
-          cards.value = defaultCards
+          projectCardStore.setProjectCards(projectId, defaultCards)
           // 保存生成的卡片到项目
           if (defaultCards.length > 0) {
             saveProject()
@@ -146,20 +152,19 @@ const handleCardStateUpdate = (cardId, newState) => {
 }
 
 const handleCardDataUpdate = (cardId, newData) => {
-  // 更新卡片数据
-  const cardIndex = cards.value.findIndex(card => card.id === cardId)
-  if (cardIndex !== -1) {
-    cards.value[cardIndex].data = { ...cards.value[cardIndex].data, ...newData }
-    
-    // 如果newData包含isCompleted，则更新卡片的isCompleted状态
-    if (newData.hasOwnProperty('isCompleted')) {
-      cards.value[cardIndex].isCompleted = newData.isCompleted
-    }
-  }
+  console.log('[PlanView] 收到卡片数据更新事件:', { cardId, newData })
   
-  // 自动保存项目
-  if (currentProject.value) {
-    saveProject()
+  // 使用projectCardStore更新卡片数据
+  const success = projectCardStore.updateCardData(cardId, newData)
+  
+  if (success) {
+    console.log('[PlanView] 卡片数据更新成功')
+    // 自动保存项目
+    if (currentProject.value) {
+      saveProject()
+    }
+  } else {
+    console.warn('[PlanView] 卡片数据更新失败')
   }
 }
 
@@ -196,7 +201,7 @@ watch(() => route.query.projectId, (newId) => {
 // 监听当前项目变化，更新卡片显示
 watch(() => currentProject.value, (newProject) => {
   if (newProject) {
-    cards.value = newProject.cards || []
+    projectCardStore.setProjectCards(newProject.id, newProject.cards || [])
   }
 }, { deep: true })
 
@@ -211,16 +216,16 @@ onMounted(() => {
     try {
       const planData = JSON.parse(route.query.planData)
       userInput.value = planData.description || ''
-      cards.value = []
+      projectCardStore.setProjectCards('', [])
       if (planData.title) {
         currentProject.value = { title: planData.title, description: planData.description, cards: [] }
       }
       // 生成卡片
       if (planData.type && planData.title) {
         const scene = planData.type
-        const cardTypes = cards.value.length > 0 ? cards.value.map(c => c.type) : undefined
+        const cardTypes = projectCardStore.projectCards.length > 0 ? projectCardStore.projectCards.map(c => c.type) : undefined
         const generatedCards = cardStore.generateCardsByScene(scene, cardTypes || undefined)
-        cards.value = generatedCards
+        projectCardStore.setProjectCards('', generatedCards)
         if (currentProject.value) {
           currentProject.value.cards = generatedCards
         }
@@ -280,10 +285,10 @@ onMounted(() => {
       console.log('找到已存在的项目，加载中...')
       currentProject.value = Object.assign(new ProjectModel(''), existingProject)
       userInput.value = existingProject.description
-      cards.value = existingProject.cards || []
+      projectCardStore.setProjectCards(existingProject.id, existingProject.cards || [])
       
       // 如果项目没有卡片，根据描述和AI回复生成默认卡片
-      if (!cards.value || cards.value.length === 0) {
+      if (!existingProject.cards || existingProject.cards.length === 0) {
         console.log('已存在项目没有卡片，根据描述和AI回复生成默认卡片...')
         // 尝试从对话历史中找到AI的回复来分析场景
         let aiResponse = null
@@ -297,7 +302,7 @@ onMounted(() => {
         }
         
         const defaultCards = cardStore.generateCards(existingProject.description, aiResponse)
-        cards.value = defaultCards
+        projectCardStore.setProjectCards(existingProject.id, defaultCards)
         // 保存生成的卡片到项目
         if (defaultCards.length > 0) {
           saveProject()
@@ -318,7 +323,7 @@ onMounted(() => {
       userInput.value = route.query.input
       // 对于新项目，暂时没有AI回复，使用关键词检测
       const newCards = cardStore.generateCards(route.query.input)
-      cards.value = newCards
+      projectCardStore.setProjectCards('', newCards)
       
       // 生成卡片后自动保存项目
       if (newCards.length > 0) {

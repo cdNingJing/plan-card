@@ -169,27 +169,20 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
-import { getBasicInfoFields } from '@/config/basicInfoFields.js'
+import { useProjectCardStore } from '@/stores/projectCardStore.js'
 import { UserInfoStorage } from '@/utils/userInfoStorage.js'
+import { getBasicInfoFields, basicInfoFieldsConfig } from '@/config/basicInfoFields.js'
 
 const props = defineProps({
+  scenario: { type: String, default: 'general' },
+  initialData: { type: Object, default: () => ({}) },
   // 支持直接传入字段配置（向后兼容）
   fields: {
     type: Array,
     default: () => []
   },
-  // 支持传入场景类型
-  scenario: {
-    type: String,
-    default: 'general'
-  },
   // 支持传入完整配置
   config: {
-    type: Object,
-    default: () => ({})
-  },
-  // 初始数据
-  initialData: {
     type: Object,
     default: () => ({})
   }
@@ -197,36 +190,52 @@ const props = defineProps({
 
 const emit = defineEmits(['submit', 'change', 'collapse'])
 
+const projectCardStore = useProjectCardStore()
+
 // 表单数据
 const formData = ref({})
 const validationErrors = ref([])
 
 // 计算显示的字段配置
 const displayFields = computed(() => {
+  console.log('[BasicInfoCard] displayFields computed, props:', {
+    fields: props.fields,
+    config: props.config,
+    scenario: props.scenario
+  })
+  
   // 优先使用直接传入的字段配置（向后兼容）
-  if (props.fields && props.fields.length > 0) {
+  if (props.fields && Array.isArray(props.fields) && props.fields.length > 0) {
+    console.log('[BasicInfoCard] 使用props.fields:', props.fields)
     return props.fields
   }
   
   // 使用配置中的字段
-  if (props.config.fields && props.config.fields.length > 0) {
+  if (props.config && props.config.fields && Array.isArray(props.config.fields) && props.config.fields.length > 0) {
+    console.log('[BasicInfoCard] 使用props.config.fields:', props.config.fields)
     return props.config.fields
   }
   
   // 根据场景获取字段配置
   const scenarioConfig = getBasicInfoFields(props.scenario)
+  console.log('[BasicInfoCard] 使用场景配置:', scenarioConfig)
   return scenarioConfig.fields || []
 })
 
 // 计算配置信息
 const config = computed(() => {
+  console.log('[BasicInfoCard] config computed, props.config:', props.config)
+  
   // 优先使用直接传入的配置
-  if (Object.keys(props.config).length > 0) {
+  if (props.config && Object.keys(props.config).length > 0) {
+    console.log('[BasicInfoCard] 使用props.config:', props.config)
     return props.config
   }
   
   // 根据场景获取配置
-  return getBasicInfoFields(props.scenario)
+  const scenarioConfig = getBasicInfoFields(props.scenario)
+  console.log('[BasicInfoCard] 使用场景配置:', scenarioConfig)
+  return scenarioConfig
 })
 
 // 初始化表单数据
@@ -360,6 +369,40 @@ watch(isCompleted, (newCompleted) => {
 // 监听字段配置变化，重新初始化表单
 watch(displayFields, () => {
   initFormData()
+}, { deep: true })
+
+// 监听projectCardStore的变化，更新表单数据
+watch(() => projectCardStore.updateVersion, (newVersion, oldVersion) => {
+  if (newVersion !== oldVersion) {
+    console.log('[BasicInfoCard] 检测到projectCardStore更新:', newVersion)
+    
+    // 查找当前场景的basic-info卡片
+    const basicInfoCards = projectCardStore.getCardsByType('basic-info')
+    const currentCard = basicInfoCards.find(card => 
+      card.data.scenario === props.scenario
+    )
+    
+    if (currentCard && currentCard.data.formData) {
+      console.log('[BasicInfoCard] 找到匹配的卡片，更新表单数据:', currentCard.data.formData)
+      Object.assign(formData.value, currentCard.data.formData)
+      console.log('[BasicInfoCard] 更新后的表单数据:', formData.value)
+    }
+  }
+}, { immediate: true })
+
+// 监听初始数据变化，更新表单数据（保持向后兼容）
+watch(() => props.initialData, (newInitialData, oldInitialData) => {
+  console.log('[BasicInfoCard] 检测到initialData变化:', {
+    old: oldInitialData,
+    new: newInitialData,
+    hasData: newInitialData && Object.keys(newInitialData).length > 0
+  })
+  
+  if (newInitialData && Object.keys(newInitialData).length > 0) {
+    console.log('[BasicInfoCard] 更新表单数据:', newInitialData)
+    Object.assign(formData.value, newInitialData)
+    console.log('[BasicInfoCard] 更新后的表单数据:', formData.value)
+  }
 }, { deep: true })
 
 // 组件挂载时初始化
