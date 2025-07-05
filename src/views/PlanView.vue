@@ -23,9 +23,9 @@
     </main>
     
     <!-- 底部输入组件 -->
-    <BottomInput 
+    <PlanInput 
+      :projectId="currentProject?.id || ''"
       placeholder="继续添加需求或修改计划..."
-      @submit="handleNewInput"
     />
   </div>
 </template>
@@ -35,7 +35,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, User, Bot } from 'lucide-vue-next'
 import SmartCard from '../components/SmartCard.vue'
-import BottomInput from '../components/BottomInput.vue'
+import PlanInput from '../components/PlanInput.vue'
 import { ProjectStorage, ProjectModel } from '../utils/storage.js'
 import { useCardStore } from '../stores/cardStore.js'
 import { getBasicInfoFields, basicInfoFieldsConfig } from '../config/basicInfoFields.js'
@@ -123,29 +123,14 @@ const saveProject = () => {
         
         // 加载对话历史
         conversationHistory.value = project.conversationHistory || []
+        
+        // 设置当前项目ID
+        ProjectStorage.setCurrentProjectId(projectId)
       }
     }
   }
 
-  // 处理新输入
-  const handleNewInput = (input) => {
-    // 尝试从当前项目的对话历史中找到最新的AI回复
-    let aiResponse = null
-    if (currentProject.value && currentProject.value.conversationHistory) {
-      const lastAssistantMsg = currentProject.value.conversationHistory
-        .filter(msg => msg.role === 'assistant' && msg.status === 'done')
-        .pop()
-      if (lastAssistantMsg) {
-        aiResponse = lastAssistantMsg.content
-      }
-    }
-    
-    const newCards = cardStore.generateCards(input, aiResponse)
-    cards.value = [...cards.value, ...newCards]
-    
-    // 生成卡片后自动保存项目
-    saveProject()
-  }
+
 
 const handleCardStateUpdate = (cardId, newState) => {
   // 更新卡片状态
@@ -207,6 +192,13 @@ watch(() => route.query.projectId, (newId) => {
     loadProject(newId)
   }
 })
+
+// 监听当前项目变化，更新卡片显示
+watch(() => currentProject.value, (newProject) => {
+  if (newProject) {
+    cards.value = newProject.cards || []
+  }
+}, { deep: true })
 
 onMounted(() => {
   // 优先处理 projectId 路由参数，确保刷新时能加载项目

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, reactive } from 'vue'
 import { AIAgent, defaultTools } from '@/services/aiAgent.js'
 import { useCardStore } from './cardStore.js'
+import { ProjectStorage } from '../utils/storage.js'
 
 export const useAgentStore = defineStore('agent', () => {
   // Agent 实例
@@ -146,6 +147,8 @@ export const useAgentStore = defineStore('agent', () => {
     
     // 设置回调函数
     agent.value.setCallback('onMessage', (message) => {
+      console.log('[agentStore] onMessage 回调:', message)
+      
       // 直接添加到messages数组
       messages.push({
         id: Date.now() + Math.random(),
@@ -157,6 +160,29 @@ export const useAgentStore = defineStore('agent', () => {
       
       if (message.role === 'assistant' && message.toolResult) {
         messages[messages.length - 1].toolResult = message.toolResult
+      }
+      
+      // 如果是AI回复，更新当前项目的对话历史
+      if (message.role === 'assistant') {
+        const currentProjectId = ProjectStorage.getCurrentProjectId()
+        console.log('[agentStore] 当前项目ID:', currentProjectId)
+        if (currentProjectId) {
+          const project = ProjectStorage.getProject(currentProjectId)
+          console.log('[agentStore] 获取到的项目:', project)
+          if (project && project.conversationHistory) {
+            // 找到对应的loading消息并更新
+            const loadingMsg = project.conversationHistory.find(msg => 
+              msg.role === 'assistant' && msg.status === 'loading'
+            )
+            console.log('[agentStore] 找到的loading消息:', loadingMsg)
+            if (loadingMsg) {
+              loadingMsg.content = message.content
+              loadingMsg.status = 'done'
+              console.log('[agentStore] 更新项目对话历史:', loadingMsg)
+              ProjectStorage.saveProject(project)
+            }
+          }
+        }
       }
     })
     
