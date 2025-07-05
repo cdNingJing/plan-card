@@ -89,13 +89,22 @@ const handleSubmit = (input) => {
   top: 0;
   left: 0;
   right: 0;
-  bottom: 60px;
+  bottom: 68px; /* 默认输入框高度 */
   overflow-y: auto;
   overflow-x: hidden;
   padding: 16px 12px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* 当输入框展开时，调整内容区域 */
+.main-content.input-expanded {
+  bottom: 50vh; /* 展开状态占用50vh */
+}
+
+.main-content.input-fullscreen {
+  bottom: 100vh; /* 全屏状态完全隐藏 */
 }
 
 .content-container {
@@ -168,6 +177,14 @@ const handleSubmit = (input) => {
     padding: 64px 24px;
   }
   
+  .main-content.input-expanded {
+    bottom: 50vh;
+  }
+  
+  .main-content.input-fullscreen {
+    bottom: 100vh;
+  }
+  
   .welcome-section {
     margin-bottom: 48px;
   }
@@ -207,6 +224,14 @@ const handleSubmit = (input) => {
     padding: 24px 16px;
   }
   
+  .main-content.input-expanded {
+    bottom: 60vh;
+  }
+  
+  .main-content.input-fullscreen {
+    bottom: 100vh;
+  }
+  
   .welcome-section h1 {
     font-size: 2.5rem;
   }
@@ -221,6 +246,14 @@ const handleSubmit = (input) => {
   .main-content {
     bottom: 60px;
     padding: 16px 12px;
+  }
+  
+  .main-content.input-expanded {
+    bottom: 70vh;
+  }
+  
+  .main-content.input-fullscreen {
+    bottom: 100vh;
   }
   
   .welcome-section {

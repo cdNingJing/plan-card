@@ -335,10 +335,19 @@ onMounted(() => {
   top: 56px;
   left: 0;
   right: 0;
-  bottom: 60px;
+  bottom: 68px; /* 默认输入框高度 */
   overflow-y: auto;
   overflow-x: hidden;
   padding: 12px;
+}
+
+/* 当输入框展开时，调整内容区域 */
+.plan-content.input-expanded {
+  bottom: 50vh; /* 展开状态占用50vh */
+}
+
+.plan-content.input-fullscreen {
+  bottom: 100vh; /* 全屏状态完全隐藏 */
 }
 
 .cards-container {
@@ -381,6 +390,14 @@ onMounted(() => {
     padding: 32px 24px;
   }
   
+  .plan-content.input-expanded {
+    bottom: 50vh;
+  }
+  
+  .plan-content.input-fullscreen {
+    bottom: 100vh;
+  }
+  
   .cards-container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
@@ -407,6 +424,14 @@ onMounted(() => {
     top: 64px;
     bottom: 64px;
     padding: 16px;
+  }
+  
+  .plan-content.input-expanded {
+    bottom: 60vh;
+  }
+  
+  .plan-content.input-fullscreen {
+    bottom: 100vh;
   }
   
   .cards-container {
@@ -446,6 +471,14 @@ onMounted(() => {
     top: 52px;
     bottom: 60px;
     padding: 8px;
+  }
+  
+  .plan-content.input-expanded {
+    bottom: 70vh;
+  }
+  
+  .plan-content.input-fullscreen {
+    bottom: 100vh;
   }
   
   .cards-container {
