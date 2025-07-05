@@ -130,7 +130,8 @@ import {
 
 const props = defineProps({
   projectId: { type: String, required: true },
-  placeholder: { type: String, default: '继续补充、完善或修改您的计划...' }
+  placeholder: { type: String, default: '继续补充、完善或修改您的计划...' },
+  scenario: { type: String, default: 'travel' }
 })
 
 const planAgentStore = usePlanAgentStore()
@@ -295,7 +296,7 @@ const handleSubmit = async () => {
     sendUserMessage(input)
     nextTick(() => { scrollToBottom() })
     try {
-      await planAgentStore.sendMessage(input, props.projectId, true) // 使用新的对话专用提示词
+      await planAgentStore.sendMessage(input, props.projectId, true, props.scenario) // 使用新的对话专用提示词
     } catch (error) {
       // 错误处理略
       console.warn('[PlanInput] planAgentStore.sendMessage error', error)

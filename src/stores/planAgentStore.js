@@ -71,18 +71,19 @@ export const usePlanAgentStore = defineStore('planAgent', () => {
           const project = ProjectStorage.getProject(currentProjectId)
           console.log('[planAgentStore] 获取到的项目:', project)
           if (project && project.conversationHistory) {
-            // 找到对应的loading消息并更新
-            const loadingMsg = project.conversationHistory.find(msg => 
+            // 优先找status为loading的assistant消息
+            let loadingMsg = project.conversationHistory.find(msg => 
               msg.role === 'assistant' && msg.status === 'loading'
             )
-            console.log('[planAgentStore] 找到的loading消息:', loadingMsg)
+            // 如果找不到，找最后一条assistant消息
+            if (!loadingMsg) {
+              loadingMsg = [...project.conversationHistory].reverse().find(msg => msg.role === 'assistant')
+            }
+            console.log('[planAgentStore] 找到的AI消息:', loadingMsg)
             if (loadingMsg) {
               loadingMsg.content = message.content
               loadingMsg.status = 'done'
-              console.log('[planAgentStore] 更新项目对话历史:', loadingMsg)
               ProjectStorage.saveProject(project)
-              
-              // 触发组件更新
               updateVersion.value++
             }
           }
@@ -93,6 +94,25 @@ export const usePlanAgentStore = defineStore('planAgent', () => {
     agent.value.setCallback('onError', (err) => {
       error.value = err
       isProcessing.value = false
+      // 错误时也要将最后一条assistant消息设为error，避免loading一直转圈
+      const currentProjectId = ProjectStorage.getCurrentProjectId()
+      if (currentProjectId) {
+        const project = ProjectStorage.getProject(currentProjectId)
+        if (project && project.conversationHistory) {
+          let loadingMsg = project.conversationHistory.find(msg => 
+            msg.role === 'assistant' && msg.status === 'loading'
+          )
+          if (!loadingMsg) {
+            loadingMsg = [...project.conversationHistory].reverse().find(msg => msg.role === 'assistant')
+          }
+          if (loadingMsg) {
+            loadingMsg.status = 'error'
+            loadingMsg.content = err?.message || 'AI请求失败'
+            ProjectStorage.saveProject(project)
+            updateVersion.value++
+          }
+        }
+      }
     })
     
     agent.value.setCallback('onComplete', (message) => {
@@ -104,7 +124,7 @@ export const usePlanAgentStore = defineStore('planAgent', () => {
   }
   
   // 发送消息
-  const sendMessage = async (message, projectId = null, usePlanInputPrompt = true) => {
+  const sendMessage = async (message, projectId = null, usePlanInputPrompt = true, scenario = 'travel') => {
     if (!agent.value) {
       initializeAgent()
     }
@@ -113,7 +133,7 @@ export const usePlanAgentStore = defineStore('planAgent', () => {
     isProcessing.value = true
     
     try {
-      await agent.value.sendMessage(message, projectId, usePlanInputPrompt)
+      await agent.value.sendMessage(message, projectId, usePlanInputPrompt, scenario)
     } catch (err) {
       error.value = err
       console.error('PlanAgent 发送消息失败:', err)

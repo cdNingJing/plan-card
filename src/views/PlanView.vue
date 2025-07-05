@@ -26,6 +26,7 @@
     <PlanInput 
       :projectId="currentProject?.id || ''"
       placeholder="继续添加需求或修改计划..."
+      :scenario="getCurrentScenario()"
     />
   </div>
 </template>
@@ -189,6 +190,33 @@ const saveConversationHistory = () => {
 const findExistingProject = (input) => {
   const projects = ProjectStorage.getProjects()
   return projects.find(project => project.description === input)
+}
+
+// 获取当前场景
+const getCurrentScenario = () => {
+  if (!currentProject.value) return 'travel'
+  
+  // 从项目描述或卡片中推断场景
+  const description = currentProject.value.description || ''
+  const cards = currentProject.value.cards || []
+  
+  // 检查是否有basic-info卡片，从中获取场景信息
+  const basicInfoCard = cards.find(card => card.type === 'basic-info')
+  if (basicInfoCard && basicInfoCard.data && basicInfoCard.data.scenario) {
+    return basicInfoCard.data.scenario
+  }
+  
+  // 根据描述关键词推断场景
+  if (description.includes('旅行') || description.includes('旅游') || description.includes('机票') || description.includes('酒店')) {
+    return 'travel'
+  } else if (description.includes('礼物') || description.includes('送礼') || description.includes('购买')) {
+    return 'gift'
+  } else if (description.includes('会议') || description.includes('开会') || description.includes('邮箱')) {
+    return 'meeting'
+  }
+  
+  // 默认返回travel场景
+  return 'travel'
 }
 
 // 监听 projectId 路由参数变化，强制重新加载
