@@ -1,47 +1,64 @@
 <template>
   <div class="home-view">
-    <!-- 主体内容区域 -->
+    <!-- 主内容 -->
     <main class="main-content">
       <div class="content-container">
-        <div class="welcome-section">
-          <h1>智能规划助手</h1>
-          <p>描述您的需求，我们为您生成个性化的计划卡片</p>
-        </div>
-        
         <!-- 示例区域 -->
-        <div class="examples-section">
-          <h2>试试这些示例：</h2>
+        <section class="examples-section">
+          <h2>试试这些示例</h2>
           <div class="example-list">
             <button 
               v-for="example in examples" 
               :key="example.id"
-              class="example-btn"
               @click="handleExample(example.text)"
+              class="example-btn"
             >
               {{ example.text }}
             </button>
           </div>
-        </div>
+        </section>
+        
+        <!-- 项目列表 -->
+        <section class="projects-section">
+          <div class="section-header">
+            <h2>我的项目</h2>
+            <button 
+              v-if="hasProjects"
+              @click="clearAllProjects"
+              class="clear-all-btn"
+              title="清空所有项目"
+            >
+              清空全部
+            </button>
+          </div>
+          <ProjectList ref="projectListRef" @projects-updated="handleProjectsUpdated" />
+        </section>
       </div>
     </main>
     
     <!-- 底部输入组件 -->
     <BottomInput 
       ref="bottomInputRef"
+      placeholder="描述您的需求，如：我想和朋友一起去东京玩五天..."
       @submit="handleSubmit"
     />
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import BottomInput from '../components/BottomInput.vue'
+import ProjectList from '../components/ProjectList.vue'
+import { ProjectStorage } from '../utils/storage.js'
 
 const router = useRouter()
 const bottomInputRef = ref(null)
+const projectListRef = ref(null)
+const projectCount = ref(0)
 
-// 示例数据
+const hasProjects = computed(() => projectCount.value > 0)
+
 const examples = ref([
   {
     id: 1,
@@ -71,6 +88,33 @@ const handleSubmit = (input) => {
     query: { input }
   })
 }
+
+const handleProjectsUpdated = (count) => {
+  projectCount.value = count
+}
+
+const clearAllProjects = () => {
+  if (confirm('确定要清空所有项目吗？此操作无法撤销。')) {
+    const success = ProjectStorage.clearProjects()
+    if (success) {
+      projectListRef.value.loadProjects()
+      projectCount.value = 0
+    } else {
+      alert('清空失败，请重试')
+    }
+  }
+}
+
+// 初始化项目数量
+const initProjectCount = () => {
+  const projects = ProjectStorage.getProjects()
+  projectCount.value = projects.length
+}
+
+// 组件挂载时初始化
+onMounted(() => {
+  initProjectCount()
+})
 </script>
 
 <style scoped>
@@ -113,26 +157,6 @@ const handleSubmit = (input) => {
   text-align: center;
 }
 
-.welcome-section {
-  margin-bottom: 32px;
-}
-
-.welcome-section h1 {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #333333;
-  margin-bottom: 12px;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-}
-
-.welcome-section p {
-  font-size: 1rem;
-  color: #666666;
-  font-weight: 400;
-  line-height: 1.5;
-}
-
 .examples-section {
   margin-bottom: 32px;
 }
@@ -170,6 +194,41 @@ const handleSubmit = (input) => {
   border-color: #CCCCCC;
 }
 
+.projects-section {
+  margin-bottom: 32px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333333;
+  margin: 0;
+}
+
+.clear-all-btn {
+  padding: 6px 12px;
+  background: none;
+  border: 1px solid #E5E5E5;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: #666666;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.clear-all-btn:hover {
+  background: #FEF2F2;
+  border-color: #FECACA;
+  color: #DC2626;
+}
+
 /* 桌面端样式 */
 @media (min-width: 769px) {
   .main-content {
@@ -183,19 +242,6 @@ const handleSubmit = (input) => {
   
   .main-content.input-fullscreen {
     bottom: 100vh;
-  }
-  
-  .welcome-section {
-    margin-bottom: 48px;
-  }
-  
-  .welcome-section h1 {
-    font-size: 3rem;
-    margin-bottom: 16px;
-  }
-  
-  .welcome-section p {
-    font-size: 1.25rem;
   }
   
   .examples-section {
@@ -231,14 +277,6 @@ const handleSubmit = (input) => {
   .main-content.input-fullscreen {
     bottom: 100vh;
   }
-  
-  .welcome-section h1 {
-    font-size: 2.5rem;
-  }
-  
-  .welcome-section p {
-    font-size: 1.125rem;
-  }
 }
 
 /* 手机端样式 */
@@ -254,19 +292,6 @@ const handleSubmit = (input) => {
   
   .main-content.input-fullscreen {
     bottom: 100vh;
-  }
-  
-  .welcome-section {
-    margin-bottom: 24px;
-  }
-  
-  .welcome-section h1 {
-    font-size: 1.5rem;
-    margin-bottom: 8px;
-  }
-  
-  .welcome-section p {
-    font-size: 0.9rem;
   }
   
   .examples-section {

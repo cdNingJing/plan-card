@@ -40,17 +40,19 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, Trash2 } from 'lucide-vue-next'
 import SmartCard from '../components/SmartCard.vue'
 import BottomInput from '../components/BottomInput.vue'
+import { ProjectStorage, ProjectModel } from '../utils/storage.js'
 
 const route = useRoute()
 const router = useRouter()
 
 const userInput = ref('')
 const cards = ref([])
+const currentProject = ref(null)
 
 const planTitle = computed(() => {
   if (userInput.value.length > 30) {
@@ -201,48 +203,74 @@ const generateMockCards = (input) => {
         }
       }
     )
-  } else {
-    // 默认卡片
-    mockCards.push({
-      id: 'generic-default',
-      type: 'generic',
-      title: '智能分析结果',
-      status: 'expanded',
-      priority: 1,
-      data: {
-        title: '需求分析',
-        content: `您的需求：${input}\n\n我们正在为您准备相关的计划卡片...`,
-        type: 'analysis'
-      }
-    })
   }
   
   return mockCards
 }
 
-const handleCardUpdate = (cardId, updateData) => {
-  console.log('Card updated:', cardId, updateData)
+// 保存项目到本地存储
+const saveProject = () => {
+  if (!userInput.value.trim() || cards.value.length === 0) {
+    return
+  }
+
+  try {
+    if (currentProject.value) {
+      // 更新现有项目
+      currentProject.value.update({
+        description: userInput.value,
+        cards: cards.value
+      })
+      ProjectStorage.saveProject(currentProject.value.toJSON())
+    } else {
+      // 创建新项目
+      const project = new ProjectModel(userInput.value, cards.value)
+      currentProject.value = project
+      ProjectStorage.saveProject(project.toJSON())
+    }
+    
+    console.log('项目已保存到本地存储')
+  } catch (error) {
+    console.error('保存项目失败:', error)
+  }
 }
 
+// 加载现有项目
+const loadProject = (projectId) => {
+  if (projectId) {
+    const project = ProjectStorage.getProject(projectId)
+    if (project) {
+      currentProject.value = Object.assign(new ProjectModel(''), project)
+      userInput.value = project.description
+      cards.value = project.cards || []
+    }
+  }
+}
+
+// 处理新输入
 const handleNewInput = (input) => {
-  // 生成新的卡片并添加到现有卡片中
   const newCards = generateMockCards(input)
+  cards.value = [...cards.value, ...newCards]
   
-  // 为新卡片生成唯一ID
-  const maxId = cards.value.length > 0 ? Math.max(...cards.value.map(c => parseInt(c.id.split('-')[1]) || 0)) : 0
-  newCards.forEach((card, index) => {
-    card.id = `${card.type}-${maxId + index + 1}`
-  })
+  // 生成卡片后自动保存项目
+  saveProject()
+}
+
+// 监听卡片变化，自动保存
+watch(cards, () => {
+  if (currentProject.value && cards.value.length > 0) {
+    saveProject()
+  }
+}, { deep: true })
+
+const handleCardUpdate = (cardData) => {
+  // 处理卡片更新
+  console.log('卡片更新:', cardData)
   
-  // 添加到现有卡片中
-  cards.value.push(...newCards)
-  
-  // 更新URL参数
-  const allInputs = [userInput.value, input].filter(Boolean).join('; ')
-  router.replace({
-    name: 'plan',
-    query: { input: allInputs }
-  })
+  // 自动保存项目
+  if (currentProject.value) {
+    saveProject()
+  }
 }
 
 const goBack = () => {
@@ -250,14 +278,30 @@ const goBack = () => {
 }
 
 const clearPlan = () => {
-  cards.value = []
-  router.push('/')
+  if (currentProject.value && confirm('确定要清空当前计划吗？')) {
+    cards.value = []
+    userInput.value = ''
+    currentProject.value = null
+  }
 }
 
 onMounted(() => {
-  userInput.value = route.query.input || ''
-  if (userInput.value) {
-    cards.value = generateMockCards(userInput.value)
+  const projectId = route.query.projectId
+  const input = route.query.input
+  
+  if (projectId) {
+    // 加载现有项目
+    loadProject(projectId)
+  } else if (input) {
+    // 新建项目
+    userInput.value = input
+    const newCards = generateMockCards(input)
+    cards.value = newCards
+    
+    // 生成卡片后自动保存项目
+    if (newCards.length > 0) {
+      saveProject()
+    }
   }
 })
 </script>
