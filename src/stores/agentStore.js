@@ -30,10 +30,25 @@ export const useAgentStore = defineStore('agent', () => {
     agent.value = new AIAgent({
       systemPrompt: `你是一个智能的计划助手，专门帮助用户规划和管理各种任务。你的主要职责包括：
 
-1. **理解用户需求**：仔细分析用户的描述，识别他们的真实意图和需求
-2. **智能工具调用**：根据用户需求选择合适的工具来完成任务
-3. **创建计划卡片**：为不同类型的需求创建相应的功能卡片
-4. **提供专业建议**：基于用户的具体情况给出个性化的建议
+1. **场景识别与卡片规划**：根据用户描述，智能分析属于哪种场景（旅行、礼物、会议），并规划需要展示的卡片类型
+2. **理解用户需求**：仔细分析用户的描述，识别他们的真实意图和需求
+3. **智能工具调用**：根据用户需求选择合适的工具来完成任务
+4. **创建计划卡片**：为不同类型的需求创建相应的功能卡片
+5. **提供专业建议**：基于用户的具体情况给出个性化的建议
+
+**场景识别规则：**
+请根据用户的描述，判断其需求属于以下哪种场景之一：
+- **旅行场景 (travel)**：包含旅行、旅游、出行、游玩、度假、机票、酒店、景点等关键词
+- **礼物场景 (gift)**：包含礼物、送礼、礼品、购买、推荐、收礼人等关键词  
+- **会议场景 (meeting)**：包含会议、开会、讨论、提醒、参与者、日程等关键词
+- **通用场景 (general)**：其他类型的计划、安排、规划等需求
+
+**卡片规划规则：**
+每个场景必须包含以下卡片类型：
+- **旅行场景**：basic-info, flight, hotel, itinerary, packing
+- **礼物场景**：basic-info, profile, gift, budget, tips  
+- **会议场景**：basic-info, meeting, participants, reminder, feedback, attachments
+- **通用场景**：basic-info, suggestions, resources
 
 **可用工具说明：**
 - createPlanCard: 创建计划卡片（支持旅行、礼物、会议、通用四种类型）
@@ -54,6 +69,15 @@ export const useAgentStore = defineStore('agent', () => {
 - 让用户主动选择是否查看详细计划
 - 保持对话的连续性和自然性
 - **重要**：请先完整回复用户的问题，然后再使用工具。确保用户能看到你的完整回答。
+
+**场景分析格式：**
+当用户首次描述需求时，请在回复中包含场景分析结果，格式如下：
+{
+  "scene": "travel|gift|meeting|general",
+  "title": "本次计划的简明标题",
+  "cards": ["basic-info", "flight", "hotel", ...]
+}
+请确保 title 字段为本次计划的简明标题，便于用户区分不同项目。
 
 请以友好、专业的方式与用户交流，主动理解用户的需求，并及时使用合适的工具来帮助用户完成任务。`,
       ...config
@@ -91,17 +115,21 @@ export const useAgentStore = defineStore('agent', () => {
             description: args.description,
             type: args.type
           }
-          
-          // 延迟跳转，让用户看到AI的回复
+          // 恢复跳转逻辑，加入详细打印
           setTimeout(() => {
             if (typeof window !== 'undefined') {
               const url = new URL(window.location)
               url.pathname = '/plan'
               url.searchParams.set('planData', JSON.stringify(planData))
+              console.log('[createPlanCard] 跳转到:', url.toString())
+              console.log('[createPlanCard] planData:', planData)
+              console.log('[createPlanCard] 跳转前 window.location.href:', window.location.href)
               window.location.href = url.toString()
+              setTimeout(() => {
+                console.log('[createPlanCard] 跳转后 window.location.href:', window.location.href)
+              }, 500)
             }
-          }, 3000)
-          
+          }, 1000)
           return {
             success: true,
             message: '正在为您创建计划，即将跳转到计划页面...'

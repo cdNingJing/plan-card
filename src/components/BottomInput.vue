@@ -117,6 +117,7 @@
 import { ref, reactive, nextTick, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAgentStore } from '@/stores/agentStore.js'
+import { useCardStore } from '@/stores/cardStore.js'
 // import ConfirmDialog from './ConfirmDialog.vue' // 暂时移除
 import { 
   Maximize2, 
@@ -128,7 +129,7 @@ import {
   Send,
   RefreshCw
 } from 'lucide-vue-next'
-import { ProjectStorage } from '../utils/storage.js'
+import { ProjectStorage, ProjectModel } from '../utils/storage.js'
 
 const props = defineProps({
   placeholder: {
@@ -143,6 +144,7 @@ const props = defineProps({
 
 const router = useRouter()
 const agentStore = useAgentStore()
+const cardStore = useCardStore()
 
 const inputValue = ref(props.initialValue)
 const currentState = ref('default') // 'default', 'expanded', 'fullscreen'
@@ -252,10 +254,14 @@ function saveProjectAndTrigger(project) {
 
 // 发送消息
 function sendUserMessage(input) {
-  const projectId = ProjectStorage.getCurrentProjectId()
-  if (!projectId) return
-  const project = ProjectStorage.getProject(projectId)
-  if (!project) return
+  // 每次对话都新建项目，确保没有当前项目ID
+  ProjectStorage.setCurrentProjectId(null)
+  const project = new ProjectModel(input)
+  ProjectStorage.saveProject(project)
+  ProjectStorage.setCurrentProjectId(project.id)
+  const projectId = project.id
+  console.log('[BottomInput] 新项目已创建，id:', projectId)
+
   if (!project.conversationHistory) project.conversationHistory = []
 
   const userMsg = {
@@ -266,6 +272,7 @@ function sendUserMessage(input) {
     status: 'done'
   }
   project.conversationHistory.push(userMsg)
+  console.log('[BottomInput] 用户消息已写入项目', projectId, userMsg)
 
   const aiMsg = {
     id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
@@ -275,16 +282,67 @@ function sendUserMessage(input) {
     status: 'loading'
   }
   project.conversationHistory.push(aiMsg)
+  console.log('[BottomInput] AI消息(loading)已写入项目', projectId, aiMsg)
 
   saveProjectAndTrigger(project)
+  console.log('[BottomInput] 项目已保存', project)
 }
 
 // AI接口返回后写入AI回复
 function onAIResponse(aiText) {
   const projectId = ProjectStorage.getCurrentProjectId()
   if (!projectId) return
-  const project = ProjectStorage.getProject(projectId)
+  let project = ProjectStorage.getProject(projectId)
   if (!project || !project.conversationHistory) return
+
+  // 检查AI回复内容是否包含卡片生成场景（scene/gift/travel/meeting/general）
+  let scene = null, cards = null, projectTitle = null
+  const sceneMatch = aiText.match(/\{[\s\S]*?"scene"\s*:\s*"(gift|travel|meeting|general)"[\s\S]*?"cards"\s*:\s*\[([^\]]+)\][\s\S]*?\}/)
+  if (sceneMatch) {
+    try {
+      const jsonMatch = aiText.match(/\{[\s\S]*?"scene"[\s\S]*?"cards"[\s\S]*?\}/)
+      if (jsonMatch) {
+        const analysis = JSON.parse(jsonMatch[0])
+        scene = analysis.scene
+        cards = analysis.cards
+        projectTitle = analysis.title || project.description
+        // 插入卡片生成提示
+        const tipMsg = {
+          id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+          role: 'assistant',
+          content: '即将为您生成计划卡片...',
+          timestamp: new Date().toISOString(),
+          status: 'done'
+        }
+        project.conversationHistory.push(tipMsg)
+        console.log('[BottomInput] 立即插入卡片生成提示', tipMsg)
+        // 生成卡片并更新当前项目
+        const newCards = cardStore.generateCardsByScene(scene, cards)
+        project.title = projectTitle
+        project.cards = newCards
+        project.cardCount = newCards.length
+        console.log('[BottomInput] 已根据AI场景分析生成卡片并更新项目', project)
+        
+        // 检测到场景分析后，自动跳转到计划页面
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            const url = new URL(window.location)
+            url.pathname = '/plan'
+            url.searchParams.set('planData', JSON.stringify({
+              title: projectTitle,
+              description: project.description,
+              type: scene
+            }))
+            console.log('[BottomInput] 检测到场景分析，自动跳转到计划页面:', url.toString())
+            window.location.href = url.toString()
+          }
+        }, 2000) // 2秒后跳转，让用户看到AI回复
+      }
+    } catch (e) {
+      console.warn('[BottomInput] 场景分析JSON解析失败', e)
+    }
+  }
+
   let inserted = false
   for (let i = project.conversationHistory.length - 1; i >= 0; i--) {
     const msg = project.conversationHistory[i]
@@ -292,21 +350,12 @@ function onAIResponse(aiText) {
       msg.content = aiText
       msg.status = 'done'
       inserted = true
+      console.log('[BottomInput] AI回复内容写入', aiText)
       break
     }
   }
-  // AI回复后，插入一条"即将为您生成计划卡片..."的assistant消息
-  if (inserted) {
-    const tipMsg = {
-      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-      role: 'assistant',
-      content: '即将为您生成计划卡片...',
-      timestamp: new Date().toISOString(),
-      status: 'done'
-    }
-    project.conversationHistory.push(tipMsg)
-  }
   saveProjectAndTrigger(project)
+  console.log('[BottomInput] AI回复后项目已保存', project)
 }
 
 // 错误处理
@@ -367,6 +416,22 @@ watch(
       if (newMessage.role === 'assistant') {
         const aiText = extractAITextFromResponse(newMessage)
         onAIResponse(aiText)
+        // 暂时屏蔽跳转和页面刷新
+        // if (window.location.pathname === '/plan') {
+        //   setTimeout(() => {
+        //     const projectId = ProjectStorage.getCurrentProjectId()
+        //     if (projectId) {
+        //       const project = ProjectStorage.getProject(projectId)
+        //       if (project) {
+        //         const cardStore = useCardStore()
+        //         const newCards = cardStore.generateCards(project.description || '', aiText)
+        //         project.cards = newCards
+        //         ProjectStorage.saveProject(project)
+        //         window.location.reload()
+        //       }
+        //     }
+        //   }, 1000)
+        // }
         nextTick(() => { scrollToBottom() })
       }
     }

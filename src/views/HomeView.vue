@@ -50,8 +50,12 @@ import { useRouter } from 'vue-router'
 import BottomInput from '../components/BottomInput.vue'
 import ProjectList from '../components/ProjectList.vue'
 import { ProjectStorage, ProjectModel } from '../utils/storage.js'
+import { useAgentStore } from '../stores/agentStore.js'
+import { useCardStore } from '../stores/cardStore.js'
 
 const router = useRouter()
+const agentStore = useAgentStore()
+const cardStore = useCardStore()
 const bottomInputRef = ref(null)
 const projectListRef = ref(null)
 const projectCount = ref(0)
@@ -73,33 +77,28 @@ const examples = ref([
   }
 ])
 
-// 新增：首次对话时创建项目
-function ensureCurrentProject(input) {
-  let projectId = ProjectStorage.getCurrentProjectId()
-  let project = projectId ? ProjectStorage.getProject(projectId) : null
-  if (!project) {
-    // 创建新项目
-    const newProject = new ProjectModel(input)
-    ProjectStorage.saveProject(newProject)
-    ProjectStorage.setCurrentProjectId(newProject.id)
-    project = newProject
-  }
-  return project
+// 创建新项目并清除对话历史（已废弃，由 BottomInput 统一处理）
+function createNewProject(input) {
+  // 此函数已废弃，项目创建统一由 BottomInput 处理
+  console.warn('createNewProject 已废弃，请使用 BottomInput 的项目创建逻辑')
+  return null
 }
 
 const handleExample = (text) => {
-  // 新增：确保有当前项目
-  ensureCurrentProject(text)
-  // 设置输入框的值
+  // 设置输入框的值，让 BottomInput 来处理项目创建
   bottomInputRef.value.setValue(text)
-  // 展开输入框以显示对话界面
+  // 清空首页对话历史
+  agentStore.clearHistory()
+  // 展开输入框
   bottomInputRef.value.expand()
-  // 聚焦到输入框
+  // 聚焦到输入框并自动发送
   nextTick(() => {
     const inputRef = bottomInputRef.value.$refs?.inputRef
     if (inputRef) {
       inputRef.focus()
     }
+    // 自动发送消息，让 BottomInput 创建项目
+    bottomInputRef.value.handleSubmit()
   })
 }
 

@@ -15,6 +15,7 @@
         >
           <SmartCard 
             :card="card"
+            :requiredFields="getRequiredFields(card)"
             @update-state="handleCardStateUpdate"
             @update-data="handleCardDataUpdate"
           />
@@ -38,6 +39,7 @@ import SmartCard from '../components/SmartCard.vue'
 import BottomInput from '../components/BottomInput.vue'
 import { ProjectStorage, ProjectModel } from '../utils/storage.js'
 import { useCardStore } from '../stores/cardStore.js'
+import { getBasicInfoFields, basicInfoFieldsConfig } from '../config/basicInfoFields.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -55,8 +57,6 @@ const planTitle = computed(() => {
   }
   return userInput.value || '我的计划'
 })
-
-
 
 // 保存项目到本地存储
 const saveProject = () => {
@@ -91,40 +91,62 @@ const saveProject = () => {
   }
 }
 
-// 加载现有项目
-const loadProject = (projectId) => {
-  if (projectId) {
-    const project = ProjectStorage.getProject(projectId)
-    if (project) {
-      currentProject.value = Object.assign(new ProjectModel(''), project)
-      userInput.value = project.description
-      cards.value = project.cards || []
-      
-      // 如果项目没有卡片，根据描述生成默认卡片
-      if (!cards.value || cards.value.length === 0) {
-        console.log('项目没有卡片，根据描述生成默认卡片...')
-        const defaultCards = cardStore.generateCards(project.description)
-        cards.value = defaultCards
-        // 保存生成的卡片到项目
-        if (defaultCards.length > 0) {
-          saveProject()
+  // 加载现有项目
+  const loadProject = (projectId) => {
+    if (projectId) {
+      const project = ProjectStorage.getProject(projectId)
+      if (project) {
+        currentProject.value = Object.assign(new ProjectModel(''), project)
+        userInput.value = project.description
+        cards.value = project.cards || []
+        
+        // 如果项目没有卡片，根据描述和AI回复生成卡片
+        if (!cards.value || cards.value.length === 0) {
+          console.log('项目没有卡片，根据描述和AI回复生成卡片...')
+          // 尝试从对话历史中找到AI的回复来分析场景
+          let aiResponse = null
+          if (project.conversationHistory && project.conversationHistory.length > 0) {
+            const lastAssistantMsg = project.conversationHistory
+              .filter(msg => msg.role === 'assistant' && msg.status === 'done')
+              .pop()
+            if (lastAssistantMsg) {
+              aiResponse = lastAssistantMsg.content
+            }
+          }
+          
+          const defaultCards = cardStore.generateCards(project.description, aiResponse)
+          cards.value = defaultCards
+          // 保存生成的卡片到项目
+          if (defaultCards.length > 0) {
+            saveProject()
+          }
         }
+        
+        // 加载对话历史
+        conversationHistory.value = project.conversationHistory || []
       }
-      
-      // 加载对话历史
-      conversationHistory.value = project.conversationHistory || []
     }
   }
-}
 
-// 处理新输入
-const handleNewInput = (input) => {
-  const newCards = cardStore.generateCards(input)
-  cards.value = [...cards.value, ...newCards]
-  
-  // 生成卡片后自动保存项目
-  saveProject()
-}
+  // 处理新输入
+  const handleNewInput = (input) => {
+    // 尝试从当前项目的对话历史中找到最新的AI回复
+    let aiResponse = null
+    if (currentProject.value && currentProject.value.conversationHistory) {
+      const lastAssistantMsg = currentProject.value.conversationHistory
+        .filter(msg => msg.role === 'assistant' && msg.status === 'done')
+        .pop()
+      if (lastAssistantMsg) {
+        aiResponse = lastAssistantMsg.content
+      }
+    }
+    
+    const newCards = cardStore.generateCards(input, aiResponse)
+    cards.value = [...cards.value, ...newCards]
+    
+    // 生成卡片后自动保存项目
+    saveProject()
+  }
 
 // 监听卡片变化，自动保存
 watch(cards, () => {
@@ -181,15 +203,48 @@ const saveConversationHistory = () => {
   }
 }
 
-
-
 // 查找已存在的项目
 const findExistingProject = (input) => {
   const projects = ProjectStorage.getProjects()
   return projects.find(project => project.description === input)
 }
 
+function getRequiredFields(card) {
+  if (card.type === 'basic-info') {
+    const scenario = card.data?.scenario || 'general'
+    const allFields = getBasicInfoFields(scenario).fields
+    return allFields.filter(f => f.required)
+  }
+  return null
+}
+
 onMounted(() => {
+  // 优先处理 planData 跳转
+  if (route.query.planData) {
+    try {
+      const planData = JSON.parse(route.query.planData)
+      userInput.value = planData.description || ''
+      cards.value = []
+      if (planData.title) {
+        currentProject.value = { title: planData.title, description: planData.description, cards: [] }
+      }
+      // 生成卡片
+      if (planData.type && planData.title) {
+        const scene = planData.type
+        const cardTypes = cards.value.length > 0 ? cards.value.map(c => c.type) : undefined
+        const generatedCards = cardStore.generateCardsByScene(scene, cardTypes || undefined)
+        cards.value = generatedCards
+        if (currentProject.value) {
+          currentProject.value.cards = generatedCards
+        }
+      }
+      // 可选：保存到本地项目
+      // ...
+      return
+    } catch (e) {
+      console.warn('planData 解析失败', e)
+    }
+  }
   const projectId = ProjectStorage.getCurrentProjectId()
   if (projectId) {
     const project = ProjectStorage.getProject(projectId)
@@ -203,8 +258,35 @@ onMounted(() => {
         ProjectStorage.saveProject(project)
       }
     }
-    // 加载现有项目
+    // 使用AI分析结果生成卡片
+    if (project) {
+      // 尝试从对话历史中找到AI的回复来分析场景
+      let aiResponse = null
+      if (project.conversationHistory && project.conversationHistory.length > 0) {
+        const lastAssistantMsg = project.conversationHistory
+          .filter(msg => msg.role === 'assistant' && msg.status === 'done')
+          .pop()
+        if (lastAssistantMsg) {
+          aiResponse = lastAssistantMsg.content
+        }
+      }
+      
+      // 使用AI分析结果生成卡片
+      const allCards = cardStore.generateCards(project.description || '', aiResponse)
+      project.cards = allCards
+      ProjectStorage.saveProject(project)
+    }
+    // 打印当前已生成的所有卡片及必选字段
+    console.log('[PlanView] 当前场景已生成卡片:', project.cards.map(card => ({
+      type: card.type,
+      title: card.title,
+      state: card.state,
+      requiredFields: getRequiredFields(card)
+    })))
     loadProject(projectId)
+    
+    // 项目保存后，清除当前项目ID，为下次对话做准备
+    ProjectStorage.setCurrentProjectId(null)
   } else if (route.query.input) {
     // 检查是否已有相同描述的项目
     const existingProject = findExistingProject(route.query.input)
@@ -216,10 +298,21 @@ onMounted(() => {
       userInput.value = existingProject.description
       cards.value = existingProject.cards || []
       
-      // 如果项目没有卡片，根据描述生成默认卡片
+      // 如果项目没有卡片，根据描述和AI回复生成默认卡片
       if (!cards.value || cards.value.length === 0) {
-        console.log('已存在项目没有卡片，根据描述生成默认卡片...')
-        const defaultCards = cardStore.generateCards(existingProject.description)
+        console.log('已存在项目没有卡片，根据描述和AI回复生成默认卡片...')
+        // 尝试从对话历史中找到AI的回复来分析场景
+        let aiResponse = null
+        if (existingProject.conversationHistory && existingProject.conversationHistory.length > 0) {
+          const lastAssistantMsg = existingProject.conversationHistory
+            .filter(msg => msg.role === 'assistant' && msg.status === 'done')
+            .pop()
+          if (lastAssistantMsg) {
+            aiResponse = lastAssistantMsg.content
+          }
+        }
+        
+        const defaultCards = cardStore.generateCards(existingProject.description, aiResponse)
         cards.value = defaultCards
         // 保存生成的卡片到项目
         if (defaultCards.length > 0) {
@@ -232,10 +325,14 @@ onMounted(() => {
       newUrl.searchParams.set('projectId', existingProject.id)
       newUrl.searchParams.delete('input')
       window.history.replaceState({}, '', newUrl)
+      
+      // 项目保存后，清除当前项目ID，为下次对话做准备
+      ProjectStorage.setCurrentProjectId(null)
     } else {
       // 新建项目
       console.log('创建新项目...')
       userInput.value = route.query.input
+      // 对于新项目，暂时没有AI回复，使用关键词检测
       const newCards = cardStore.generateCards(route.query.input)
       cards.value = newCards
       
@@ -243,12 +340,10 @@ onMounted(() => {
       if (newCards.length > 0) {
         saveProject()
       }
+      
+      // 项目保存后，清除当前项目ID，为下次对话做准备
+      ProjectStorage.setCurrentProjectId(null)
     }
-  }
-  
-  // 确保有当前项目ID
-  if (currentProject.value && !ProjectStorage.getCurrentProjectId()) {
-    ProjectStorage.setCurrentProjectId(currentProject.value.id)
   }
 })
 </script>
@@ -316,8 +411,6 @@ onMounted(() => {
   flex-direction: column;
   gap: 20px;
 }
-
-
 
 /* 计划标题样式已移除 */
 

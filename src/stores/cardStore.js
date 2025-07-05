@@ -17,6 +17,10 @@ export const useCardStore = defineStore('card', () => {
   
   // 当前解析的上下文
   const currentContext = ref({})
+  
+  // 当前场景和卡片配置
+  const currentScene = ref('general')
+  const currentCards = ref([])
 
   // 计算属性
   const visibleCards = computed(() => 
@@ -193,193 +197,135 @@ export const useCardStore = defineStore('card', () => {
     return context
   }
 
-  const detectScenario = (input) => {
-    if (input.includes('旅行') || input.includes('去') || input.includes('玩') || input.includes('东京') || input.includes('大阪') || input.includes('北京') || input.includes('上海')) {
-      return 'travel'
-    } else if (input.includes('礼物') || input.includes('送')) {
-      return 'gift'
-    } else if (input.includes('会议') || input.includes('提醒')) {
-      return 'meeting'
+  // 解析AI回复中的场景分析结果
+  const parseSceneAnalysis = (aiResponse) => {
+    try {
+      // 尝试从AI回复中提取JSON格式的场景分析
+      const jsonMatch = aiResponse.match(/\{[\s\S]*"scene"[\s\S]*"cards"[\s\S]*\}/)
+      if (jsonMatch) {
+        const analysis = JSON.parse(jsonMatch[0])
+        return {
+          scene: analysis.scene || 'general',
+          cards: analysis.cards || ['basic-info']
+        }
+      }
+    } catch (error) {
+      console.warn('解析场景分析失败:', error)
     }
-    return 'general'
+    
+    // 如果解析失败，使用关键词检测作为备选方案
+    return detectScenarioByKeywords(aiResponse)
+  }
+  
+  const detectScenarioByKeywords = (input) => {
+    // 增强礼物场景关键词识别
+    if (/礼物|送|买.*礼物|购买.*礼物|给.+买礼物|给.+送礼物/.test(input)) {
+      return {
+        scene: 'gift',
+        cards: ['basic-info', 'profile', 'gift', 'budget', 'tips']
+      }
+    } else if (input.includes('旅行') || input.includes('旅游') || input.includes('出行') || input.includes('游玩') || input.includes('度假') || input.includes('机票') || input.includes('酒店') || input.includes('景点')) {
+      return {
+        scene: 'travel',
+        cards: ['basic-info', 'flight', 'hotel', 'itinerary', 'packing']
+      }
+    } else if (input.includes('会议') || input.includes('开会') || input.includes('讨论') || input.includes('提醒') || input.includes('参与者') || input.includes('日程')) {
+      return {
+        scene: 'meeting',
+        cards: ['basic-info', 'meeting', 'participants', 'reminder', 'feedback', 'attachments']
+      }
+    }
+    return {
+      scene: 'general',
+      cards: ['basic-info', 'suggestions', 'resources']
+    }
+  }
+  
+  const detectScenario = (input) => {
+    const result = detectScenarioByKeywords(input)
+    return result.scene
   }
 
-  const generateCards = (input) => {
+  // 根据场景和卡片类型生成卡片
+  const generateCardsByScene = (scene, cardTypes) => {
     const cards = []
     
-    // 检测场景类型
-    const scenario = detectScenario(input)
-    
-    if (scenario === 'travel') {
-      // 旅行场景 - 基础信息卡片排在第一位
-      cards.push({
-        id: 'basic-info-travel',
-        type: 'basic-info',
-        title: '旅行基础信息',
-        state: 'collapsed',
-        data: {
-          scenario: 'travel'
-        }
-      })
-      
-
-      
-      cards.push({
-        id: 'flight',
-        type: 'flight',
-        title: '航班推荐',
-        state: 'collapsed',
-        data: generateCardData('flight')
-      })
-      
-      cards.push({
-        id: 'hotel',
-        type: 'hotel',
-        title: '酒店推荐',
-        state: 'collapsed',
-        data: generateCardData('hotel')
-      })
-      
-      cards.push({
-        id: 'itinerary',
-        type: 'itinerary',
-        title: '行程规划',
-        state: 'collapsed',
-        data: generateCardData('itinerary')
-      })
-      
-      cards.push({
-        id: 'packing',
-        type: 'packing',
-        title: '打包清单',
-        state: 'collapsed',
-        data: generateCardData('packing')
-      })
-    } else if (scenario === 'gift') {
-      // 礼物场景 - 基础信息卡片排在第一位
-      cards.push({
-        id: 'basic-info-gift',
-        type: 'basic-info',
-        title: '礼物推荐基础信息',
-        state: 'collapsed',
-        data: {
-          scenario: 'gift'
-        }
-      })
-      
-      cards.push({
-        id: 'profile',
-        type: 'profile',
-        title: '收礼人画像',
-        state: 'collapsed',
-        data: generateCardData('profile')
-      })
-      
-      cards.push({
-        id: 'gift',
-        type: 'gift',
-        title: '礼物推荐',
-        state: 'collapsed',
-        data: generateCardData('gift')
-      })
-      
-      cards.push({
-        id: 'budget',
-        type: 'budget',
-        title: '预算筛选',
-        state: 'collapsed',
-        data: generateCardData('budget')
-      })
-      
-      cards.push({
-        id: 'tips',
-        type: 'tips',
-        title: '贴心提示',
-        state: 'collapsed',
-        data: generateCardData('tips')
-      })
-    } else if (scenario === 'meeting') {
-      // 会议场景 - 基础信息卡片排在第一位
-      cards.push({
-        id: 'basic-info-meeting',
-        type: 'basic-info',
-        title: '会议基础信息',
-        state: 'collapsed',
-        data: {
-          scenario: 'meeting'
-        }
-      })
-      
-      cards.push({
-        id: 'meeting',
-        type: 'meeting',
-        title: '会议详情',
-        state: 'collapsed',
-        data: generateCardData('meeting')
-      })
-      
-      cards.push({
-        id: 'participants',
-        type: 'participants',
-        title: '参与者管理',
-        state: 'collapsed',
-        data: generateCardData('participants')
-      })
-      
-      cards.push({
-        id: 'reminder',
-        type: 'reminder',
-        title: '提醒设置',
-        state: 'collapsed',
-        data: generateCardData('reminder')
-      })
-      
-      cards.push({
-        id: 'feedback',
-        type: 'feedback',
-        title: '执行反馈',
-        state: 'collapsed',
-        data: generateCardData('feedback')
-      })
-      
-      cards.push({
-        id: 'attachments',
-        type: 'attachments',
-        title: '附件管理',
-        state: 'collapsed',
-        data: generateCardData('attachments')
-      })
-    } else {
-      // 通用场景 - 也包含基础信息卡片
-      cards.push({
-        id: 'basic-info-general',
-        type: 'basic-info',
-        title: '基础信息',
-        state: 'collapsed',
-        data: {
-          scenario: 'general'
-        }
-      })
-      
-      // 通用场景的其他卡片
-      cards.push({
-        id: 'suggestions',
-        type: 'suggestions',
-        title: '建议方案',
-        state: 'collapsed',
-        data: generateCardData('suggestions')
-      })
-      
-      cards.push({
-        id: 'resources',
-        type: 'resources',
-        title: '相关资源',
-        state: 'collapsed',
-        data: generateCardData('resources')
-      })
+    // 确保包含基础信息卡片
+    if (!cardTypes.includes('basic-info')) {
+      cardTypes.unshift('basic-info')
     }
     
+    cardTypes.forEach((cardType, index) => {
+      const card = createCardByType(cardType, scene, index)
+      if (card) {
+        cards.push(card)
+      }
+    })
+    
     return cards
+  }
+  
+  // 创建指定类型的卡片
+  const createCardByType = (cardType, scene, index) => {
+    const cardTitles = {
+      'basic-info': {
+        travel: '旅行基础信息',
+        gift: '礼物推荐基础信息', 
+        meeting: '会议基础信息',
+        general: '基础信息'
+      },
+      'flight': '航班推荐',
+      'hotel': '酒店推荐',
+      'itinerary': '行程规划',
+      'packing': '打包清单',
+      'profile': '收礼人画像',
+      'gift': '礼物推荐',
+      'budget': '预算筛选',
+      'tips': '贴心提示',
+      'meeting': '会议详情',
+      'participants': '参与者管理',
+      'reminder': '提醒设置',
+      'feedback': '执行反馈',
+      'attachments': '附件管理',
+      'suggestions': '建议方案',
+      'resources': '相关资源'
+    }
+    
+    const title = cardTitles[cardType]?.[scene] || cardTitles[cardType] || cardType
+    
+    return {
+      id: `${cardType}-${scene}-${index}`,
+      type: cardType,
+      title: title,
+      state: 'collapsed',
+      data: {
+        scenario: scene,
+        ...generateCardData(cardType)
+      }
+    }
+  }
+  
+  const generateCards = (input, aiResponse = null) => {
+    let scene = 'general'
+    let cardTypes = ['basic-info', 'suggestions', 'resources']
+    
+    // 如果有AI回复，尝试解析场景分析结果
+    if (aiResponse) {
+      const analysis = parseSceneAnalysis(aiResponse)
+      scene = analysis.scene
+      cardTypes = analysis.cards
+    } else {
+      // 使用关键词检测作为备选方案
+      const analysis = detectScenarioByKeywords(input)
+      scene = analysis.scene
+      cardTypes = analysis.cards
+    }
+    
+    // 更新当前场景和卡片配置
+    currentScene.value = scene
+    currentCards.value = cardTypes
+    
+    return generateCardsByScene(scene, cardTypes)
   }
 
   const generateCardData = (type) => {
@@ -615,6 +561,8 @@ export const useCardStore = defineStore('card', () => {
     cardData,
     inputHistory,
     currentContext,
+    currentScene,
+    currentCards,
     
     // 计算属性
     visibleCards,
@@ -625,6 +573,8 @@ export const useCardStore = defineStore('card', () => {
     
     // 方法
     generateCards,
+    generateCardsByScene,
+    parseSceneAnalysis,
     processInput,
     updateCardState,
     updateCardData,

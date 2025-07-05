@@ -13,7 +13,7 @@
         v-for="project in projects" 
         :key="project.id"
         class="project-card"
-        @click="openProject(project.id)"
+        @click="handleProjectClick(project.id)"
       >
         <div class="project-header">
           <h3 class="project-title">{{ project.title }}</h3>
@@ -110,11 +110,15 @@ const loadProjects = () => {
 }
 
 // 打开项目
-const openProject = (projectId) => {
-  router.push({
-    name: 'Plan',
-    query: { projectId }
-  })
+const handleProjectClick = (projectId) => {
+  // 1. 通过id获取项目数据
+  const project = ProjectStorage.getProject(projectId)
+  if (project) {
+    // 2. 设置为当前项目
+    ProjectStorage.setCurrentProjectId(projectId)
+    // 3. 跳转到计划页面（唯一保留的跳转入口）
+    router.push({ path: '/plan', query: { projectId } })
+  }
 }
 
 // 编辑项目
@@ -239,76 +243,50 @@ onMounted(() => {
   border-radius: 8px;
   padding: 16px;
   cursor: pointer;
-  transition: all 0.2s;
-}
-
-.project-card:hover {
-  border-color: #CCCCCC;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transform: translateY(-1px);
+  text-align: left;
 }
 
 .project-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 8px;
+  align-items: center;
 }
 
 .project-title {
-  margin: 0;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
-  color: #333333;
-  line-height: 1.4;
-  flex: 1;
-  margin-right: 8px;
+  color: #333;
+  margin: 0;
+  text-align: left;
+}
+
+.project-description {
+  color: #666;
+  margin: 8px 0 0 0;
+  font-size: 0.95rem;
+  text-align: left;
 }
 
 .project-actions {
   display: flex;
   gap: 4px;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.project-card:hover .project-actions {
-  opacity: 1;
 }
 
 .action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  padding: 6px;
   background: none;
   border: none;
   border-radius: 4px;
-  cursor: pointer;
   color: #666666;
-  transition: all 0.2s;
-}
-
-.action-btn:hover {
-  background: #F0F0F0;
-  color: #333333;
+  cursor: pointer;
 }
 
 .delete-btn:hover {
   background: #FEF2F2;
   color: #DC2626;
-}
-
-.project-description {
-  margin: 0 0 12px 0;
-  font-size: 0.875rem;
-  color: #666666;
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 .project-meta {
