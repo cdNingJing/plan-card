@@ -3,26 +3,49 @@
     <!-- 统计面板 -->
     <div class="stats-panel">
       <div class="stat-item">
-        <span class="stat-number">{{ planStore.totalPlans }}</span>
-        <span class="stat-label">总计划</span>
+        <div class="stat-icon">
+          <ClipboardList :size="24" />
+        </div>
+        <div class="stat-content">
+          <span class="stat-number">{{ planStore.totalPlans }}</span>
+          <span class="stat-label">总计划</span>
+        </div>
       </div>
       <div class="stat-item">
-        <span class="stat-number">{{ planStore.todoPlans.length }}</span>
-        <span class="stat-label">待办</span>
+        <div class="stat-icon">
+          <Clock :size="24" />
+        </div>
+        <div class="stat-content">
+          <span class="stat-number">{{ planStore.todoPlans.length }}</span>
+          <span class="stat-label">待办</span>
+        </div>
       </div>
       <div class="stat-item">
-        <span class="stat-number">{{ planStore.inProgressPlans.length }}</span>
-        <span class="stat-label">进行中</span>
+        <div class="stat-icon">
+          <Play :size="24" />
+        </div>
+        <div class="stat-content">
+          <span class="stat-number">{{ planStore.inProgressPlans.length }}</span>
+          <span class="stat-label">进行中</span>
+        </div>
       </div>
       <div class="stat-item">
-        <span class="stat-number">{{ planStore.completedPlans.length }}</span>
-        <span class="stat-label">已完成</span>
+        <div class="stat-icon">
+          <CheckCircle :size="24" />
+        </div>
+        <div class="stat-content">
+          <span class="stat-number">{{ planStore.completedPlans.length }}</span>
+          <span class="stat-label">已完成</span>
+        </div>
       </div>
     </div>
 
     <!-- 添加计划表单 -->
     <div class="add-plan-form">
-      <h3>✨ 添加新计划</h3>
+      <div class="form-header">
+        <Plus :size="20" />
+        <h3>添加新计划</h3>
+      </div>
       <form @submit.prevent="addNewPlan">
         <div class="form-group">
           <input 
@@ -46,13 +69,19 @@
             <option value="high">高优先级</option>
           </select>
         </div>
-        <button type="submit" class="add-btn">添加计划</button>
+        <button type="submit" class="add-btn">
+          <Plus :size="16" />
+          添加计划
+        </button>
       </form>
     </div>
 
     <!-- 计划列表 -->
     <div class="plans-list">
-      <h3>📝 我的计划</h3>
+      <div class="list-header">
+        <FileText :size="20" />
+        <h3>我的计划</h3>
+      </div>
       <div class="plans-grid">
         <div 
           v-for="plan in planStore.plans" 
@@ -65,17 +94,17 @@
             <div class="plan-actions">
               <button 
                 @click="planStore.togglePlanStatus(plan.id)"
-                class="status-btn"
+                class="action-btn status-btn"
                 :title="getStatusButtonTitle(plan.status)"
               >
-                {{ getStatusIcon(plan.status) }}
+                <component :is="getStatusIcon(plan.status)" :size="16" />
               </button>
               <button 
                 @click="planStore.deletePlan(plan.id)"
-                class="delete-btn"
+                class="action-btn delete-btn"
                 title="删除计划"
               >
-                🗑️
+                <Trash2 :size="16" />
               </button>
             </div>
           </div>
@@ -83,12 +112,19 @@
           <p class="plan-description">{{ plan.description }}</p>
           
           <div class="plan-meta">
-            <span class="priority-badge">{{ getPriorityText(plan.priority) }}</span>
-            <span class="status-badge">{{ getStatusText(plan.status) }}</span>
+            <div class="priority-badge">
+              <component :is="getPriorityIcon(plan.priority)" :size="12" />
+              <span>{{ getPriorityText(plan.priority) }}</span>
+            </div>
+            <div class="status-badge">
+              <component :is="getStatusIcon(plan.status)" :size="12" />
+              <span>{{ getStatusText(plan.status) }}</span>
+            </div>
           </div>
           
           <div class="plan-date">
-            创建于: {{ formatDate(plan.createdAt) }}
+            <Calendar :size="12" />
+            <span>创建于: {{ formatDate(plan.createdAt) }}</span>
           </div>
         </div>
       </div>
@@ -99,6 +135,22 @@
 <script setup>
 import { ref } from 'vue'
 import { usePlanStore } from '../stores/planStore'
+import { 
+  ClipboardList, 
+  Clock, 
+  Play, 
+  CheckCircle, 
+  Plus, 
+  FileText, 
+  Trash2, 
+  Calendar,
+  Circle,
+  PlayCircle,
+  CheckCircle2,
+  AlertCircle,
+  ArrowUp,
+  Minus
+} from 'lucide-vue-next'
 
 const planStore = usePlanStore()
 
@@ -130,11 +182,20 @@ const addNewPlan = () => {
 
 const getStatusIcon = (status) => {
   const icons = {
-    'todo': '⏳',
-    'progress': '🔄',
-    'completed': '✅'
+    'todo': Circle,
+    'progress': PlayCircle,
+    'completed': CheckCircle2
   }
-  return icons[status] || '⏳'
+  return icons[status] || Circle
+}
+
+const getPriorityIcon = (priority) => {
+  const icons = {
+    'low': Minus,
+    'medium': Minus,
+    'high': ArrowUp
+  }
+  return icons[priority] || Minus
 }
 
 const getStatusText = (status) => {
@@ -171,55 +232,80 @@ const formatDate = (dateString) => {
 
 <style scoped>
 .plan-card {
-  background: white;
-  border-radius: 16px;
-  padding: 30px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-  margin-bottom: 20px;
+  background: #FFFFFF;
+  border-radius: 8px;
+  border: 1px solid #E5E5E5;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
 }
 
 .stats-panel {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1px;
+  background: #E5E5E5;
+  margin-bottom: 32px;
 }
 
 .stat-item {
-  text-align: center;
-  padding: 20px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background: #FFFFFF;
+  transition: background-color 0.2s;
+}
+
+.stat-item:hover {
+  background: #F8F9FA;
+}
+
+.stat-icon {
+  color: #666666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
 }
 
 .stat-number {
-  display: block;
   font-size: 2rem;
-  font-weight: bold;
-  color: #667eea;
-  margin-bottom: 5px;
+  font-weight: 600;
+  color: #333333;
+  line-height: 1;
 }
 
 .stat-label {
-  font-size: 0.9rem;
-  color: #666;
+  font-size: 0.875rem;
+  color: #666666;
+  font-weight: 400;
 }
 
 .add-plan-form {
-  background: #f8f9ff;
-  padding: 25px;
-  border-radius: 12px;
-  margin-bottom: 30px;
+  background: #F8F9FA;
+  padding: 24px;
+  border-bottom: 1px solid #E5E5E5;
 }
 
-.add-plan-form h3 {
+.form-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 20px;
-  color: #333;
+}
+
+.form-header h3 {
+  color: #333333;
+  font-size: 1.25rem;
+  font-weight: 600;
 }
 
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 16px;
 }
 
 .form-group input,
@@ -227,162 +313,196 @@ const formatDate = (dateString) => {
 .form-group select {
   width: 100%;
   padding: 12px;
-  border: 2px solid #e1e5e9;
+  border: 1px solid #E5E5E5;
   border-radius: 8px;
   font-size: 14px;
-  transition: border-color 0.3s;
+  background: #FFFFFF;
+  color: #333333;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .form-group input:focus,
 .form-group textarea:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #333333;
+  box-shadow: 0 0 0 3px rgba(51, 51, 51, 0.1);
 }
 
 .add-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #333333;
+  color: #FFFFFF;
   border: none;
   padding: 12px 24px;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 16px;
-  font-weight: 600;
-  transition: transform 0.2s;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s, transform 0.1s;
 }
 
 .add-btn:hover {
-  transform: translateY(-2px);
+  background: #222222;
+  transform: translateY(-1px);
 }
 
-.plans-list h3 {
-  margin-bottom: 20px;
-  color: #333;
+.plans-list {
+  padding: 24px;
+}
+
+.list-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.list-header h3 {
+  color: #333333;
+  font-size: 1.25rem;
+  font-weight: 600;
 }
 
 .plans-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
 }
 
 .plan-item {
-  background: white;
-  border: 2px solid #e1e5e9;
-  border-radius: 12px;
+  background: #FFFFFF;
+  border: 1px solid #E5E5E5;
+  border-radius: 8px;
   padding: 20px;
-  transition: all 0.3s;
+  transition: all 0.2s;
   position: relative;
 }
 
 .plan-item:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
 }
 
 .plan-item.status-completed {
-  border-color: #4caf50;
-  background: #f8fff8;
+  border-color: #999999;
+  background: #FAFAFA;
 }
 
 .plan-item.status-progress {
-  border-color: #ff9800;
-  background: #fff8f0;
+  border-color: #666666;
+  background: #FFFFFF;
 }
 
 .plan-item.priority-high {
-  border-left: 4px solid #f44336;
+  border-left: 4px solid #333333;
 }
 
 .plan-item.priority-medium {
-  border-left: 4px solid #ff9800;
+  border-left: 4px solid #666666;
 }
 
 .plan-item.priority-low {
-  border-left: 4px solid #4caf50;
+  border-left: 4px solid #999999;
 }
 
 .plan-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
+  align-items: flex-start;
+  margin-bottom: 12px;
 }
 
 .plan-header h4 {
   margin: 0;
-  color: #333;
-  font-size: 1.2rem;
+  color: #333333;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.4;
+  flex: 1;
 }
 
 .plan-actions {
   display: flex;
-  gap: 8px;
+  gap: 4px;
+  margin-left: 12px;
 }
 
-.status-btn,
-.delete-btn {
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1.2rem;
-  padding: 5px;
+  padding: 6px;
   border-radius: 4px;
-  transition: background-color 0.2s;
+  color: #666666;
+  transition: all 0.2s;
 }
 
-.status-btn:hover,
+.action-btn:hover {
+  background: #F0F0F0;
+  color: #333333;
+}
+
 .delete-btn:hover {
-  background: #f0f0f0;
+  color: #DC3545;
 }
 
 .plan-description {
-  color: #666;
-  margin-bottom: 15px;
+  color: #666666;
+  margin-bottom: 16px;
   line-height: 1.5;
+  font-size: 0.875rem;
 }
 
 .plan-meta {
   display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .priority-badge,
 .status-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 0.8rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
   font-weight: 500;
-}
-
-.priority-badge {
-  background: #e3f2fd;
-  color: #1976d2;
-}
-
-.status-badge {
-  background: #f3e5f5;
-  color: #7b1fa2;
+  background: #F0F0F0;
+  color: #666666;
 }
 
 .plan-date {
-  font-size: 0.8rem;
-  color: #999;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: #999999;
 }
 
 @media (max-width: 768px) {
-  .plan-card {
-    padding: 20px;
-  }
-  
   .stats-panel {
     grid-template-columns: repeat(2, 1fr);
   }
   
   .plans-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .plan-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .plan-actions {
+    margin-left: 0;
   }
 }
 </style> 

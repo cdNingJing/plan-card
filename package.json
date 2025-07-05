@@ -9,9 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "vue": "^3.3.8",
+    "vue": "^3.4.0",
     "pinia": "^2.1.7",
-    "@vueuse/core": "^10.5.0"
+    "vue-router": "^4.2.5",
+    "@vueuse/core": "^10.5.0",
+    "lucide-vue-next": "^0.294.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.5.0",
