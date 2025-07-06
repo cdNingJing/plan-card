@@ -16,9 +16,9 @@
           <span v-if="field.required" class="required">*</span>
         </label>
         
-        <!-- 文本输入框 -->
+        <!-- 文本输入框/通用输入框 -->
         <input
-          v-if="field.type === 'text'"
+          v-if="field.type === 'text' || field.type === 'input'"
           :id="field.key"
           v-model="formData[field.key]"
           :placeholder="field.placeholder"
@@ -266,8 +266,32 @@ const debouncedAutoSave = debounce(autoSave, autoSaveDelay)
 
 // 处理输入变化
 const handleInputChange = (fieldKey, value) => {
-  // 更新表单数据
-  formData.value[fieldKey] = value
+  // 获取字段配置
+  const field = displayFields.value.find(f => f.key === fieldKey)
+  
+  // 根据字段类型处理值
+  let processedValue = value
+  
+  if (field && field.type === 'number') {
+    // 数字类型：转换为数字，确保在有效范围内
+    const numValue = parseInt(value) || 0
+    const min = field.min || 0
+    const max = field.max || 999
+    
+    if (numValue < min) {
+      processedValue = min
+    } else if (numValue > max) {
+      processedValue = max
+    } else {
+      processedValue = numValue
+    }
+    
+    // 更新表单数据
+    formData.value[fieldKey] = processedValue
+  } else {
+    // 其他类型：直接使用原值
+    formData.value[fieldKey] = value
+  }
   
   // 触发防抖自动保存
   debouncedAutoSave({ ...formData.value })
@@ -325,17 +349,30 @@ const initFormData = () => {
   displayFields.value.forEach(field => {
     let value = ''
     
-    // 优先级：props.initialData > savedInfo > field.defaultValue > ''
+    // 优先级：props.initialData > savedInfo > field.defaultValue > 默认值
     if (props.initialData[field.key] !== undefined) {
       value = props.initialData[field.key]
     } else if (savedInfo[field.key] !== undefined) {
       value = savedInfo[field.key]
     } else if (field.defaultValue !== undefined) {
       value = field.defaultValue
+    } else {
+      // 根据字段类型设置默认值
+      if (field.type === 'number') {
+        value = field.min || 1
+      } else if (field.type === 'checkbox') {
+        value = []
+      } else {
+        value = ''
+      }
     }
     
+    // 根据字段类型处理值
     if (field.type === 'checkbox') {
       data[field.key] = Array.isArray(value) ? value : []
+    } else if (field.type === 'number') {
+      // 确保数字字段是数字类型
+      data[field.key] = parseInt(value) || field.min || 1
     } else {
       data[field.key] = value
     }

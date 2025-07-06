@@ -36,21 +36,20 @@ export const basicInfoFieldsConfig = {
       {
         key: 'travelers',
         label: '出行人数',
-        type: 'text',
-        placeholder: '出行人数',
-        required: false
+        type: 'number',
+        placeholder: '请输入出行人数',
+        required: false,
+        min: 1,
+        max: 10,
+        defaultValue: 1,
+        description: '请输入1-10之间的正整数'
       },
       {
         key: 'budget',
-        label: '预算范围',
-        type: 'select',
+        label: '预算',
+        type: 'input',
         required: false,
-        placeholder: '请选择预算范围',
-        options: [
-          { value: 'budget', label: '经济型 (≤3000元)' },
-          { value: 'comfort', label: '舒适型 (3000-8000元)' },
-          { value: 'luxury', label: '豪华型 (>8000元)' }
-        ]
+        placeholder: '请输入预算（如8000元、预算不限等）'
       }
     ]
   },

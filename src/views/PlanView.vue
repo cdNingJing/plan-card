@@ -71,10 +71,8 @@ const saveProject = () => {
   try {
     if (currentProject.value) {
       // 更新现有项目
-      currentProject.value.update({
-        description: userInput.value,
-        cards: cards.value
-      })
+      currentProject.value.description = userInput.value
+      currentProject.value.cards = cards.value
       ProjectStorage.saveProject(currentProject.value.toJSON())
     } else {
       // 创建新项目
@@ -97,11 +95,14 @@ const saveProject = () => {
 
   // 加载现有项目
   const loadProject = (projectId) => {
+    console.log('[PlanView] loadProject 开始，projectId:', projectId)
     if (projectId) {
       const project = ProjectStorage.getProject(projectId)
+      console.log('[PlanView] 从存储中获取项目:', project ? '项目存在' : '项目不存在')
       if (project) {
         currentProject.value = Object.assign(new ProjectModel(''), project)
         userInput.value = project.description
+        console.log('[PlanView] 项目已加载到 currentProject:', currentProject.value.id)
         
         // 使用projectCardStore设置卡片数据
         projectCardStore.setProjectCards(projectId, project.cards || [])
@@ -133,7 +134,11 @@ const saveProject = () => {
         
         // 设置当前项目ID
         ProjectStorage.setCurrentProjectId(projectId)
+      } else {
+        console.warn('[PlanView] 项目不存在，projectId:', projectId)
       }
+    } else {
+      console.warn('[PlanView] projectId 为空')
     }
   }
 
@@ -251,8 +256,14 @@ onMounted(() => {
       // 生成卡片
       if (planData.type && planData.title) {
         const scene = planData.type
-        const cardTypes = projectCardStore.projectCards.length > 0 ? projectCardStore.projectCards.map(c => c.type) : undefined
-        const generatedCards = cardStore.generateCardsByScene(scene, cardTypes || undefined)
+        // 确保 cardTypes 是有效的数组
+        let cardTypes = ['basic-info', 'suggestions', 'resources'] // 默认值
+        if (projectCardStore.projectCards.length > 0) {
+          cardTypes = projectCardStore.projectCards.map(c => c.type)
+        }
+        // 解析用户输入，获取实体信息
+        const context = cardStore.parseUserInput(planData.description || '')
+        const generatedCards = cardStore.generateCardsByScene(scene, cardTypes, context)
         projectCardStore.setProjectCards('', generatedCards)
         if (currentProject.value) {
           currentProject.value.cards = generatedCards

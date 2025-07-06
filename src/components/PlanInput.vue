@@ -539,7 +539,8 @@ const testCardModification = () => {
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
   
-  const project = ProjectStorage.getProject(props.projectId)
+  console.log('[PlanInput] onMounted, props.projectId:', props.projectId)
+  const project = props.projectId ? ProjectStorage.getProject(props.projectId) : null
   console.log('[PlanInput] onMounted, 当前项目:', project ? JSON.parse(JSON.stringify(project)) : '项目不存在')
   
   // 初始化计划页面专用的 agent

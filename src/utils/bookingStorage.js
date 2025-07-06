@@ -49,6 +49,28 @@ class BookingStorage {
     }
   }
 
+  // 添加新酒店预订记录
+  addHotelBooking(bookingData) {
+    try {
+      const bookings = this.getAllHotelBookings()
+      const newBooking = {
+        id: this.generateBookingId(),
+        ...bookingData,
+        createdAt: new Date().toISOString(),
+        status: 'confirmed'
+      }
+      
+      bookings.unshift(newBooking) // 添加到开头
+      localStorage.setItem(this.hotelStorageKey, JSON.stringify(bookings))
+      
+      console.log('[BookingStorage] 酒店预订记录已保存:', newBooking)
+      return newBooking
+    } catch (error) {
+      console.error('[BookingStorage] 保存酒店预订记录失败:', error)
+      return null
+    }
+  }
+
   // 生成预订ID
   generateBookingId() {
     const timestamp = Date.now()

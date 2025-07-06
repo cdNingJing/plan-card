@@ -110,7 +110,7 @@
       <BasicInfoCard 
         v-else-if="card.type === 'basic-info'"
         :scenario="card.data.scenario || 'general'"
-        :initialData="card.data.formData || {}"
+        :initialData="getBasicInfoInitialData()"
         @submit="handleBasicInfoSubmit"
         @change="handleBasicInfoChange"
         @collapse="handleBasicInfoCollapse"
@@ -219,7 +219,7 @@
           <BasicInfoCard 
             v-if="card.type === 'basic-info'"
             :scenario="card.data.scenario || 'general'"
-            :initialData="card.data.formData || {}"
+            :initialData="getBasicInfoInitialData()"
             @submit="handleBasicInfoSubmit"
             @change="handleBasicInfoChange"
             @collapse="handleBasicInfoCollapse"
@@ -391,6 +391,47 @@ const handleBasicInfoChange = (formData) => {
     formData: formData,
     isCompleted: formData.isCompleted || false
   })
+}
+
+const getBasicInfoInitialData = () => {
+  // 优先级：formData > 直接字段 > 空对象
+  if (props.card.data.formData && Object.keys(props.card.data.formData).length > 0) {
+    console.log('[SmartCard] 使用 formData 作为 initialData:', props.card.data.formData)
+    return props.card.data.formData
+  }
+  
+  // 如果没有 formData，检查是否有直接字段（从用户输入解析的实体信息）
+  const directFields = {}
+  const travelFields = ['departure', 'destination', 'startDate', 'endDate', 'travelers']
+  const giftFields = ['recipient', 'occasion', 'budget', 'interests']
+  const meetingFields = ['meetingTitle', 'meetingDate', 'startTime', 'participants', 'duration', 'location']
+  
+  // 根据场景检查相关字段
+  const scenario = props.card.data.scenario || 'general'
+  let relevantFields = []
+  
+  if (scenario === 'travel') {
+    relevantFields = travelFields
+  } else if (scenario === 'gift') {
+    relevantFields = giftFields
+  } else if (scenario === 'meeting') {
+    relevantFields = meetingFields
+  }
+  
+  // 提取相关字段
+  relevantFields.forEach(field => {
+    if (props.card.data[field] !== undefined) {
+      directFields[field] = props.card.data[field]
+    }
+  })
+  
+  if (Object.keys(directFields).length > 0) {
+    console.log('[SmartCard] 使用直接字段作为 initialData:', directFields)
+    return directFields
+  }
+  
+  console.log('[SmartCard] 没有找到 initialData，使用空对象')
+  return {}
 }
 </script>
 

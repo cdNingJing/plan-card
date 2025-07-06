@@ -295,51 +295,73 @@ function onAIResponse(aiText) {
   let project = ProjectStorage.getProject(projectId)
   if (!project || !project.conversationHistory) return
 
-  // 检查AI回复内容是否包含卡片生成场景（scene/gift/travel/meeting/general）
+  // 使用 cardStore 的 parseSceneAnalysis 方法来解析AI回复
   let scene = null, cards = null, projectTitle = null
-  const sceneMatch = aiText.match(/\{[\s\S]*?"scene"\s*:\s*"(gift|travel|meeting|general)"[\s\S]*?"cards"\s*:\s*\[([^\]]+)\][\s\S]*?\}/)
-  if (sceneMatch) {
-    try {
-      const jsonMatch = aiText.match(/\{[\s\S]*?"scene"[\s\S]*?"cards"[\s\S]*?\}/)
-      if (jsonMatch) {
-        const analysis = JSON.parse(jsonMatch[0])
-        scene = analysis.scene
-        cards = analysis.cards
-        projectTitle = analysis.title || project.description
-        // 插入卡片生成提示
-        const tipMsg = {
-          id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-          role: 'assistant',
-          content: '即将为您生成计划卡片...',
-          timestamp: new Date().toISOString(),
-          status: 'done'
-        }
-        project.conversationHistory.push(tipMsg)
-        console.log('[BottomInput] 立即插入卡片生成提示', tipMsg)
-        // 生成卡片并更新当前项目
-        const newCards = cardStore.generateCardsByScene(scene, cards)
-        project.title = projectTitle
-        project.cards = newCards
-        project.cardCount = newCards.length
-        console.log('[BottomInput] 已根据AI场景分析生成卡片并更新项目', project)
-        
-        // 检测到场景分析后，自动跳转到计划页面
-        setTimeout(() => {
-          if (typeof window !== 'undefined') {
-            const url = new URL(window.location)
-            url.pathname = '/plan'
-            url.searchParams.set('planData', JSON.stringify({
-              title: projectTitle,
-              description: project.description,
-              type: scene
-            }))
-            console.log('[BottomInput] 检测到场景分析，自动跳转到计划页面:', url.toString())
-            window.location.href = url.toString()
-          }
-        }, 2000) // 2秒后跳转，让用户看到AI回复
+  try {
+    const analysis = cardStore.parseSceneAnalysis(aiText)
+    if (analysis && analysis.scene) {
+      scene = analysis.scene
+      cards = analysis.cards
+      projectTitle = analysis.title || project.description
+      
+      console.log('[BottomInput] 成功解析AI场景分析:', analysis)
+      
+      // 插入卡片生成提示
+      const tipMsg = {
+        id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+        role: 'assistant',
+        content: '即将为您生成计划卡片...',
+        timestamp: new Date().toISOString(),
+        status: 'done'
       }
-    } catch (e) {
-      console.warn('[BottomInput] 场景分析JSON解析失败', e)
+      project.conversationHistory.push(tipMsg)
+      console.log('[BottomInput] 立即插入卡片生成提示', tipMsg)
+      
+      // 生成卡片并更新当前项目
+      const validCards = Array.isArray(cards) ? cards : ['basic-info', 'suggestions', 'resources']
+      // 使用AI解析的实体信息，如果没有则使用本地解析
+      const context = analysis.entities ? { entities: analysis.entities } : { entities: cardStore.parseUserInput(project.description).entities }
+      const newCards = cardStore.generateCardsByScene(scene, validCards, context)
+      project.title = projectTitle
+      project.cards = newCards
+      project.cardCount = newCards.length
+      console.log('[BottomInput] 已根据AI场景分析生成卡片并更新项目', project)
+      
+      // 检测到场景分析后，自动跳转到计划页面
+      setTimeout(() => {
+        if (typeof window !== 'undefined') {
+          const url = new URL(window.location)
+          url.pathname = '/plan'
+          url.searchParams.set('projectId', project.id)
+          url.searchParams.set('planData', JSON.stringify({
+            title: projectTitle,
+            description: project.description,
+            type: scene
+          }))
+          console.log('[BottomInput] 检测到场景分析，自动跳转到计划页面:', url.toString())
+          window.location.href = url.toString()
+        }
+      }, 2000) // 2秒后跳转，让用户看到AI回复
+    }
+  } catch (e) {
+    console.warn('[BottomInput] 场景分析解析失败，使用备选方案:', e)
+    // 备选方案：使用关键词检测
+    const fallbackAnalysis = cardStore.detectScenarioByKeywords(aiText)
+    if (fallbackAnalysis && fallbackAnalysis.scene) {
+      scene = fallbackAnalysis.scene
+      cards = fallbackAnalysis.cards
+      projectTitle = project.description
+      
+      console.log('[BottomInput] 使用备选方案解析场景:', fallbackAnalysis)
+      
+      // 生成卡片并更新当前项目
+      const validCards = Array.isArray(cards) ? cards : ['basic-info', 'suggestions', 'resources']
+      const context = { entities: fallbackAnalysis.entities || {} }
+      const newCards = cardStore.generateCardsByScene(scene, validCards, context)
+      project.title = projectTitle
+      project.cards = newCards
+      project.cardCount = newCards.length
+      console.log('[BottomInput] 已根据备选方案生成卡片并更新项目', project)
     }
   }
 

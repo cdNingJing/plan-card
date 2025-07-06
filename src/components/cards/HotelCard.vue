@@ -240,6 +240,7 @@ import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { Building, Eye, Calendar, Info, CheckCircle } from 'lucide-vue-next'
 import { searchHotels, formatHotelData } from '@/api/hotelApi.js'
 import { useUserInfoStore } from '@/stores/userInfoStore.js'
+import { bookingStorage } from '@/utils/bookingStorage.js'
 
 const props = defineProps({
   data: {
@@ -305,11 +306,15 @@ const fetchHotels = async () => {
       departure_date = startDate.toISOString().split('T')[0]
     }
     
+    // 获取人数，确保是正整数
+    const travelers = parseInt(userInfo.travelers) || 1
+    const adults = Math.max(1, Math.min(10, travelers)) // 确保在1-10之间
+    
     const params = {
       location,
       departure_date,
       arrival_date,
-      adults: 1,
+      adults: adults,
       children: 0,
       rooms: 1
     }
@@ -343,19 +348,26 @@ onMounted(() => {
 })
 
 // 监听用户目的地、日期变化自动刷新酒店
-watch([
-  () => userInfoStore.destination,
-  () => userInfoStore.getScenarioInfo('travel').startDate,
-  () => userInfoStore.getScenarioInfo('travel').endDate
-], () => {
+watch(() => userInfoStore.getScenarioInfo('travel'), (newUserInfo, oldUserInfo) => {
   // 如果已有预订记录，不自动刷新酒店数据
   if (recentBookings.value.length > 0) {
     console.log('[HotelCard] 检测到已有预订记录，跳过自动刷新酒店数据')
     return
   }
   
-  fetchHotels()
-})
+  // 检查目的地、开始日期或结束日期是否有变化
+  const oldDestination = oldUserInfo?.destination
+  const newDestination = newUserInfo?.destination
+  const oldStartDate = oldUserInfo?.startDate
+  const newStartDate = newUserInfo?.startDate
+  const oldEndDate = oldUserInfo?.endDate
+  const newEndDate = newUserInfo?.endDate
+  
+  if (newDestination !== oldDestination || newStartDate !== oldStartDate || newEndDate !== oldEndDate) {
+    console.log('[HotelCard] 检测到目的地或日期变化，刷新酒店数据')
+    fetchHotels()
+  }
+}, { deep: true, immediate: false })
 
 const filteredHotels = computed(() => {
   return allHotels.value.filter(hotel => {
@@ -465,7 +477,7 @@ const confirmPayment = async () => {
     }
     
     // 保存预订记录到本地存储
-    saveHotelBooking(bookingData)
+    const savedBooking = saveHotelBooking(bookingData)
     
     // 更新最近的预订记录显示
     loadRecentBookings()
@@ -495,16 +507,13 @@ const confirmPayment = async () => {
 // 保存酒店预订记录到本地存储
 const saveHotelBooking = (bookingData) => {
   try {
-    const existingBookings = JSON.parse(localStorage.getItem('hotel_bookings') || '[]')
-    existingBookings.unshift(bookingData) // 添加到开头
-    
-    // 只保留最近10条记录
-    const updatedBookings = existingBookings.slice(0, 10)
-    
-    localStorage.setItem('hotel_bookings', JSON.stringify(updatedBookings))
-    console.log('[HotelCard] 酒店预订记录已保存到本地存储')
+    // 使用统一的bookingStorage工具
+    const savedBooking = bookingStorage.addHotelBooking(bookingData)
+    console.log('[HotelCard] 酒店预订记录已保存:', savedBooking)
+    return savedBooking
   } catch (error) {
     console.error('[HotelCard] 保存酒店预订记录失败:', error)
+    return null
   }
 }
 
@@ -599,8 +608,7 @@ const generateFilterOptions = (hotels) => {
 // 加载最近的预订记录
 const loadRecentBookings = () => {
   try {
-    const existingBookings = JSON.parse(localStorage.getItem('hotel_bookings') || '[]')
-    recentBookings.value = existingBookings.slice(0, 3) // 只显示最近3条
+    recentBookings.value = bookingStorage.getRecentHotelBookings(3) // 只显示最近3条
     console.log('[HotelCard] 加载最近的预订记录:', recentBookings.value)
   } catch (error) {
     console.error('[HotelCard] 加载预订记录失败:', error)

@@ -71,12 +71,76 @@ export const useAgentStore = defineStore('agent', () => {
 - **重要**：请先完整回复用户的问题，然后再使用工具。确保用户能看到你的完整回答。
 
 **场景分析格式：**
-当用户首次描述需求时，请在回复中包含场景分析结果，格式如下：
+当用户首次描述需求时，请在回复中包含场景分析结果，使用以下格式：
+
+<SCENE_ANALYSIS_START>
 {
   "scene": "travel|gift|meeting|general",
   "title": "本次计划的简明标题",
-  "cards": ["basic-info", "flight", "hotel", ...]
+  "cards": ["basic-info", "flight", "hotel", ...],
+  "entities": {
+    "departure": "出发地",
+    "destination": "目的地", 
+    "startDate": "开始日期 (YYYY-MM-DD)",
+    "endDate": "结束日期 (YYYY-MM-DD)",
+    "travelers": 人数,
+    "travelType": "旅行类型 (business|leisure)",
+    "budget": "预算金额",
+    "companions": ["同行人1", "同行人2"],
+    "duration": 天数,
+    "purpose": "旅行目的"
+  }
 }
+<SCENE_ANALYSIS_END>
+
+**字段说明：**
+- 必需字段：scene, title, cards
+- 可选字段：entities 中的所有字段都可以为空或省略
+- 空值处理：如果某个字段无法确定，请设置为空字符串 "" 或空数组 []
+- 默认值：travelers默认为1，duration默认为1
+
+**重要格式要求：**
+- 必须使用 <SCENE_ANALYSIS_START> 和 <SCENE_ANALYSIS_END> 标记包围JSON内容
+- 所有字符串值必须用双引号包围
+- 数字值（如travelers、duration）不要用引号包围
+- 数组值必须用方括号包围，元素用逗号分隔
+- 每个字段后必须有逗号，最后一个字段除外
+- 确保JSON格式完全正确，可以被JSON.parse()解析
+- 特别注意：空字符串值也要用双引号包围，如 "budget": ""
+
+**正确示例：**
+<SCENE_ANALYSIS_START>
+{
+  "scene": "travel",
+  "title": "成都到纽约7天之旅",
+  "cards": ["basic-info", "flight", "hotel", "itinerary", "packing"],
+  "entities": {
+    "departure": "成都",
+    "destination": "纽约",
+    "startDate": "2025-07-10",
+    "endDate": "2025-07-17",
+    "travelers": 2,
+    "travelType": "leisure",
+    "budget": "",
+    "companions": ["朋友"],
+    "duration": 7,
+    "purpose": "旅游"
+  }
+}
+<SCENE_ANALYSIS_END>
+
+**实体信息提取规则：**
+- departure: 从"从...前往"、"from...to"等表达中提取出发地，无法确定时设为空字符串
+- destination: 从"前往..."、"to..."等表达中提取目的地，只保留标准地名，无法确定时设为空字符串
+- startDate: 从日期表达中提取开始日期，格式为YYYY-MM-DD，无法确定时设为空字符串
+- endDate: 从日期表达中提取结束日期，格式为YYYY-MM-DD，无法确定时设为空字符串
+- travelers: 从人数表达中提取数字，如"独自旅行"=1，"3人"=3，"多人"=2，无法确定时默认为1
+- travelType: 根据关键词判断，"商务"=business，"旅游/度假"=leisure，无法确定时设为空字符串
+- budget: 从预算表达中提取预算范围，返回下拉框选项的 value 值（如 "low"、"medium"、"high"），如果没有则为空字符串""
+- companions: 从同行人表达中提取，如"和朋友"=["朋友"]，"和家人"=["家人"]，无法确定时设为空数组[]
+- duration: 从天数表达中提取数字，如"住5天"=5，"一周"=7，无法确定时默认为1
+- purpose: 从描述中提取旅行目的，如"购物"、"考察"、"度假"，无法确定时设为空字符串
+
 请确保 title 字段为本次计划的简明标题，便于用户区分不同项目。
 
 请以友好、专业的方式与用户交流，主动理解用户的需求，并及时使用合适的工具来帮助用户完成任务。`,

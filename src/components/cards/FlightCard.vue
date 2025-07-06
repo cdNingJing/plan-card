@@ -125,7 +125,7 @@
       <div v-else-if="filteredFlights.length === 0" class="empty-state">
         <span>暂无符合条件的航班</span>
       </div>
-      <div v-else v-for="flight in filteredFlights" :key="flight.id" class="flight-item">
+      <div v-else v-for="(flight, index) in filteredFlights" :key="`flight_${flight.id || index}_${index}`" class="flight-item">
         <div class="flight-header">
           <div class="airline-section">
             <div class="airline-logo">
@@ -374,12 +374,16 @@ const fetchReturnFlights = async (outboundFlight) => {
     
     loading.value = true
     
+    // 获取人数，确保是正整数
+    const travelers = parseInt(userInfo.travelers) || 1
+    const adults = Math.max(1, Math.min(10, travelers)) // 确保在1-10之间
+    
     // 交换出发地和目的地
     const searchParams = {
       from: getAirportCode(userInfo.destination || '东京'),
       to: getAirportCode(userInfo.departure || '成都'),
       date: returnDate,
-      adults: 1,
+      adults: adults,
       cabinClass: 'economy',
       trip: 'ONE_WAY',
       is_code: true
@@ -489,28 +493,34 @@ const fetchFlightsFromAPI = async (departure, destination, customDate = null) =>
     const departureCode = getAirportCode(departure)
     const destinationCode = getAirportCode(destination)
     
+    console.log(`[FlightCard] 城市代码转换: ${departure} -> ${departureCode}, ${destination} -> ${destinationCode}`)
+    
+    // 获取用户信息
+    const userInfo = userInfoStore.getScenarioInfo('travel')
+    
     // 优先使用用户设置的日期，否则使用默认日期
     let date
     if (customDate) {
       date = customDate
+    } else if (userInfo.startDate) {
+      date = userInfo.startDate
     } else {
-      const userInfo = userInfoStore.getScenarioInfo('travel')
-      if (userInfo.startDate) {
-        date = userInfo.startDate
-      } else {
-        // 获取当前日期
-        const today = new Date()
-        const tomorrow = new Date(today)
-        tomorrow.setDate(tomorrow.getDate() + 1)
-        date = tomorrow.toISOString().split('T')[0] // YYYY-MM-DD格式
-      }
+      // 获取当前日期
+      const today = new Date()
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      date = tomorrow.toISOString().split('T')[0] // YYYY-MM-DD格式
     }
+    
+    // 获取人数，确保是正整数
+    const travelers = parseInt(userInfo.travelers) || 1
+    const adults = Math.max(1, Math.min(10, travelers)) // 确保在1-10之间
     
     const searchParams = {
       from: departureCode,
       to: destinationCode,
       date: date,
-      adults: 1,
+      adults: adults,
       cabinClass: 'economy',
       trip: 'ONE_WAY',
       is_code: true
@@ -537,6 +547,7 @@ const fetchFlightsFromAPI = async (departure, destination, customDate = null) =>
 // 获取机场代码
 const getAirportCode = (city) => {
   const codeMap = {
+    // 中文城市名
     '成都': 'CTU',
     '北京': 'PEK',
     '上海': 'SHA',
@@ -553,9 +564,61 @@ const getAirportCode = (city) => {
     '新加坡': 'SIN',
     '曼谷': 'BKK',
     '香港': 'HKG',
-    '台北': 'TPE'
+    '台北': 'TPE',
+    // 英文城市名
+    'chengdu': 'CTU',
+    'beijing': 'PEK',
+    'shanghai': 'SHA',
+    'guangzhou': 'CAN',
+    'shenzhen': 'SZX',
+    'hangzhou': 'HGH',
+    'nanjing': 'NKG',
+    'xian': 'XIY',
+    'chongqing': 'CKG',
+    'wuhan': 'WUH',
+    'tokyo': 'NRT',
+    'osaka': 'KIX',
+    'seoul': 'ICN',
+    'singapore': 'SIN',
+    'bangkok': 'BKK',
+    'hongkong': 'HKG',
+    'taipei': 'TPE',
+    // 美国城市
+    'newyork': 'JFK',
+    'new york': 'JFK',
+    'los angeles': 'LAX',
+    'chicago': 'ORD',
+    'miami': 'MIA',
+    'san francisco': 'SFO',
+    'washington': 'IAD',
+    'boston': 'BOS',
+    'seattle': 'SEA',
+    'dallas': 'DFW',
+    'atlanta': 'ATL',
+    // 欧洲城市
+    'london': 'LHR',
+    'paris': 'CDG',
+    'berlin': 'BER',
+    'rome': 'FCO',
+    'madrid': 'MAD',
+    'barcelona': 'BCN',
+    'amsterdam': 'AMS',
+    'frankfurt': 'FRA',
+    'munich': 'MUC',
+    'zurich': 'ZRH',
+    'vienna': 'VIE',
+    'prague': 'PRG',
+    'budapest': 'BUD',
+    'warsaw': 'WAW',
+    'stockholm': 'ARN',
+    'oslo': 'OSL',
+    'copenhagen': 'CPH',
+    'helsinki': 'HEL'
   }
-  return codeMap[city] || 'XXX'
+  
+  // 转换为小写进行匹配
+  const normalizedCity = city.toLowerCase().trim()
+  return codeMap[normalizedCity] || codeMap[city] || 'XXX'
 }
 
 // 扩展的航班数据
@@ -564,8 +627,10 @@ const loading = ref(false)
 
 // 初始化航班数据
 const initFlights = async () => {
-  const departure = userInfoStore.departure || '成都'
-  const destination = userInfoStore.destination || '东京'
+  // 从用户信息中获取出发地和目的地
+  const userInfo = userInfoStore.getScenarioInfo('travel')
+  const departure = userInfo.departure || '成都'
+  const destination = userInfo.destination || '东京'
   
   loading.value = true
   try {
@@ -815,8 +880,10 @@ const refreshFlightsByUser = async () => {
   }
   
   try {
-    const departure = userInfoStore.departure || '成都'
-    const destination = userInfoStore.destination || '东京'
+    // 从用户信息中获取出发地和目的地
+    const userInfo = userInfoStore.getScenarioInfo('travel')
+    const departure = userInfo.departure || '成都'
+    const destination = userInfo.destination || '东京'
     
     loading.value = true
     
@@ -927,31 +994,24 @@ const resetFilters = () => {
 }
 
 // 监听用户信息变化
-watch(() => userInfoStore.destination, async (newDestination, oldDestination) => {
+watch(() => userInfoStore.getScenarioInfo('travel'), async (newUserInfo, oldUserInfo) => {
   try {
-    if (newDestination && newDestination !== oldDestination) {
-      console.log(`[FlightCard] 检测到目的地变化: ${oldDestination} -> ${newDestination}`)
+    const oldDeparture = oldUserInfo?.departure
+    const oldDestination = oldUserInfo?.destination
+    const newDeparture = newUserInfo?.departure
+    const newDestination = newUserInfo?.destination
+    
+    if ((newDeparture && newDeparture !== oldDeparture) || (newDestination && newDestination !== oldDestination)) {
+      console.log(`[FlightCard] 检测到出发地或目的地变化: ${oldDeparture}->${newDeparture}, ${oldDestination}->${newDestination}`)
       await refreshFlightsByUser()
     }
   } catch (error) {
-    console.error('[FlightCard] Error in destination watch:', error)
+    console.error('[FlightCard] Error in userInfo watch:', error)
   }
-}, { immediate: false })
+}, { deep: true, immediate: false })
 
-// 监听出发地变化
-watch(() => userInfoStore.departure, async (newDeparture, oldDeparture) => {
-  try {
-    if (newDeparture && newDeparture !== oldDeparture) {
-      console.log(`[FlightCard] 检测到出发地变化: ${oldDeparture} -> ${newDeparture}`)
-      await refreshFlightsByUser()
-    }
-  } catch (error) {
-    console.error('[FlightCard] Error in departure watch:', error)
-  }
-}, { immediate: false })
-
-// 监听日期变化，重新检查行程类型
-watch(() => userInfoStore.getScenarioInfo('travel'), (newUserInfo, oldUserInfo) => {
+// 监听日期变化，重新检查行程类型并刷新航班数据
+watch(() => userInfoStore.getScenarioInfo('travel'), async (newUserInfo, oldUserInfo) => {
   try {
     const oldStartDate = oldUserInfo?.startDate
     const oldEndDate = oldUserInfo?.endDate
@@ -959,7 +1019,7 @@ watch(() => userInfoStore.getScenarioInfo('travel'), (newUserInfo, oldUserInfo) 
     const newEndDate = newUserInfo?.endDate
     
     if (oldStartDate !== newStartDate || oldEndDate !== newEndDate) {
-      console.log('[FlightCard] 检测到日期变化，重新检查行程类型')
+      console.log('[FlightCard] 检测到日期变化，重新检查行程类型并刷新航班数据')
       checkTripType()
       
       // 如果从单程变为往返，重置选择状态
@@ -967,6 +1027,9 @@ watch(() => userInfoStore.getScenarioInfo('travel'), (newUserInfo, oldUserInfo) 
         selectedFlights.value = []
         currentTripPhase.value = 'outbound'
       }
+      
+      // 重新获取航班数据
+      await refreshFlightsByUser()
     }
   } catch (error) {
     console.error('[FlightCard] Error in userInfo watch:', error)
@@ -1155,45 +1218,7 @@ onMounted(async () => {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.flight-item.recommended {
-  border-color: #333333;
-  background: #FAFAFA;
-}
 
-.flight-item.recommended::before {
-  content: '推荐';
-  position: absolute;
-  top: -1px;
-  right: 16px;
-  background: #333333;
-  color: #FFFFFF;
-  font-size: 0.75rem;
-  padding: 2px 8px;
-  border-radius: 0 0 4px 4px;
-}
-
-.flight-item.recommended::after {
-  content: attr(data-reasons);
-  position: absolute;
-  top: 20px;
-  right: 16px;
-  background: rgba(51, 51, 51, 0.9);
-  color: #FFFFFF;
-  font-size: 0.75rem;
-  padding: 4px 8px;
-  border-radius: 4px;
-  max-width: 200px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  opacity: 0;
-  transition: opacity 0.3s;
-  pointer-events: none;
-}
-
-.flight-item.recommended:hover::after {
-  opacity: 1;
-}
 
 .flight-header {
   display: flex;
