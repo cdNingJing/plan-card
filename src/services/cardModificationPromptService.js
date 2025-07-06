@@ -76,9 +76,10 @@ export class CardModificationPromptService {
             patterns: [
               /(?:预算|多少钱|价格|费用).*?(\d+)(?:元|块|块钱)?/,
               /(?:预算|价格).*?(不限|随意|都可以)/,
-              /(?:修改|更改|更新|改为|改成).*?(?:预算|价格).*?(\d+)(?:元|块|块钱)?/
+              /(?:修改|更改|更新|改为|改成).*?(?:预算|价格).*?(\d+)(?:元|块|块钱)?/,
+              /(?:预算|价格).*?(\d+)(?:元|块|块钱)?.*?(?:以内|以下|不超过|不超)/
             ],
-            examples: ['预算500元', '500元以内', '预算不限', '价格随意']
+            examples: ['预算500元', '500元以内', '预算1001元', '1001元以内', '预算不限', '价格随意']
           },
           interests: {
             patterns: [
@@ -92,7 +93,7 @@ export class CardModificationPromptService {
               /(?:搜索需求|搜索条件|搜索要求|查找需求|具体需求).*?([^，。！？\n]+)/,
               /(?:修改|更改|更新|改为|改成).*?(?:搜索需求|搜索条件).*?([^，。！？\n]+)/
             ],
-            examples: ['想要母亲节礼物推荐，预算500元以内', '想要一款性价比高的手机，预算在3000元左右'],
+            examples: ['母亲节礼物', '园艺工具', '运动装备', '数码产品'],
             textParser: this.parseSearchQuery
           }
         }
@@ -314,11 +315,12 @@ export class CardModificationPromptService {
   // 预算值映射
   mapBudgetValue(value) {
     if (typeof value === 'string') {
+      // 旅行场景的预算映射
       if (value.includes('经济') || value.includes('3000以内')) return 'budget'
       if (value.includes('舒适') || value.includes('3000-8000')) return 'comfort'
       if (value.includes('豪华') || value.includes('8000以上')) return 'luxury'
       
-      // 数字映射
+      // 数字映射（旅行场景）
       const numMatch = value.match(/(\d+)/)
       if (numMatch) {
         const num = parseInt(numMatch[1])
@@ -326,6 +328,10 @@ export class CardModificationPromptService {
         if (num <= 8000) return 'comfort'
         return 'luxury'
       }
+      
+      // 礼物场景：直接返回原值，保持用户输入的格式
+      // 如"1001元"、"500元以内"等
+      return value
     }
     return value
   }
@@ -471,14 +477,15 @@ export class CardModificationPromptService {
     const descriptions = {
       budget: {
         travel: '≤3000元→budget, 3001-8000元→comfort, >8000元→luxury',
-        gift: '直接使用用户输入的文本值'
+        gift: '直接使用用户输入的文本值，如"1001元"、"500元以内"等'
       },
-      occasion: '直接使用用户输入的文本值',
-      interests: '直接使用用户输入的文本值',
+      recipient: '直接使用用户输入的文本值，如"妈妈"、"爸爸"等',
+      occasion: '直接使用用户输入的文本值，如"母亲节"、"生日"等',
+      interests: '直接使用用户输入的文本值，如"园艺"、"运动"等',
       duration: '30分钟→30, 1小时→60, 2小时→120, 半天→240',
       sort_by: '最新→most_recent, 价格从低到高→price_low_to_high, 价格从高到低→price_high_to_low, 精选→featured, 评价→average_review',
       exclude_sponsored: '是/排除/过滤→true, 否/不排除/不过滤→false',
-      searchQuery: '解析文本中的搜索条件，提取关键词、排序、数量等参数'
+      searchQuery: '提取具体的商品搜索关键词，专注于商品本身，不包含预算、排序等额外信息'
     }
     return descriptions[fieldKey]?.[scenario] || descriptions[fieldKey] || '直接使用原值'
   }

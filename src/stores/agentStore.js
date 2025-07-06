@@ -142,9 +142,30 @@ export const useAgentStore = defineStore('agent', () => {
     "occasion": "母亲节",
     "budget": "500元以内",
     "interests": "园艺",
-    "searchQuery": "园艺礼物 预算500元以内",
+    "searchQuery": "园艺礼物",
     "query": "园艺礼物",
     "sort_by": "price_low_to_high",
+    "limit": 10,
+    "exclude_sponsored": true,
+    "detail": 3
+  }
+}
+<SCENE_ANALYSIS_END>
+
+**购物场景示例（带具体预算）：**
+<SCENE_ANALYSIS_START>
+{
+  "scene": "gift",
+  "title": "母亲节礼物推荐",
+  "cards": ["basic-info", "shop", "selected-products", "profile", "tips"],
+  "entities": {
+    "recipient": "妈妈",
+    "occasion": "母亲节",
+    "budget": "1001元",
+    "interests": "",
+    "searchQuery": "母亲节礼物",
+    "query": "母亲节礼物",
+    "sort_by": "most_recent",
     "limit": 10,
     "exclude_sponsored": true,
     "detail": 3
@@ -189,7 +210,11 @@ export const useAgentStore = defineStore('agent', () => {
 - purpose: 从描述中提取旅行目的，如"购物"、"考察"、"度假"，无法确定时设为空字符串
 
 **购物场景字段：**
-- searchQuery: 从用户描述中提取完整的搜索需求文本，包含关键词、排序、数量等所有搜索条件
+- recipient: 从用户描述中提取收礼人信息，如"给妈妈"提取"妈妈"，"送给爸爸"提取"爸爸"
+- occasion: 从用户描述中提取送礼场合，如"母亲节礼物"提取"母亲节"，"生日礼物"提取"生日"
+- budget: 从用户描述中提取预算信息，如"预算1001元"提取"1001元"，"500元以内"提取"500元以内"
+- interests: 从用户描述中提取兴趣爱好，如"喜欢园艺"提取"园艺"，"爱运动"提取"运动"
+- searchQuery: 从用户描述中提取具体的商品搜索关键词，专注于商品本身，不包含预算、排序等额外信息，如"母亲节礼物推荐"提取"母亲节礼物"
 - query: 从搜索需求中提取单个关键词，如"搜索iphone"提取"iphone"
 - querys: 从搜索需求中提取多个关键词，如"搜索samsung和iphone"提取"samsung, iphone"
 - sort_by: 从搜索需求中提取排序方式，如"按价格从低到高"提取"price_low_to_high"

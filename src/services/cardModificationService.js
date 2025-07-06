@@ -1,4 +1,6 @@
 // 卡片修改服务 - 处理通过对话修改卡片信息
+import { ProjectStorage } from '../utils/storage.js'
+
 export class CardModificationService {
   constructor() {
     this.modificationPatterns = {
@@ -19,8 +21,8 @@ export class CardModificationService {
           /(?:预算|费用|价格|金额).*?(?:改为|改成|修改为|更改为).*?(\d+)(?:元|块|块钱)?/,
           /(?:预算|费用|价格|金额).*?(\d+)(?:元|块|块钱)?.*?(?:以内|以下|不超过|不超)/
         ],
-        targetCard: 'budget',
-        updateField: 'range.max'
+        targetCard: 'basic-info', // 修改为 basic-info，因为预算信息存储在 basic-info 卡片的 formData 中
+        updateField: 'budget'
       },
       
       // 时间修改模式
@@ -129,6 +131,44 @@ export class CardModificationService {
         }
       } else {
         console.log('[CardModificationService] 未找到JSON开始位置')
+        
+        // 备用解析逻辑：检查是否是确认消息
+        if (response.includes('成功更新') || response.includes('已更新') || response.includes('修改完成')) {
+          console.log('[CardModificationService] 检测到确认消息，尝试从用户输入中解析修改意图')
+          
+          // 尝试从用户输入中解析修改意图
+          const currentProjectId = ProjectStorage.getCurrentProjectId()
+          if (currentProjectId) {
+            const project = ProjectStorage.getProject(currentProjectId)
+            if (project && project.conversationHistory) {
+              const lastUserMsg = project.conversationHistory
+                .filter(msg => msg.role === 'user')
+                .pop()
+              
+              if (lastUserMsg) {
+                console.log('[CardModificationService] 从用户输入解析修改意图:', lastUserMsg.content)
+                const modifications = this.parseModificationIntent(lastUserMsg.content)
+                
+                if (modifications.length > 0) {
+                  const modification = modifications[0] // 取第一个修改意图
+                  console.log('[CardModificationService] 从用户输入解析到的修改意图:', modification)
+                  
+                  // 构造修改指令
+                  const result = {
+                    action: 'update_card',
+                    target: modification.targetCard,
+                    updates: {
+                      [modification.updateField]: modification.value
+                    },
+                    message: response // 使用AI的确认消息
+                  }
+                  console.log('[CardModificationService] 构造的修改指令:', result)
+                  return result
+                }
+              }
+            }
+          }
+        }
       }
     } catch (error) {
       console.warn('[CardModificationService] 解析AI回复中的修改指令失败:', error)
@@ -244,14 +284,29 @@ export class CardModificationService {
           if (card.data[field] !== value) {
             card.data[field] = value
             hasChanges = true
+            console.log(`[CardModificationService] 更新卡片标题: ${field} = ${value}`)
           }
         } else {
           // 其他字段更新到formData
           if (card.data.formData[field] !== value) {
             card.data.formData[field] = value
             hasChanges = true
+            console.log(`[CardModificationService] 更新formData字段: ${field} = ${value}`)
           }
         }
+      }
+      
+      // 确保场景信息正确设置
+      if (card.data.formData && Object.keys(card.data.formData).length > 0) {
+        // 根据字段内容推断场景
+        if (card.data.formData.recipient || card.data.formData.budget || card.data.formData.searchQuery) {
+          card.data.scenario = 'gift'
+        } else if (card.data.formData.departure || card.data.formData.destination) {
+          card.data.scenario = 'travel'
+        } else if (card.data.formData.meetingTitle || card.data.formData.participants) {
+          card.data.scenario = 'meeting'
+        }
+        console.log(`[CardModificationService] 设置卡片场景: ${card.data.scenario}`)
       }
     } else {
       // 其他卡片的正常处理
@@ -269,12 +324,14 @@ export class CardModificationService {
           if (current[parts[parts.length - 1]] !== value) {
             current[parts[parts.length - 1]] = value
             hasChanges = true
+            console.log(`[CardModificationService] 更新嵌套字段: ${field} = ${value}`)
           }
         } else {
           // 处理普通字段
           if (card.data[field] !== value) {
             card.data[field] = value
             hasChanges = true
+            console.log(`[CardModificationService] 更新普通字段: ${field} = ${value}`)
           }
         }
       }

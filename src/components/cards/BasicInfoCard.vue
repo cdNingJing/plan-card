@@ -346,7 +346,7 @@ const updateSearchQuery = () => {
     return
   }
   
-  // 构建智能搜索查询
+  // 构建智能搜索查询 - 专注于具体商品
   let searchQuery = ''
   const keywords = []
   
@@ -384,12 +384,9 @@ const updateSearchQuery = () => {
     }
   }
   
-  // 组合搜索查询
+  // 组合搜索查询 - 不包含预算信息，专注于商品本身
   if (keywords.length > 0) {
     searchQuery = keywords.join(' ')
-    if (budget) {
-      searchQuery += ` ${budget}`
-    }
   }
   
   // 更新具体需求字段

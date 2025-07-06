@@ -67,6 +67,14 @@ export const basicInfoFieldsConfig = {
         required: false,
         description: '您想给谁买礼物？'
       },
+      {
+        key: 'budget',
+        label: '预算范围',
+        type: 'text',
+        placeholder: '例如：500元以内、1000-2000元、预算不限等',
+        required: false,
+        description: '您的预算大概是多少？'
+      },
       // {
       //   key: 'occasion',
       //   label: '送礼场合',
@@ -74,14 +82,6 @@ export const basicInfoFieldsConfig = {
       //   placeholder: '例如：生日、母亲节、结婚纪念日、新年等',
       //   required: false,
       //   description: '什么场合送这个礼物？'
-      // },
-      // {
-      //   key: 'budget',
-      //   label: '预算范围',
-      //   type: 'text',
-      //   placeholder: '例如：500元以内、1000-2000元、预算不限等',
-      //   required: false,
-      //   description: '您的预算大概是多少？'
       // },
       // {
       //   key: 'interests',

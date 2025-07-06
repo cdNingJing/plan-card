@@ -2,8 +2,12 @@
   <div class="shop-card" :class="{ scrollable: fullscreen }">
     <!-- <div>{{ fullscreen }}</div> -->
     <!-- 调试信息显示 -->
-    <div v-if="!fullscreen && allProducts.length > 0" class="debug-info">
+    <div v-if="!fullscreen" class="debug-info">
       <small>当前搜索: {{ generateSmartSearchQuery(userInfoStore.getScenarioInfo('gift')) }}</small>
+      <br>
+      <small>当前预算: {{ userInfoStore.getScenarioInfo('gift').budget || '未设置' }}</small>
+      <br>
+      <small>商品数量: {{ allProducts.length }} 个</small>
     </div>
     <div class="shop-card-content">
       <div v-if="loading" class="loading-state">
@@ -48,6 +52,13 @@
       <div class="tip-item">
         <Info :size="16" />
         <span>建议对比多个商品的价格和评价，选择最适合的</span>
+      </div>
+      <!-- 测试按钮 -->
+      <div class="tip-item" style="margin-top: 10px;">
+        <button @click="testBudgetListener" style="padding: 4px 8px; font-size: 12px; background: #3182ce; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          测试预算监听
+        </button>
+        <span style="margin-left: 8px; font-size: 12px; color: #666;">点击测试预算变化监听</span>
       </div>
     </div>
 
@@ -228,7 +239,9 @@ const fetchProducts = async () => {
     const params = parseSearchQuery(smartSearchQuery)
     const result = await searchShopItems(params)
     if (result && Array.isArray(result.items)) {
-      allProducts.value = formatShopData(result)
+      const formattedData = formatShopData(result)
+      const processedData = processShopData(formattedData)
+      allProducts.value = processedData
       console.log('[ShopCard] 成功获取商品数据，共', allProducts.value.length, '个商品')
     } else {
       allProducts.value = []
@@ -257,6 +270,71 @@ const parseSearchQuery = (text) => {
     sort_by: 'most_recent',
     exclude_sponsored: true,
     page: 1
+  }
+}
+
+// 处理商品数据的方法
+const processShopData = (data) => {
+  if (!Array.isArray(data)) {
+    console.warn('[ShopCard] processShopData: 输入数据不是数组')
+    return []
+  }
+  
+  try {
+    // 获取用户预算信息
+    const userInfo = userInfoStore.getScenarioInfo('gift')
+    const budget = userInfo?.budget
+    
+    console.log('[ShopCard] processShopData - 获取到的预算信息:', {
+      userInfo,
+      budget,
+      budgetType: typeof budget
+    })
+    
+    let processedData = data
+    
+    // 如果存在预算信息，按预算过滤商品
+    if (budget && budget.trim() !== '') {
+      // 从字符串中提取数字
+      const budgetMatch = budget.match(/(\d+)/)
+      console.log('[ShopCard] processShopData - 预算匹配结果:', {
+        budget,
+        budgetMatch,
+        extractedNumber: budgetMatch ? budgetMatch[1] : null
+      })
+      
+      if (budgetMatch) {
+        const budgetNum = parseInt(budgetMatch[1])
+        console.log('[ShopCard] processShopData - 解析的预算数字:', budgetNum)
+        
+        if (budgetNum > 0) {
+          processedData = data.filter(item => {
+            const itemPrice = parseFloat(item.price) || 0
+            return itemPrice <= budgetNum
+          })
+          
+          console.log(`[ShopCard] 按预算 ¥${budgetNum} 过滤商品，从 ${data.length} 个过滤到 ${processedData.length} 个`)
+        } else {
+          console.warn('[ShopCard] 预算数字无效:', budgetNum)
+        }
+      } else {
+        console.warn('[ShopCard] 无法从预算字符串中提取数字:', budget)
+      }
+    } else {
+      console.log('[ShopCard] 未设置预算，显示所有商品')
+    }
+    
+    // 为每个商品添加处理时间戳
+    processedData = processedData.map(item => ({
+      ...item,
+      processedAt: new Date().toISOString()
+    }))
+    
+    console.log('[ShopCard] 商品数据处理完成，共处理', processedData.length, '个商品')
+    return processedData
+  } catch (error) {
+    console.error('[ShopCard] 处理商品数据时出错:', error)
+    return data // 如果处理失败，返回原始数据
   }
 }
 
@@ -372,6 +450,25 @@ watch(() => userInfoStore.getScenarioInfo('gift'), (newUserInfo, oldUserInfo) =>
         console.log('[ShopCard] 检测到searchQuery变化，将使用新的搜索查询:', newSearchQuery)
       }
       
+      // 特别关注budget的变化
+      if (newBudget !== oldBudget) {
+        console.log('[ShopCard] 检测到budget变化，将重新处理商品数据:', {
+          oldBudget,
+          newBudget,
+          allProductsLength: allProducts.value.length
+        })
+        // 如果已有商品数据，直接重新处理而不重新获取
+        if (allProducts.value.length > 0) {
+          console.log('[ShopCard] 开始重新处理商品数据...')
+          const reprocessedData = processShopData(allProducts.value)
+          allProducts.value = reprocessedData
+          console.log('[ShopCard] 预算变化，重新处理商品数据完成，结果数量:', reprocessedData.length)
+          return
+        } else {
+          console.log('[ShopCard] 没有现有商品数据，跳过重新处理')
+        }
+      }
+      
       // 延迟执行，避免频繁请求
       setTimeout(() => {
         if (isComponentMounted.value) {
@@ -383,6 +480,70 @@ watch(() => userInfoStore.getScenarioInfo('gift'), (newUserInfo, oldUserInfo) =>
     console.error('[ShopCard] 监听用户信息变化时出错:', error)
   }
 }, { deep: true, immediate: false })
+
+// 监听props.data变化，处理AI自动修改的情况
+watch(() => props.data, (newData, oldData) => {
+  try {
+    // 检查组件是否仍然挂载
+    if (!isComponentMounted.value) {
+      console.log('[ShopCard] 组件已卸载，跳过props.data监听')
+      return
+    }
+    
+    // 检查是否有formData变化（AI修改通常通过formData更新）
+    const oldFormData = oldData?.formData
+    const newFormData = newData?.formData
+    
+    if (oldFormData && newFormData) {
+      const oldBudget = oldFormData.budget
+      const newBudget = newFormData.budget
+      
+      if (newBudget !== oldBudget) {
+        console.log('[ShopCard] 检测到props.data中budget变化，将重新处理商品数据:', {
+          oldBudget,
+          newBudget,
+          allProductsLength: allProducts.value.length
+        })
+        
+        // 如果已有商品数据，直接重新处理
+        if (allProducts.value.length > 0) {
+          console.log('[ShopCard] 开始重新处理商品数据（props.data触发）...')
+          const reprocessedData = processShopData(allProducts.value)
+          allProducts.value = reprocessedData
+          console.log('[ShopCard] props.data预算变化，重新处理商品数据完成，结果数量:', reprocessedData.length)
+        } else {
+          console.log('[ShopCard] 没有现有商品数据，跳过重新处理（props.data触发）')
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[ShopCard] 监听props.data变化时出错:', error)
+  }
+}, { deep: true, immediate: false })
+
+// 调试函数：测试预算监听
+const testBudgetListener = () => {
+  console.log('[ShopCard] 开始测试预算监听...')
+  const currentUserInfo = userInfoStore.getScenarioInfo('gift')
+  console.log('[ShopCard] 当前用户信息:', currentUserInfo)
+  
+  // 模拟预算变化
+  userInfoStore.updateField('gift', 'budget', '1000元')
+  console.log('[ShopCard] 已更新预算为1000元，请检查监听器是否触发')
+  
+  // 延迟检查更新后的状态
+  setTimeout(() => {
+    const updatedUserInfo = userInfoStore.getScenarioInfo('gift')
+    console.log('[ShopCard] 更新后的用户信息:', updatedUserInfo)
+    console.log('[ShopCard] 当前商品数量:', allProducts.value.length)
+  }, 1000)
+}
+
+// 暴露测试函数到全局（仅用于调试）
+if (typeof window !== 'undefined') {
+  window.testShopCardBudget = testBudgetListener
+  console.log('[ShopCard] 调试函数已暴露到全局: window.testShopCardBudget()')
+}
 
 const filteredProducts = computed(() => {
   return allProducts.value.filter(product => {
@@ -662,16 +823,7 @@ function toggleSelectProduct(product) {
   })
 }
 
-// 自动监听 props.data 变化，刷新商品
-watch(
-  () => props.data,
-  (newData, oldData) => {
-    if (JSON.stringify(newData) !== JSON.stringify(oldData)) {
-      fetchProducts() // 用新内容请求接口
-    }
-  },
-  { deep: true }
-)
+// 移除重复的props.data监听器，避免与上面的监听器冲突
 </script>
 
 <style scoped>
