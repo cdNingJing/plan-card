@@ -117,7 +117,7 @@
     </div>
 
     <!-- 航班列表/empty-state -->
-    <div class="flight-list" :class="{ 'scrollable': !fullscreen }">
+    <div v-if="!fullscreen && recentBookings.length === 0" class="flight-list" :class="{ 'scrollable': !fullscreen }">
       <div v-if="loading" class="loading-state">
         <div class="loading-spinner"></div>
         <span>正在搜索航班...</span>
@@ -125,7 +125,7 @@
       <div v-else-if="filteredFlights.length === 0" class="empty-state">
         <span>暂无符合条件的航班</span>
       </div>
-      <div v-else v-for="flight in filteredFlights" :key="flight.id" class="flight-item" :class="{ recommended: flight.recommended }" :data-reasons="flight.reasons ? flight.reasons.join('、') : ''">
+      <div v-else v-for="flight in filteredFlights" :key="flight.id" class="flight-item">
         <div class="flight-header">
           <div class="airline-section">
             <div class="airline-logo">
@@ -212,7 +212,7 @@
       </div>
     </div>
     
-    <div class="flight-tips" v-if="!fullscreen">
+    <div class="flight-tips" v-if="!fullscreen && recentBookings.length === 0">
       <div class="tip-item">
         <Lightbulb :size="16" />
         <span>建议提前2小时到达机场办理登机手续</span>
@@ -780,15 +780,8 @@ const analyzeAndRecommendFlights = (flights) => {
   // 按评分排序
   scoredFlights.sort((a, b) => b.score - a.score)
   
-  // 选择最佳航班作为推荐
-  if (scoredFlights.length > 0) {
-    const bestFlight = scoredFlights[0]
-    bestFlight.recommended = true
-    console.log(`[FlightCard] 推荐航班: ${bestFlight.airline} ${bestFlight.flightNumber}`, {
-      score: bestFlight.score,
-      reasons: bestFlight.reasons
-    })
-  }
+  // 不再选择最佳航班作为推荐
+  console.log(`[FlightCard] 航班分析完成，共${scoredFlights.length}个航班`)
   
   return scoredFlights
 }

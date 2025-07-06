@@ -59,8 +59,8 @@ hotelApi.interceptors.response.use(
  * 搜索酒店
  * @param {Object} params 搜索参数
  * @param {string} params.location 目的地
- * @param {string} params.departure_date 入住日期 (YYYY-MM-DD)
- * @param {string} params.arrival_date 退房日期 (YYYY-MM-DD)
+ * @param {string} params.arrival_date 入住日期 (旅行开始时间) (YYYY-MM-DD)
+ * @param {string} params.departure_date 退房日期 (离开时间) (YYYY-MM-DD)
  * @param {number} params.adults 成人数量
  * @param {number} params.children 儿童数量
  * @param {number} params.rooms 房间数量
@@ -131,36 +131,24 @@ export const formatHotelData = (apiHotels) => {
     
     if (hotel.price) {
       price = typeof hotel.price === 'number' ? hotel.price : parseFloat(hotel.price) || 0
-    } else if (hotel.ratePlan && hotel.ratePlan[0]) {
-      const rate = hotel.ratePlan[0]
-      if (rate.price && rate.price.current) {
-        price = rate.price.current.amount || 0
-        priceCurrency = rate.price.current.currency || 'CNY'
-      }
     }
     
     return {
       id: hotel.id || `hotel_${index}`,
       name: hotel.name || '未知酒店',
-      address: hotel.address || '',
-      city: hotel.city || '',
-      country: hotel.country || '',
-      rating: hotel.starRating || 0,
-      price: price,
-      priceValue: price, // 保持兼容性
-      priceCurrency: priceCurrency,
-      image: hotel.images && hotel.images[0] ? hotel.images[0].url : '',
-      amenities: hotel.amenities || [],
-      description: hotel.description || '',
-      recommended: index === 0, // 第一个酒店作为推荐
-      location: {
-        latitude: hotel.latitude || 0,
-        longitude: hotel.longitude || 0
-      },
-      checkIn: hotel.checkIn || '14:00',
-      checkOut: hotel.checkOut || '12:00',
-      cancellationPolicy: hotel.cancellationPolicy || '可免费取消',
-      roomTypes: hotel.roomTypes || []
+      rating: hotel.rating || 0,
+      starRating: Math.floor((hotel.rating || 0) / 2), // 将10分制转换为5星制
+      price: `¥${price.toLocaleString()}`,
+      priceValue: price,
+      oldPrice: hotel.oldPrice,
+      image: hotel.image || (hotel.images && hotel.images[0]) || '',
+      images: hotel.images || [],
+      latitude: hotel.latitude || 0,
+      longitude: hotel.longitude || 0,
+      url: hotel.url || '',
+      reviews: hotel.reviews || '',
+      // 保留原始数据的所有字段
+      ...hotel
     }
   })
 }

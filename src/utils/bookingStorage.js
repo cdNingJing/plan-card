@@ -2,6 +2,7 @@
 class BookingStorage {
   constructor() {
     this.storageKey = 'flight_bookings'
+    this.hotelStorageKey = 'hotel_bookings'
   }
 
   // 获取所有预订记录
@@ -11,6 +12,17 @@ class BookingStorage {
       return data ? JSON.parse(data) : []
     } catch (error) {
       console.error('[BookingStorage] 获取预订记录失败:', error)
+      return []
+    }
+  }
+
+  // 获取所有酒店预订记录
+  getAllHotelBookings() {
+    try {
+      const data = localStorage.getItem(this.hotelStorageKey)
+      return data ? JSON.parse(data) : []
+    } catch (error) {
+      console.error('[BookingStorage] 获取酒店预订记录失败:', error)
       return []
     }
   }
@@ -50,9 +62,21 @@ class BookingStorage {
     return bookings.slice(0, limit)
   }
 
+  // 获取最近的酒店预订记录
+  getRecentHotelBookings(limit = 5) {
+    const bookings = this.getAllHotelBookings()
+    return bookings.slice(0, limit)
+  }
+
   // 根据ID获取预订记录
   getBookingById(id) {
     const bookings = this.getAllBookings()
+    return bookings.find(booking => booking.id === id)
+  }
+
+  // 根据ID获取酒店预订记录
+  getHotelBookingById(id) {
+    const bookings = this.getAllHotelBookings()
     return bookings.find(booking => booking.id === id)
   }
 
@@ -69,6 +93,19 @@ class BookingStorage {
     }
   }
 
+  // 删除酒店预订记录
+  deleteHotelBooking(id) {
+    try {
+      const bookings = this.getAllHotelBookings()
+      const filteredBookings = bookings.filter(booking => booking.id !== id)
+      localStorage.setItem(this.hotelStorageKey, JSON.stringify(filteredBookings))
+      return true
+    } catch (error) {
+      console.error('[BookingStorage] 删除酒店预订记录失败:', error)
+      return false
+    }
+  }
+
   // 清空所有预订记录
   clearAllBookings() {
     try {
@@ -76,6 +113,17 @@ class BookingStorage {
       return true
     } catch (error) {
       console.error('[BookingStorage] 清空预订记录失败:', error)
+      return false
+    }
+  }
+
+  // 清空所有酒店预订记录
+  clearAllHotelBookings() {
+    try {
+      localStorage.removeItem(this.hotelStorageKey)
+      return true
+    } catch (error) {
+      console.error('[BookingStorage] 清空酒店预订记录失败:', error)
       return false
     }
   }

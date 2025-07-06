@@ -28,6 +28,23 @@
             </span>
           </div>
         </div>
+        
+        <!-- 酒店卡片收起状态下的购买信息 -->
+        <div v-if="card.type === 'hotel' && card.state === 'collapsed' && recentHotelBookings.length > 0" class="hotel-booking-summary">
+          <div class="booking-count">
+            <CheckCircle :size="14" />
+            <span>{{ recentHotelBookings.length }}个酒店已预订</span>
+          </div>
+          <div class="booking-preview">
+            <span v-for="(booking, index) in recentHotelBookings.slice(0, 2)" :key="booking.id" class="booking-item">
+              {{ booking.hotel.name }}
+              <span class="booking-price">{{ booking.totalPrice }}</span>
+            </span>
+            <span v-if="recentHotelBookings.length > 2" class="more-bookings">
+              +{{ recentHotelBookings.length - 2 }}个
+            </span>
+          </div>
+        </div>
       </div>
       <div class="card-actions" @click.stop>
         <!-- 已完成标识 -->
@@ -266,6 +283,14 @@ const emit = defineEmits(['update-state', 'update-data'])
 const recentBookings = computed(() => {
   if (props.card.type === 'flight') {
     return bookingStorage.getRecentBookings(3)
+  }
+  return []
+})
+
+// 获取酒店预订记录
+const recentHotelBookings = computed(() => {
+  if (props.card.type === 'hotel') {
+    return bookingStorage.getRecentHotelBookings(3)
   }
   return []
 })
@@ -681,6 +706,47 @@ const handleBasicInfoChange = (formData) => {
   border-left: 3px solid #22C55E;
 }
 
+/* 酒店卡片收起状态下的购买信息样式 */
+.hotel-booking-summary {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #E8F5E8 0%, #F0F8F0 100%);
+  border: 1px solid #4CAF50;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
 
+.hotel-booking-summary .booking-count {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #2E7D32;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
 
+.hotel-booking-summary .booking-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hotel-booking-summary .booking-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #333333;
+  font-size: 0.75rem;
+}
+
+.hotel-booking-summary .booking-price {
+  color: #2E7D32;
+  font-weight: 500;
+}
+
+.hotel-booking-summary .more-bookings {
+  color: #666666;
+  font-size: 0.7rem;
+  font-style: italic;
+}
 </style> 
