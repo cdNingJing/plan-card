@@ -46,7 +46,7 @@ export const useAgentStore = defineStore('agent', () => {
 **卡片规划规则：**
 每个场景必须包含以下卡片类型：
 - **旅行场景**：basic-info, flight, hotel, itinerary, packing
-- **购物场景**：basic-info, shop, profile, tips 
+- **购物场景**：basic-info, shop, selected-products, profile, tips 
 - **会议场景**：basic-info, meeting, participants, reminder, feedback, attachments
 - **通用场景**：basic-info, suggestions, resources
 
@@ -136,7 +136,7 @@ export const useAgentStore = defineStore('agent', () => {
 {
   "scene": "gift",
   "title": "妈妈的园艺礼物",
-  "cards": ["basic-info", "shop", "profile", "tips"],
+  "cards": ["basic-info", "shop", "selected-products", "profile", "tips"],
   "entities": {
     "recipient": "妈妈",
     "occasion": "母亲节",

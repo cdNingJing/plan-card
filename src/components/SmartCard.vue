@@ -62,6 +62,23 @@
             </span>
           </div>
         </div>
+        
+        <!-- 已选商品卡片收起状态下的购买信息 -->
+        <div v-if="card.type === 'selected-products' && card.state === 'collapsed' && selectedShopProducts.length > 0" class="selected-products-summary">
+          <div class="selected-count">
+            <CheckCircle :size="14" />
+            <span>{{ selectedShopProducts.length }}个商品待购买</span>
+          </div>
+          <div class="selected-preview">
+            <span v-for="(item, idx) in selectedShopProducts.slice(0, 2)" :key="item.id" class="selected-item">
+              {{ item.title }}
+              <span class="selected-price">{{ item.currencySymbol || '¥' }}{{ item.price }}</span>
+            </span>
+            <span v-if="selectedShopProducts.length > 2" class="more-selected">
+              +{{ selectedShopProducts.length - 2 }}个
+            </span>
+          </div>
+        </div>
       </div>
       <div class="card-actions" @click.stop>
         <!-- 已完成标识 -->
@@ -220,6 +237,16 @@
         />
       </template>
       
+      <!-- 已选商品卡片 -->
+      <template v-else-if="card.type === 'selected-products'">
+        <SelectedProductsCard
+          :fullscreen="card.state === 'expanded'"
+          @update="handleSelectedProductsUpdate"
+          @purchase="handleSelectedProductsPurchase"
+          @addToCart="handleSelectedProductsAddToCart"
+        />
+      </template>
+      
       <!-- 通用卡片 -->
       <GenericCard 
         v-else
@@ -296,6 +323,7 @@ import BasicInfoCard from './cards/BasicInfoCard.vue'
 import ProfileCard from './cards/ProfileCard.vue'
 import TipsCard from './cards/TipsCard.vue'
 import ShopCard from './cards/ShopCard.vue'
+import SelectedProductsCard from './cards/SelectedProductsCard.vue'
 
 const props = defineProps({
   card: {
@@ -384,6 +412,7 @@ const getCardComponent = (type) => {
     profile: ProfileCard,
     tips: TipsCard,
     shop: ShopCard,
+    'selected-products': SelectedProductsCard,
     default: GenericCard
   }
   return componentMap[type] || componentMap.default
@@ -475,6 +504,21 @@ const getBasicInfoInitialData = () => {
 
 const handleShopCardUpdate = (payload) => {
   // 可根据需要处理 ShopCard 的 update 事件
+}
+
+const handleSelectedProductsUpdate = (payload) => {
+  // 处理已选商品卡片的更新事件
+  console.log('[SmartCard] 已选商品卡片更新:', payload)
+}
+
+const handleSelectedProductsPurchase = (payload) => {
+  // 处理已选商品卡片的购买事件
+  console.log('[SmartCard] 已选商品购买:', payload)
+}
+
+const handleSelectedProductsAddToCart = (payload) => {
+  // 处理已选商品卡片的添加到购物车事件
+  console.log('[SmartCard] 已选商品添加到购物车:', payload)
 }
 </script>
 
@@ -878,5 +922,45 @@ const handleShopCardUpdate = (payload) => {
   color: #888;
   font-size: 13px;
   align-self: center;
+}
+
+/* 已选商品卡片收起状态下的购买信息样式 */
+.selected-products-summary {
+  padding: 10px 18px 8px 18px;
+  background: #f0f8f0;
+  border-bottom: 1px solid #e8f5e8;
+}
+
+.selected-products-summary .selected-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #28a745;
+  font-weight: 500;
+}
+
+.selected-products-summary .selected-preview {
+  margin-top: 4px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.selected-products-summary .selected-item {
+  font-size: 13px;
+  color: #222;
+  background: #e8f5e8;
+  border-radius: 4px;
+  padding: 2px 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.selected-products-summary .selected-price {
+  color: #e53e3e;
+  font-weight: bold;
+  margin-left: 2px;
 }
 </style> 

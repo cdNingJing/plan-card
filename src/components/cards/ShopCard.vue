@@ -1,13 +1,18 @@
 <template>
   <div class="shop-card" :class="{ scrollable: fullscreen }">
     <!-- <div>{{ fullscreen }}</div> -->
+    <!-- 调试信息显示 -->
+    <div v-if="!fullscreen && allProducts.length > 0" class="debug-info">
+      <small>当前搜索: {{ generateSmartSearchQuery(userInfoStore.getScenarioInfo('gift')) }}</small>
+    </div>
     <div class="shop-card-content">
       <div v-if="loading" class="loading-state">
         <div class="loading-spinner"></div>
         <span>正在加载商品数据...</span>
       </div>
       <div v-else-if="allProducts.length === 0" class="empty-state">
-        <span>暂无商品</span>
+        <span v-if="error">{{ error }}</span>
+        <span v-else>暂无商品，请先输入收件人、兴趣或预算信息</span>
       </div>
       <div v-else class="product-list">
         <div
@@ -215,16 +220,23 @@ const fetchProducts = async () => {
   error.value = ''
   try {
     const userInfo = userInfoStore.getScenarioInfo('gift')
-    const searchQuery = userInfo.searchQuery || ''
-    const params = parseSearchQuery(searchQuery)
+    
+    // 使用智能搜索生成关键词
+    const smartSearchQuery = generateSmartSearchQuery(userInfo)
+    console.log('[ShopCard] 智能生成的搜索关键词:', smartSearchQuery)
+    
+    const params = parseSearchQuery(smartSearchQuery)
     const result = await searchShopItems(params)
     if (result && Array.isArray(result.items)) {
       allProducts.value = formatShopData(result)
+      console.log('[ShopCard] 成功获取商品数据，共', allProducts.value.length, '个商品')
     } else {
       allProducts.value = []
       error.value = '暂无商品数据'
+      console.log('[ShopCard] 未获取到商品数据')
     }
   } catch (e) {
+    console.error('[ShopCard] 获取商品数据失败:', e)
     error.value = '商品数据加载失败'
     allProducts.value = []
   } finally {
@@ -248,18 +260,75 @@ const parseSearchQuery = (text) => {
   }
 }
 
+// 智能生成搜索关键词，结合用户的所有输入信息
+const generateSmartSearchQuery = (userInfo) => {
+  const { recipient, interests, budget, searchQuery } = userInfo || {}
+  
+  // 如果有明确的搜索查询，优先使用
+  if (searchQuery && searchQuery.trim() !== '') {
+    return searchQuery.trim()
+  }
+  
+  // 否则根据用户信息智能生成搜索关键词
+  let keywords = []
+  
+  // 添加收件人信息
+  if (recipient) {
+    keywords.push(recipient)
+  }
+  
+  // 添加兴趣信息
+  if (interests) {
+    const interestArray = Array.isArray(interests) ? interests : [interests]
+    keywords.push(...interestArray)
+  }
+  
+  // 根据预算添加相关关键词
+  if (budget) {
+    const budgetNum = parseFloat(budget)
+    if (!isNaN(budgetNum)) {
+      if (budgetNum < 1000) {
+        keywords.push('经济实惠', '性价比')
+      } else if (budgetNum > 5000) {
+        keywords.push('高端', '精品')
+      }
+    }
+  }
+  
+  // 添加通用礼品关键词
+  keywords.push('礼品', '礼物')
+  
+  // 过滤空值并去重
+  const filteredKeywords = keywords.filter(k => k && k.trim() !== '')
+  const uniqueKeywords = [...new Set(filteredKeywords)]
+  
+  return uniqueKeywords.join(' ')
+}
+
 onMounted(() => {
   isComponentMounted.value = true
   userInfoStore.loadFromStorage()
   loadRecentOrders()
   
-  // 如果已有购物记录，不需要初始化商品数据
-  if (recentOrders.value.length > 0) {
-    console.log('[ShopCard] 检测到已有购物记录，跳过商品数据初始化')
-    return
-  }
-  
-  fetchProducts()
+  // 延迟初始化商品数据，确保用户信息已加载
+  setTimeout(() => {
+    if (isComponentMounted.value) {
+      const userInfo = userInfoStore.getScenarioInfo('gift')
+      const hasUserInput = userInfo && (
+        userInfo.recipient || 
+        userInfo.interests || 
+        userInfo.budget || 
+        userInfo.searchQuery
+      )
+      
+      if (hasUserInput) {
+        console.log('[ShopCard] 检测到用户输入信息，初始化商品数据')
+        fetchProducts()
+      } else {
+        console.log('[ShopCard] 未检测到用户输入信息，等待用户输入')
+      }
+    }
+  }, 100)
 })
 
 onUnmounted(() => {
@@ -273,12 +342,6 @@ watch(() => userInfoStore.getScenarioInfo('gift'), (newUserInfo, oldUserInfo) =>
     // 检查组件是否仍然挂载
     if (!isComponentMounted.value) {
       console.log('[ShopCard] 组件已卸载，跳过用户信息监听')
-      return
-    }
-    
-    // 如果已有购物记录，不自动刷新商品数据
-    if (recentOrders.value.length > 0) {
-      console.log('[ShopCard] 检测到已有购物记录，跳过自动刷新商品数据')
       return
     }
     
@@ -309,7 +372,12 @@ watch(() => userInfoStore.getScenarioInfo('gift'), (newUserInfo, oldUserInfo) =>
         console.log('[ShopCard] 检测到searchQuery变化，将使用新的搜索查询:', newSearchQuery)
       }
       
-      fetchProducts()
+      // 延迟执行，避免频繁请求
+      setTimeout(() => {
+        if (isComponentMounted.value) {
+          fetchProducts()
+        }
+      }, 500)
     }
   } catch (error) {
     console.error('[ShopCard] 监听用户信息变化时出错:', error)
@@ -563,14 +631,7 @@ const formatOrderDate = (dateString) => {
   }
 }
 
-// 监听 searchQuery 变化，有值时自动请求商品接口
-watch(searchQuery, (newQuery) => {
-  if (newQuery && newQuery.trim() !== '') {
-    fetchProducts()
-  } else {
-    allProducts.value = []
-  }
-}, { immediate: true })
+// 移除旧的 searchQuery 监听器，因为已经有了更完善的用户信息监听器
 
 function openDetail(link) {
   window.open(link, '_blank')
@@ -580,13 +641,25 @@ function toggleSelectProduct(product) {
   const idx = selectedProductIds.value.indexOf(product.id)
   if (idx === -1) {
     selectedProductIds.value.push(product.id)
+    console.log('[ShopCard] 添加商品到选择列表:', product.title)
   } else {
     selectedProductIds.value.splice(idx, 1)
+    console.log('[ShopCard] 从选择列表移除商品:', product.title)
   }
+  
   // 保存所有选中商品完整数据
   const selectedProducts = allProducts.value.filter(p => selectedProductIds.value.includes(p.id))
   localStorage.setItem('selectedShopProductIds', JSON.stringify(selectedProductIds.value))
   localStorage.setItem('selectedShopProducts', JSON.stringify(selectedProducts))
+  
+  // 通知父组件商品选择状态变化
+  emit('update', {
+    action: 'productSelectionChanged',
+    selectedProducts: selectedProducts,
+    selectedCount: selectedProducts.length,
+    product: product,
+    isSelected: idx === -1
+  })
 }
 
 // 自动监听 props.data 变化，刷新商品
@@ -594,7 +667,7 @@ watch(
   () => props.data,
   (newData, oldData) => {
     if (JSON.stringify(newData) !== JSON.stringify(oldData)) {
-      fetchShopProducts() // 用新内容请求接口
+      fetchProducts() // 用新内容请求接口
     }
   },
   { deep: true }
@@ -701,6 +774,15 @@ watch(
 
 .shop-list.scrollable::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+.debug-info {
+  background: #f8f9fa;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e9ecef;
+  font-size: 0.75rem;
+  color: #6c757d;
+  text-align: center;
 }
 
 .product-list {
