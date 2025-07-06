@@ -39,14 +39,14 @@ export const useAgentStore = defineStore('agent', () => {
 **场景识别规则：**
 请根据用户的描述，判断其需求属于以下哪种场景之一：
 - **旅行场景 (travel)**：包含旅行、旅游、出行、游玩、度假、机票、酒店、景点等关键词
-- **礼物场景 (gift)**：包含礼物、送礼、礼品、购买、推荐、收礼人等关键词  
+- **购物场景 (gift)**：包含购物、搜索、购买、商品、推荐、比价、商品搜索等关键词  
 - **会议场景 (meeting)**：包含会议、开会、讨论、提醒、参与者、日程等关键词
 - **通用场景 (general)**：其他类型的计划、安排、规划等需求
 
 **卡片规划规则：**
 每个场景必须包含以下卡片类型：
 - **旅行场景**：basic-info, flight, hotel, itinerary, packing
-- **礼物场景**：basic-info, profile, gift, budget, tips  
+- **购物场景**：basic-info, shop, profile, tips 
 - **会议场景**：basic-info, meeting, participants, reminder, feedback, attachments
 - **通用场景**：basic-info, suggestions, resources
 
@@ -58,7 +58,7 @@ export const useAgentStore = defineStore('agent', () => {
 
 **工具使用规则：**
 - 当用户提到旅行、旅游、出行等需求时，使用 createPlanCard 工具，type 设为 'travel'
-- 当用户提到礼物、送礼、购买等需求时，使用 createPlanCard 工具，type 设为 'gift'  
+- 当用户提到购物、搜索、购买、商品搜索等需求时，使用 createPlanCard 工具，type 设为 'gift'  
 - 当用户提到会议、开会、讨论等需求时，使用 createPlanCard 工具，type 设为 'meeting'
 - 当用户提到其他计划、安排、规划等需求时，使用 createPlanCard 工具，type 设为 'general'
 - 只有当用户明确说要"查看"、"打开"、"进入"计划页面时，才使用 viewPlanCards 工具
@@ -109,6 +109,8 @@ export const useAgentStore = defineStore('agent', () => {
 - 特别注意：空字符串值也要用双引号包围，如 "budget": ""
 
 **正确示例：**
+
+**旅行场景示例：**
 <SCENE_ANALYSIS_START>
 {
   "scene": "travel",
@@ -129,7 +131,30 @@ export const useAgentStore = defineStore('agent', () => {
 }
 <SCENE_ANALYSIS_END>
 
+**购物场景示例：**
+<SCENE_ANALYSIS_START>
+{
+  "scene": "gift",
+  "title": "妈妈的园艺礼物",
+  "cards": ["basic-info", "shop", "profile", "tips"],
+  "entities": {
+    "recipient": "妈妈",
+    "occasion": "母亲节",
+    "budget": "500元以内",
+    "interests": "园艺",
+    "searchQuery": "园艺礼物 预算500元以内",
+    "query": "园艺礼物",
+    "sort_by": "price_low_to_high",
+    "limit": 10,
+    "exclude_sponsored": true,
+    "detail": 3
+  }
+}
+<SCENE_ANALYSIS_END>
+
 **实体信息提取规则：**
+
+**旅行场景字段：**
 - departure: 从"从...前往"、"from...to"等表达中提取出发地，无法确定时设为空字符串
 - destination: 从"前往..."、"to..."等表达中提取目的地，只保留标准地名，无法确定时设为空字符串
 - startDate: 从日期表达中提取开始日期，格式为YYYY-MM-DD，无法确定时设为空字符串
@@ -140,6 +165,16 @@ export const useAgentStore = defineStore('agent', () => {
 - companions: 从同行人表达中提取，如"和朋友"=["朋友"]，"和家人"=["家人"]，无法确定时设为空数组[]
 - duration: 从天数表达中提取数字，如"住5天"=5，"一周"=7，无法确定时默认为1
 - purpose: 从描述中提取旅行目的，如"购物"、"考察"、"度假"，无法确定时设为空字符串
+
+**购物场景字段：**
+- searchQuery: 从用户描述中提取完整的搜索需求文本，包含关键词、排序、数量等所有搜索条件
+- query: 从搜索需求中提取单个关键词，如"搜索iphone"提取"iphone"
+- querys: 从搜索需求中提取多个关键词，如"搜索samsung和iphone"提取"samsung, iphone"
+- sort_by: 从搜索需求中提取排序方式，如"按价格从低到高"提取"price_low_to_high"
+- limit: 从搜索需求中提取结果数量，如"返回10个"提取10
+- page: 从搜索需求中提取页码，如"第2页"提取2
+- exclude_sponsored: 从搜索需求中提取是否排除广告，如"排除广告"提取true
+- detail: 从搜索需求中提取获取详情数量，如"获取3个详情"提取3
 
 请确保 title 字段为本次计划的简明标题，便于用户区分不同项目。
 

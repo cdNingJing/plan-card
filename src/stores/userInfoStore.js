@@ -19,6 +19,8 @@ export const useUserInfoStore = defineStore('userInfo', () => {
       recipient: '',
       occasion: '',
       budget: '',
+      interests: '',
+      searchQuery: '',
       preferences: '',
       relationship: ''
     },

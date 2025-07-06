@@ -56,55 +56,49 @@ export const basicInfoFieldsConfig = {
 
   // 礼物场景 - 专注于购买接口所需信息
   gift: {
-    title: '礼物推荐基础信息',
-    description: '请提供基本信息，我们将为您推荐合适的礼物并提供购买链接',
+    title: '礼物选择基础信息',
+    description: '请告诉我们您想给谁买礼物，我们会帮您找到最合适的礼物',
     fields: [
       {
         key: 'recipient',
         label: '收礼人',
         type: 'text',
-        placeholder: '请输入收礼人称呼',
+        placeholder: '例如：妈妈、爸爸、女朋友、同事等',
+        required: false,
+        description: '您想给谁买礼物？'
+      },
+      // {
+      //   key: 'occasion',
+      //   label: '送礼场合',
+      //   type: 'text',
+      //   placeholder: '例如：生日、母亲节、结婚纪念日、新年等',
+      //   required: false,
+      //   description: '什么场合送这个礼物？'
+      // },
+      // {
+      //   key: 'budget',
+      //   label: '预算范围',
+      //   type: 'text',
+      //   placeholder: '例如：500元以内、1000-2000元、预算不限等',
+      //   required: false,
+      //   description: '您的预算大概是多少？'
+      // },
+      // {
+      //   key: 'interests',
+      //   label: '收礼人兴趣',
+      //   type: 'text',
+      //   placeholder: '例如：园艺、阅读、运动、美食、科技等',
+      //   required: false,
+      //   description: '收礼人有什么兴趣爱好？'
+      // },
+      {
+        key: 'searchQuery',
+        label: '具体需求',
+        type: 'textarea',
+        placeholder: '如果您已经有具体想法，请详细描述：\n例如：想要园艺相关的礼物，最好是实用的工具套装\n或者：想要一款性价比高的手机，预算在3000元左右',
         required: true,
-        description: '例如：妈妈、朋友、同事等'
-      },
-      {
-        key: 'occasion',
-        label: '送礼场合',
-        type: 'select',
-        required: true,
-        placeholder: '请选择场合',
-        options: [
-          { value: 'birthday', label: '生日' },
-          { value: 'holiday', label: '节日' },
-          { value: 'anniversary', label: '纪念日' },
-          { value: 'just-because', label: '日常表达' }
-        ],
-        description: '送礼的具体场合'
-      },
-      {
-        key: 'budget',
-        label: '预算',
-        type: 'range',
-        min: 50,
-        max: 2000,
-        step: 50,
-        defaultValue: 300,
-        format: 'currency',
-        description: '您的预算范围'
-      },
-      {
-        key: 'interests',
-        label: '收礼人兴趣',
-        type: 'checkbox',
-        options: [
-          { value: 'gardening', label: '园艺' },
-          { value: 'cooking', label: '烹饪' },
-          { value: 'reading', label: '阅读' },
-          { value: 'sports', label: '运动' },
-          { value: 'tech', label: '科技' },
-          { value: 'fashion', label: '时尚' }
-        ],
-        description: '收礼人的主要兴趣爱好（可多选）'
+        rows: 4,
+        description: '如果您已经有具体的礼物想法，可以在这里详细描述'
       }
     ]
   },

@@ -142,6 +142,13 @@ export const useCardStore = defineStore('card', () => {
       defaultState: 'expanded',
       priority: 1
     },
+    shop: {
+      name: '商品搜索卡片',
+      icon: 'Package',
+      category: 'gift',
+      defaultState: 'collapsed',
+      priority: 2
+    },
 
   }
 
@@ -542,7 +549,7 @@ export const useCardStore = defineStore('card', () => {
         // 修复空字符串结尾的问题
         jsonStr = jsonStr.replace(/"(\w+)":\s*""\s*}/g, '"$1": ""}')
         
-        console.log('[extractEntitiesFromAIResponse] 修复后JSON:', jsonStr)
+                  console.log('[extractEntitiesFromAIResponse] 修复后JSON:', jsonStr)
         
         const analysis = JSON.parse(jsonStr)
         if (analysis.entities) {
@@ -636,6 +643,79 @@ export const useCardStore = defineStore('card', () => {
             cleanedEntities.purpose = analysis.entities.purpose
           }
           
+          // 处理购物场景的字段
+          if (analysis.entities.recipient !== undefined && analysis.entities.recipient !== null && analysis.entities.recipient !== '') {
+            cleanedEntities.recipient = analysis.entities.recipient
+          }
+          
+          if (analysis.entities.occasion !== undefined && analysis.entities.occasion !== null && analysis.entities.occasion !== '') {
+            cleanedEntities.occasion = analysis.entities.occasion
+          }
+          
+          if (analysis.entities.interests !== undefined && analysis.entities.interests !== null && analysis.entities.interests !== '') {
+            cleanedEntities.interests = analysis.entities.interests
+          }
+          
+          if (analysis.entities.searchQuery !== undefined && analysis.entities.searchQuery !== null && analysis.entities.searchQuery !== '') {
+            cleanedEntities.searchQuery = analysis.entities.searchQuery
+          }
+          
+          if (analysis.entities.query !== undefined && analysis.entities.query !== null && analysis.entities.query !== '') {
+            cleanedEntities.query = analysis.entities.query
+          }
+          
+          if (analysis.entities.querys !== undefined && analysis.entities.querys !== null && analysis.entities.querys !== '') {
+            cleanedEntities.querys = analysis.entities.querys
+          }
+          
+          if (analysis.entities.sort_by !== undefined && analysis.entities.sort_by !== null && analysis.entities.sort_by !== '') {
+            cleanedEntities.sort_by = analysis.entities.sort_by
+          }
+          
+          if (analysis.entities.limit !== undefined && analysis.entities.limit !== null) {
+            cleanedEntities.limit = parseInt(analysis.entities.limit) || 10
+          }
+          
+          if (analysis.entities.page !== undefined && analysis.entities.page !== null) {
+            cleanedEntities.page = parseInt(analysis.entities.page) || 1
+          }
+          
+          if (analysis.entities.exclude_sponsored !== undefined && analysis.entities.exclude_sponsored !== null) {
+            cleanedEntities.exclude_sponsored = analysis.entities.exclude_sponsored
+          }
+          
+          if (analysis.entities.detail !== undefined && analysis.entities.detail !== null) {
+            cleanedEntities.detail = parseInt(analysis.entities.detail) || 0
+          }
+          
+          // 处理会议场景的字段
+          if (analysis.entities.meetingTitle !== undefined && analysis.entities.meetingTitle !== null && analysis.entities.meetingTitle !== '') {
+            cleanedEntities.meetingTitle = analysis.entities.meetingTitle
+          }
+          
+          if (analysis.entities.meetingDate !== undefined && analysis.entities.meetingDate !== null && analysis.entities.meetingDate !== '') {
+            cleanedEntities.meetingDate = analysis.entities.meetingDate
+          }
+          
+          if (analysis.entities.meetingTime !== undefined && analysis.entities.meetingTime !== null && analysis.entities.meetingTime !== '') {
+            cleanedEntities.meetingTime = analysis.entities.meetingTime
+          }
+          
+          if (analysis.entities.participants !== undefined && analysis.entities.participants !== null && Array.isArray(analysis.entities.participants) && analysis.entities.participants.length > 0) {
+            cleanedEntities.participants = analysis.entities.participants
+          }
+          
+          if (analysis.entities.meetingType !== undefined && analysis.entities.meetingType !== null && analysis.entities.meetingType !== '') {
+            cleanedEntities.meetingType = analysis.entities.meetingType
+          }
+          
+          // 通用字段处理 - 保留所有其他字段
+          Object.keys(analysis.entities).forEach(key => {
+            if (!cleanedEntities.hasOwnProperty(key) && analysis.entities[key] !== undefined && analysis.entities[key] !== null) {
+              cleanedEntities[key] = analysis.entities[key]
+            }
+          })
+          
           console.log('[extractEntitiesFromAIResponse] 从标记JSON中提取实体信息:', cleanedEntities)
           return cleanedEntities
         }
@@ -675,7 +755,7 @@ export const useCardStore = defineStore('card', () => {
         // 修复空字符串结尾的问题
         jsonStr = jsonStr.replace(/"(\w+)":\s*""\s*}/g, '"$1": ""}')
         
-        console.log('[extractEntitiesFromAIResponse] 传统解析修复后JSON:', jsonStr)
+                  console.log('[extractEntitiesFromAIResponse] 传统解析修复后JSON:', jsonStr)
         
         const analysis = JSON.parse(jsonStr)
         if (analysis.entities) {
@@ -769,6 +849,79 @@ export const useCardStore = defineStore('card', () => {
             cleanedEntities.purpose = analysis.entities.purpose
           }
           
+          // 处理购物场景的字段
+          if (analysis.entities.recipient !== undefined && analysis.entities.recipient !== null && analysis.entities.recipient !== '') {
+            cleanedEntities.recipient = analysis.entities.recipient
+          }
+          
+          if (analysis.entities.occasion !== undefined && analysis.entities.occasion !== null && analysis.entities.occasion !== '') {
+            cleanedEntities.occasion = analysis.entities.occasion
+          }
+          
+          if (analysis.entities.interests !== undefined && analysis.entities.interests !== null && analysis.entities.interests !== '') {
+            cleanedEntities.interests = analysis.entities.interests
+          }
+          
+          if (analysis.entities.searchQuery !== undefined && analysis.entities.searchQuery !== null && analysis.entities.searchQuery !== '') {
+            cleanedEntities.searchQuery = analysis.entities.searchQuery
+          }
+          
+          if (analysis.entities.query !== undefined && analysis.entities.query !== null && analysis.entities.query !== '') {
+            cleanedEntities.query = analysis.entities.query
+          }
+          
+          if (analysis.entities.querys !== undefined && analysis.entities.querys !== null && analysis.entities.querys !== '') {
+            cleanedEntities.querys = analysis.entities.querys
+          }
+          
+          if (analysis.entities.sort_by !== undefined && analysis.entities.sort_by !== null && analysis.entities.sort_by !== '') {
+            cleanedEntities.sort_by = analysis.entities.sort_by
+          }
+          
+          if (analysis.entities.limit !== undefined && analysis.entities.limit !== null) {
+            cleanedEntities.limit = parseInt(analysis.entities.limit) || 10
+          }
+          
+          if (analysis.entities.page !== undefined && analysis.entities.page !== null) {
+            cleanedEntities.page = parseInt(analysis.entities.page) || 1
+          }
+          
+          if (analysis.entities.exclude_sponsored !== undefined && analysis.entities.exclude_sponsored !== null) {
+            cleanedEntities.exclude_sponsored = analysis.entities.exclude_sponsored
+          }
+          
+          if (analysis.entities.detail !== undefined && analysis.entities.detail !== null) {
+            cleanedEntities.detail = parseInt(analysis.entities.detail) || 0
+          }
+          
+          // 处理会议场景的字段
+          if (analysis.entities.meetingTitle !== undefined && analysis.entities.meetingTitle !== null && analysis.entities.meetingTitle !== '') {
+            cleanedEntities.meetingTitle = analysis.entities.meetingTitle
+          }
+          
+          if (analysis.entities.meetingDate !== undefined && analysis.entities.meetingDate !== null && analysis.entities.meetingDate !== '') {
+            cleanedEntities.meetingDate = analysis.entities.meetingDate
+          }
+          
+          if (analysis.entities.meetingTime !== undefined && analysis.entities.meetingTime !== null && analysis.entities.meetingTime !== '') {
+            cleanedEntities.meetingTime = analysis.entities.meetingTime
+          }
+          
+          if (analysis.entities.participants !== undefined && analysis.entities.participants !== null && Array.isArray(analysis.entities.participants) && analysis.entities.participants.length > 0) {
+            cleanedEntities.participants = analysis.entities.participants
+          }
+          
+          if (analysis.entities.meetingType !== undefined && analysis.entities.meetingType !== null && analysis.entities.meetingType !== '') {
+            cleanedEntities.meetingType = analysis.entities.meetingType
+          }
+          
+          // 通用字段处理 - 保留所有其他字段
+          Object.keys(analysis.entities).forEach(key => {
+            if (!cleanedEntities.hasOwnProperty(key) && analysis.entities[key] !== undefined && analysis.entities[key] !== null) {
+              cleanedEntities[key] = analysis.entities[key]
+            }
+          })
+          
           console.log('[extractEntitiesFromAIResponse] 从传统JSON中提取实体信息:', cleanedEntities)
           return cleanedEntities
         }
@@ -826,6 +979,12 @@ export const useCardStore = defineStore('card', () => {
       return {
         scene: 'gift',
         cards: ['basic-info', 'profile', 'gift', 'budget', 'tips'],
+        entities: parseUserInput(input).entities || {}
+      }
+    } else if (/购物|搜索|购买|买|商品|产品|shop|purchase|buy|search/.test(input)) {
+      return {
+        scene: 'gift',
+        cards: ['basic-info', 'shop', 'profile', 'tips'],
         entities: parseUserInput(input).entities || {}
       }
     } else if (input.includes('旅行') || input.includes('旅游') || input.includes('出行') || input.includes('游玩') || input.includes('度假') || input.includes('机票') || input.includes('酒店') || input.includes('景点')) {
@@ -897,6 +1056,7 @@ export const useCardStore = defineStore('card', () => {
       'gift': '礼物推荐',
       'budget': '预算筛选',
       'tips': '贴心提示',
+      'shop': '商品搜索',
       'meeting': '会议详情',
       'participants': '参与者管理',
       'reminder': '提醒设置',
@@ -1007,17 +1167,92 @@ export const useCardStore = defineStore('card', () => {
             ]
           }
         case 'profile':
+          // 构建收礼人画像数据
+          const recipient = context.entities?.recipient || ''
+          const occasion = context.entities?.occasion || ''
+          const budget = context.entities?.budget || ''
+          const interests = context.entities?.interests || ''
+          
+          // 生成画像分析
+          let analysis = '正在分析收礼人画像...'
+          if (recipient) {
+            analysis = `根据您提供的信息，${recipient}`
+            if (interests) {
+              analysis += `是一位热爱${interests}的`
+            }
+            if (occasion) {
+              analysis += `，在${occasion}这个特殊的日子里，`
+            }
+            analysis += `我们为您推荐最适合的礼物。`
+          }
+          
+          // 生成标签
+          const tags = []
+          if (recipient) tags.push(recipient)
+          if (occasion) tags.push(occasion)
+          if (interests) tags.push(interests)
+          if (budget) tags.push(budget)
+          if (tags.length === 0) tags.push('待完善')
+          
+          // 生成礼物建议
+          const giftSuggestions = []
+          if (interests && interests.includes('园艺')) {
+            giftSuggestions.push({
+              id: 1,
+              title: '园艺工具套装',
+              reason: '实用性强，适合园艺爱好者日常使用'
+            })
+            giftSuggestions.push({
+              id: 2,
+              title: '精美花盆组合',
+              reason: '美观实用，可以种植各种植物'
+            })
+          } else if (interests && interests.includes('阅读')) {
+            giftSuggestions.push({
+              id: 1,
+              title: '电子阅读器',
+              reason: '便携实用，适合爱阅读的人'
+            })
+            giftSuggestions.push({
+              id: 2,
+              title: '精美书签套装',
+              reason: '实用美观，阅读时的贴心伴侣'
+            })
+          } else {
+            giftSuggestions.push({
+              id: 1,
+              title: '个性化定制礼物',
+              reason: '根据收礼人喜好定制，更有意义'
+            })
+            giftSuggestions.push({
+              id: 2,
+              title: '实用生活用品',
+              reason: '日常使用频率高，实用性强'
+            })
+          }
+          
           return {
-            analysis: '根据您提供的信息，收礼人是一位热爱园艺的女性...',
-            tags: ['园艺爱好者', '实用主义', '自然主义']
+            recipient,
+            occasion,
+            budget,
+            interests,
+            analysis,
+            tags,
+            giftSuggestions
           }
         case 'gift':
           return {
             recommendations: [
               {
-                name: '园艺工具套装',
-                price: 288,
-                description: '包含铲子、剪刀、手套等基础工具',
+                name: context.entities?.interests?.includes('园艺') ? '园艺工具套装' : '精美礼物套装',
+                price: context.entities?.budget ? 
+                  (typeof context.entities.budget === 'string' ? 
+                    parseInt(context.entities.budget.match(/\d+/)?.[0] || '300') : 
+                    context.entities.budget) : 
+                  288,
+                description: context.entities?.interests?.includes('园艺') ? 
+                  '包含铲子、剪刀、手套等基础工具' : 
+                  '精选优质礼物，适合各种场合',
                 image: '/api/placeholder/200/200',
                 rating: 4.8
               }
@@ -1025,12 +1260,27 @@ export const useCardStore = defineStore('card', () => {
           }
         case 'budget':
           return {
-            range: { min: 200, max: 500 },
+            range: context.entities?.budget ? 
+              (typeof context.entities.budget === 'string' ? 
+                { min: 50, max: parseInt(context.entities.budget.match(/\d+/)?.[0] || '500') } :
+                { min: 50, max: context.entities.budget }) :
+              { min: 200, max: 500 },
             filtered: 15
           }
         case 'tips':
           return {
-            tips: ['选择实用性强的礼物', '考虑包装的精美程度']
+            tips: context.entities?.interests?.includes('园艺') ? 
+              ['选择实用性强的园艺工具', '考虑包装的精美程度', '注意工具的耐用性'] :
+              ['选择实用性强的礼物', '考虑包装的精美程度', '注意礼物的适用性']
+          }
+        case 'shop':
+          return {
+            recommendations: [],
+            searchQuery: context.entities?.searchQuery || context.entities?.query || context.entities?.querys || '',
+            filters: {
+              priceRange: 'any',
+              rating: 'any'
+            }
           }
         case 'meeting':
           return {

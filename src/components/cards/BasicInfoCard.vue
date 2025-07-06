@@ -223,6 +223,9 @@ const autoSaveDelay = 1000 // 1秒防抖延迟
 const isSaving = ref(false)
 const lastSaved = ref(null)
 
+// 组件挂载状态
+const isComponentMounted = ref(false)
+
 // 防抖函数
 const debounce = (func, delay) => {
   return (...args) => {
@@ -230,7 +233,10 @@ const debounce = (func, delay) => {
       clearTimeout(saveDebounceTimer.value)
     }
     saveDebounceTimer.value = setTimeout(() => {
-      func.apply(this, args)
+      // 检查组件是否仍然挂载
+      if (isComponentMounted.value) {
+        func.apply(this, args)
+      }
     }, delay)
   }
 }
@@ -238,6 +244,12 @@ const debounce = (func, delay) => {
 // 自动保存函数
 const autoSave = (data) => {
   try {
+    // 检查组件是否仍然挂载
+    if (!isComponentMounted.value) {
+      console.log('[BasicInfoCard] 组件已卸载，跳过自动保存')
+      return
+    }
+    
     isSaving.value = true
     
     // 保存到store
@@ -257,15 +269,29 @@ const autoSave = (data) => {
   } catch (error) {
     console.error('[BasicInfoCard] 自动保存失败:', error)
   } finally {
-    isSaving.value = false
+    // 再次检查组件是否仍然挂载
+    if (isComponentMounted.value) {
+      isSaving.value = false
+    }
   }
 }
 
 // 防抖后的自动保存函数
-const debouncedAutoSave = debounce(autoSave, autoSaveDelay)
+const debouncedAutoSave = debounce((data) => {
+  // 在防抖函数内部也检查组件挂载状态
+  if (isComponentMounted.value) {
+    autoSave(data)
+  }
+}, autoSaveDelay)
 
 // 处理输入变化
 const handleInputChange = (fieldKey, value) => {
+  // 检查组件是否仍然挂载
+  if (!isComponentMounted.value) {
+    console.log('[BasicInfoCard] 组件已卸载，跳过输入处理')
+    return
+  }
+  
   // 获取字段配置
   const field = displayFields.value.find(f => f.key === fieldKey)
   
@@ -293,8 +319,84 @@ const handleInputChange = (fieldKey, value) => {
     formData.value[fieldKey] = value
   }
   
+  // 如果是礼物场景，自动更新具体需求
+  if (props.scenario === 'gift') {
+    updateSearchQuery()
+  }
+  
   // 触发防抖自动保存
   debouncedAutoSave({ ...formData.value })
+}
+
+// 自动更新具体需求（礼物场景专用）
+const updateSearchQuery = () => {
+  // 检查组件是否仍然挂载
+  if (!isComponentMounted.value) {
+    return
+  }
+  
+  const recipient = formData.value.recipient || ''
+  const occasion = formData.value.occasion || ''
+  const budget = formData.value.budget || ''
+  const interests = formData.value.interests || ''
+  const existingSearchQuery = formData.value.searchQuery || ''
+  
+  // 如果用户已经手动填写了具体需求，不自动覆盖
+  if (existingSearchQuery && existingSearchQuery.trim() !== '') {
+    return
+  }
+  
+  // 构建智能搜索查询
+  let searchQuery = ''
+  const keywords = []
+  
+  // 根据收礼人关系生成关键词
+  if (recipient) {
+    if (recipient.includes('妈妈') || recipient.includes('母亲')) {
+      keywords.push('妈妈礼物', '女性礼物')
+    } else if (recipient.includes('爸爸') || recipient.includes('父亲')) {
+      keywords.push('爸爸礼物', '男性礼物')
+    } else if (recipient.includes('女朋友') || recipient.includes('女友')) {
+      keywords.push('女朋友礼物', '浪漫礼物')
+    } else if (recipient.includes('男朋友') || recipient.includes('男友')) {
+      keywords.push('男朋友礼物', '男性礼物')
+    } else if (recipient.includes('同事')) {
+      keywords.push('同事礼物', '办公礼物')
+    } else {
+      keywords.push(`${recipient}礼物`)
+    }
+  }
+  
+  // 根据兴趣爱好生成关键词
+  if (interests) {
+    if (interests.includes('园艺')) {
+      keywords.push('园艺工具', '花盆', '植物')
+    } else if (interests.includes('阅读')) {
+      keywords.push('书籍', '电子书', '书签')
+    } else if (interests.includes('运动')) {
+      keywords.push('运动装备', '健身器材')
+    } else if (interests.includes('美食')) {
+      keywords.push('厨房用品', '美食工具')
+    } else if (interests.includes('科技')) {
+      keywords.push('数码产品', '智能设备')
+    } else {
+      keywords.push(interests)
+    }
+  }
+  
+  // 组合搜索查询
+  if (keywords.length > 0) {
+    searchQuery = keywords.join(' ')
+    if (budget) {
+      searchQuery += ` ${budget}`
+    }
+  }
+  
+  // 更新具体需求字段
+  if (searchQuery && searchQuery !== existingSearchQuery) {
+    formData.value.searchQuery = searchQuery
+    console.log('[BasicInfoCard] 自动更新具体需求:', searchQuery)
+  }
 }
 
 // 计算显示的字段配置
@@ -484,13 +586,14 @@ const resetForm = () => {
   validationErrors.value = []
 }
 
-// 监听表单数据变化（移除原有的深度监听，改为手动控制）
-// watch(formData, (newData) => {
-//   emit('change', { ...newData })
-// }, { deep: true })
-
 // 监听完成状态变化
 watch(isCompleted, (newCompleted) => {
+  // 检查组件是否仍然挂载
+  if (!isComponentMounted.value) {
+    console.log('[BasicInfoCard] 组件已卸载，跳过完成状态监听')
+    return
+  }
+  
   // 通知父组件完成状态变化
   emit('change', { 
     ...formData.value,
@@ -507,11 +610,23 @@ watch(isCompleted, (newCompleted) => {
 
 // 监听字段配置变化，重新初始化表单
 watch(displayFields, () => {
+  // 检查组件是否仍然挂载
+  if (!isComponentMounted.value) {
+    console.log('[BasicInfoCard] 组件已卸载，跳过字段配置监听')
+    return
+  }
+  
   initFormData()
 }, { deep: true })
 
 // 监听projectCardStore的变化，更新表单数据
 watch(() => projectCardStore.updateVersion, (newVersion, oldVersion) => {
+  // 检查组件是否仍然挂载
+  if (!isComponentMounted.value) {
+    console.log('[BasicInfoCard] 组件已卸载，跳过projectCardStore监听')
+    return
+  }
+  
   if (newVersion !== oldVersion) {
     console.log('[BasicInfoCard] 检测到projectCardStore更新:', newVersion)
     
@@ -531,6 +646,12 @@ watch(() => projectCardStore.updateVersion, (newVersion, oldVersion) => {
 
 // 监听初始数据变化，更新表单数据（保持向后兼容）
 watch(() => props.initialData, (newInitialData, oldInitialData) => {
+  // 检查组件是否仍然挂载
+  if (!isComponentMounted.value) {
+    console.log('[BasicInfoCard] 组件已卸载，跳过initialData监听')
+    return
+  }
+  
   console.log('[BasicInfoCard] 检测到initialData变化:', {
     old: oldInitialData,
     new: newInitialData,
@@ -546,11 +667,14 @@ watch(() => props.initialData, (newInitialData, oldInitialData) => {
 
 // 组件挂载时初始化
 onMounted(() => {
+  isComponentMounted.value = true
+  
   initFormData()
   
   // 初始化后检查完成状态
   nextTick(() => {
-    if (isCompleted.value) {
+    // 再次检查组件是否仍然挂载
+    if (isComponentMounted.value && isCompleted.value) {
       emit('change', { 
         ...formData.value,
         isCompleted: true
@@ -561,10 +685,14 @@ onMounted(() => {
 
 // 组件卸载时清理定时器
 onUnmounted(() => {
+  isComponentMounted.value = false
+  
   if (saveDebounceTimer.value) {
     clearTimeout(saveDebounceTimer.value)
     saveDebounceTimer.value = null
   }
+  
+  console.log('[BasicInfoCard] 组件已卸载，清理完成')
 })
 
 // 暴露方法给父组件

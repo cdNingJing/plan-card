@@ -72,6 +72,16 @@ export default defineConfig({
             console.log('酒店API代理响应:', proxyRes.statusCode, req.url)
           })
         }
+      },
+      '/api/shops': {
+        target: 'https://api-dev.braininc.net/be/svc-adapter/purchasing',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/api\/shops/, '')
+      },
+      '/api/amazon': {
+        target: 'https://api-dev.braininc.net/be/svc-adapter/amazon',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/api\/amazon/, '')
       }
     }
   }

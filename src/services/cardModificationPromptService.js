@@ -60,33 +60,40 @@ export class CardModificationPromptService {
         fieldPatterns: {
           recipient: {
             patterns: [
-              /(?:收礼人|送给|给).*?([^，。！？\s]+)/,
-              /(?:修改|更改|更新|改为|改成).*?(?:收礼人).*?([^，。！？\s]+)/
+              /(?:收礼人|给谁|送给谁|买给).*?([^，。！？\s]+)/,
+              /(?:修改|更改|更新|改为|改成).*?(?:收礼人|给谁).*?([^，。！？\s]+)/
             ],
-            examples: ['收礼人妈妈', '送给朋友', '给同事']
+            examples: ['妈妈', '爸爸', '女朋友', '同事', '给妈妈买礼物']
           },
           occasion: {
             patterns: [
-              /(?:送礼场合|场合|什么场合|什么时候).*?(生日|节日|纪念日|日常表达)/,
-              /(?:修改|更改|更新|改为|改成).*?(?:送礼场合|场合).*?(生日|节日|纪念日|日常表达)/
+              /(?:送礼场合|什么场合|什么时候送|节日).*?([^，。！？\s]+)/,
+              /(?:修改|更改|更新|改为|改成).*?(?:送礼场合|场合).*?([^，。！？\s]+)/
             ],
-            examples: ['生日', '节日', '纪念日', '日常表达'],
-            valueMapper: this.mapOccasionValue
+            examples: ['生日', '母亲节', '结婚纪念日', '新年', '圣诞节']
           },
           budget: {
             patterns: [
-              /(?:预算|费用).*?(\d+)(?:元|块|块钱)?/,
-              /(?:修改|更改|更新|改为|改成).*?(?:预算|费用).*?(\d+)(?:元|块|块钱)?/
+              /(?:预算|多少钱|价格|费用).*?(\d+)(?:元|块|块钱)?/,
+              /(?:预算|价格).*?(不限|随意|都可以)/,
+              /(?:修改|更改|更新|改为|改成).*?(?:预算|价格).*?(\d+)(?:元|块|块钱)?/
             ],
-            examples: ['预算300元', '费用500元']
+            examples: ['预算500元', '500元以内', '预算不限', '价格随意']
           },
           interests: {
             patterns: [
-              /(?:兴趣|爱好|喜欢).*?(园艺|烹饪|阅读|运动|科技|时尚)/,
-              /(?:修改|更改|更新|改为|改成).*?(?:兴趣|爱好).*?(园艺|烹饪|阅读|运动|科技|时尚)/
+              /(?:兴趣爱好|喜欢什么|爱好|兴趣).*?([^，。！？\s]+)/,
+              /(?:修改|更改|更新|改为|改成).*?(?:兴趣爱好|兴趣).*?([^，。！？\s]+)/
             ],
-            examples: ['喜欢园艺', '爱好烹饪', '兴趣科技'],
-            valueMapper: this.mapInterestValue
+            examples: ['园艺', '阅读', '运动', '美食', '科技']
+          },
+          searchQuery: {
+            patterns: [
+              /(?:搜索需求|搜索条件|搜索要求|查找需求|具体需求).*?([^，。！？\n]+)/,
+              /(?:修改|更改|更新|改为|改成).*?(?:搜索需求|搜索条件).*?([^，。！？\n]+)/
+            ],
+            examples: ['想要园艺相关的礼物，最好是实用的工具套装', '想要一款性价比高的手机，预算在3000元左右'],
+            textParser: this.parseSearchQuery
           }
         }
       },
@@ -317,16 +324,120 @@ export class CardModificationPromptService {
     return mapping[value] || value
   }
 
+  // 映射排序方式值
+  mapSortByValue(value) {
+    const sortMap = {
+      '最新': 'most_recent',
+      '最新到货': 'most_recent',
+      '价格从低到高': 'price_low_to_high',
+      '价格低到高': 'price_low_to_high',
+      '价格从高到低': 'price_high_to_low',
+      '价格高到低': 'price_high_to_low',
+      '精选': 'featured',
+      '精选优先': 'featured',
+      '评价': 'average_review',
+      '平均评价': 'average_review'
+    }
+    return sortMap[value] || value
+  }
+
+  // 映射布尔值
+  mapBooleanValue(value) {
+    if (typeof value === 'boolean') return value
+    if (typeof value === 'string') {
+      const positiveWords = ['是', '要', '需要', '排除', '过滤', '不要', '不显示']
+      const negativeWords = ['否', '不要', '不需要', '不排除', '不过滤', '显示']
+      
+      const lowerValue = value.toLowerCase()
+      if (positiveWords.some(word => lowerValue.includes(word))) return true
+      if (negativeWords.some(word => lowerValue.includes(word))) return false
+    }
+    return true // 默认值
+  }
+
+  // 解析搜索查询文本
+  parseSearchQuery(text) {
+    const result = {}
+    
+    // 解析单个关键词
+    const singleQueryMatch = text.match(/搜索关键词[：:]\s*([^，。！？\n]+)/)
+    if (singleQueryMatch) {
+      result.query = singleQueryMatch[1].trim()
+    }
+    
+    // 解析多关键词
+    const multiQueryMatch = text.match(/多关键词[：:]\s*([^，。！？\n]+)/)
+    if (multiQueryMatch) {
+      result.querys = multiQueryMatch[1].trim()
+    }
+    
+    // 解析排序方式
+    const sortMatch = text.match(/排序方式[：:]\s*(按.*?排序|最新|价格.*?低.*?高|价格.*?高.*?低|精选|评价)/)
+    if (sortMatch) {
+      result.sort_by = this.mapSortByValue(sortMatch[1])
+    }
+    
+    // 解析结果数量
+    const limitMatch = text.match(/结果数量[：:]\s*(\d+)/)
+    if (limitMatch) {
+      result.limit = parseInt(limitMatch[1])
+    }
+    
+    // 解析页码
+    const pageMatch = text.match(/页码[：:]\s*(\d+)/)
+    if (pageMatch) {
+      result.page = parseInt(pageMatch[1])
+    }
+    
+    // 解析排除广告
+    const excludeMatch = text.match(/排除广告[：:]\s*(是|否|要|不要)/)
+    if (excludeMatch) {
+      result.exclude_sponsored = this.mapBooleanValue(excludeMatch[1])
+    }
+    
+    // 解析获取详情
+    const detailMatch = text.match(/获取详情[：:]\s*(\d+)/)
+    if (detailMatch) {
+      result.detail = parseInt(detailMatch[1])
+    }
+    
+    // 如果没有找到结构化信息，尝试从自然语言中提取
+    if (Object.keys(result).length === 0) {
+      // 提取关键词
+      const keywordMatch = text.match(/搜索|查找|买|购买.*?([^，。！？\n]+)/)
+      if (keywordMatch) {
+        result.query = keywordMatch[1].trim()
+      }
+      
+      // 提取排序
+      const sortNaturalMatch = text.match(/按(.*?)排序/)
+      if (sortNaturalMatch) {
+        result.sort_by = this.mapSortByValue(sortNaturalMatch[1])
+      }
+      
+      // 提取数量
+      const countMatch = text.match(/返回(\d+)个|显示(\d+)个/)
+      if (countMatch) {
+        result.limit = parseInt(countMatch[1] || countMatch[2])
+      }
+    }
+    
+    return result
+  }
+
   // 获取映射描述
   getMappingDescription(fieldKey, scenario) {
     const descriptions = {
       budget: {
         travel: '≤3000元→budget, 3001-8000元→comfort, >8000元→luxury',
-        gift: '直接使用数字值'
+        gift: '直接使用用户输入的文本值'
       },
-      occasion: '生日→birthday, 节日→holiday, 纪念日→anniversary, 日常表达→just-because',
-      interests: '园艺→gardening, 烹饪→cooking, 阅读→reading, 运动→sports, 科技→tech, 时尚→fashion',
-      duration: '30分钟→30, 1小时→60, 2小时→120, 半天→240'
+      occasion: '直接使用用户输入的文本值',
+      interests: '直接使用用户输入的文本值',
+      duration: '30分钟→30, 1小时→60, 2小时→120, 半天→240',
+      sort_by: '最新→most_recent, 价格从低到高→price_low_to_high, 价格从高到低→price_high_to_low, 精选→featured, 评价→average_review',
+      exclude_sponsored: '是/排除/过滤→true, 否/不排除/不过滤→false',
+      searchQuery: '解析文本中的搜索条件，提取关键词、排序、数量等参数'
     }
     return descriptions[fieldKey]?.[scenario] || descriptions[fieldKey] || '直接使用原值'
   }
