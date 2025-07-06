@@ -39,7 +39,7 @@
     <!-- 底部输入组件 -->
     <BottomInput 
       ref="bottomInputRef"
-      placeholder="描述您的需求，如：我想和朋友一起去东京玩五天..."
+      placeholder="描述您的需求，如：好友旅行规划..."
     />
   </div>
 </template>
@@ -65,15 +65,15 @@ const hasProjects = computed(() => projectCount.value > 0)
 const examples = ref([
   {
     id: 1,
-    text: "我想和朋友一起去东京玩五天"
+    text: "好友旅行规划"
   },
   {
     id: 2,
-    text: "我想送妈妈一个园艺相关的礼物，预算500元以内"
+    text: "母亲节礼物推荐"
   },
   {
     id: 3,
-    text: "明天下午三点的项目会议，请发提醒"
+    text: "会议确认提醒"
   }
 ])
 

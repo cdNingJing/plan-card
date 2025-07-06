@@ -95,7 +95,7 @@ export const basicInfoFieldsConfig = {
         key: 'searchQuery',
         label: '具体需求',
         type: 'textarea',
-        placeholder: '如果您已经有具体想法，请详细描述：\n例如：想要园艺相关的礼物，最好是实用的工具套装\n或者：想要一款性价比高的手机，预算在3000元左右',
+        placeholder: '如果您已经有具体想法，请详细描述：\n例如：想要母亲节礼物推荐，预算500元以内\n或者：想要一款性价比高的手机，预算在3000元左右',
         required: true,
         rows: 4,
         description: '如果您已经有具体的礼物想法，可以在这里详细描述'
@@ -128,7 +128,7 @@ export const basicInfoFieldsConfig = {
         key: 'startTime',
         label: '开始时间',
         type: 'time',
-        required: true,
+        required: false,
         description: '会议开始时间'
       },
       {
@@ -142,16 +142,11 @@ export const basicInfoFieldsConfig = {
       },
       {
         key: 'duration',
-        label: '会议时长',
-        type: 'select',
+        label: '会议时长（小时）',
+        type: 'text',
+        required: true,
         required: false,
         placeholder: '请选择会议时长',
-        options: [
-          { value: '30', label: '30分钟' },
-          { value: '60', label: '1小时' },
-          { value: '120', label: '2小时' },
-          { value: '240', label: '半天' }
-        ],
         description: '预计会议持续时间'
       },
       {

@@ -92,7 +92,7 @@ export class CardModificationPromptService {
               /(?:搜索需求|搜索条件|搜索要求|查找需求|具体需求).*?([^，。！？\n]+)/,
               /(?:修改|更改|更新|改为|改成).*?(?:搜索需求|搜索条件).*?([^，。！？\n]+)/
             ],
-            examples: ['想要园艺相关的礼物，最好是实用的工具套装', '想要一款性价比高的手机，预算在3000元左右'],
+            examples: ['想要母亲节礼物推荐，预算500元以内', '想要一款性价比高的手机，预算在3000元左右'],
             textParser: this.parseSearchQuery
           }
         }
@@ -102,9 +102,11 @@ export class CardModificationPromptService {
           meetingTitle: {
             patterns: [
               /(?:会议主题|主题|什么会议).*?([^，。！？\s]+)/,
-              /(?:修改|更改|更新|改为|改成).*?(?:会议主题|主题).*?([^，。！？\s]+)/
+              /(?:修改|更改|更新|改为|改成).*?(?:会议主题|主题).*?([^，。！？\s]+)/,
+              /(?:开会|会议|讨论|分享|汇报).*?([^，。！？\s]+)/,
+              /([^，。！？\s]+)(?:会议|讨论|分享|汇报)/
             ],
-            examples: ['项目讨论', '周会', '技术分享']
+            examples: ['项目讨论', '周会', '技术分享', '开会', '小组讨论', '项目汇报']
           },
           meetingDate: {
             patterns: [
@@ -154,7 +156,27 @@ export class CardModificationPromptService {
     const scenarioConfig = getBasicInfoFields(scenario)
     const fieldPatterns = this.scenarioModificationPatterns[scenario]?.fieldPatterns || {}
     
-    let prompt = `**卡片修改能力：**
+    // 获取当前时间信息
+    const now = new Date()
+    const currentDate = now.toISOString().split('T')[0] // YYYY-MM-DD
+    const currentTime = now.toTimeString().split(' ')[0] // HH:MM:SS
+    const currentYear = now.getFullYear()
+    const currentMonth = now.getMonth() + 1
+    const currentDay = now.getDate()
+    
+    let prompt = `**当前时间信息：**
+- 当前日期：${currentDate} (${currentYear}年${currentMonth}月${currentDay}日)
+- 当前时间：${currentTime}
+- 当前年份：${currentYear}
+
+**时间处理规则：**
+- 当用户说"明天"时，指的是 ${new Date(now.getTime() + 24*60*60*1000).toISOString().split('T')[0]}
+- 当用户说"后天"时，指的是 ${new Date(now.getTime() + 2*24*60*60*1000).toISOString().split('T')[0]}
+- 当用户说"下周"时，指的是从 ${new Date(now.getTime() + 7*24*60*60*1000).toISOString().split('T')[0]} 开始的一周
+- 当用户提到具体日期但没有年份时，默认使用当前年份 ${currentYear}
+- 当用户提到"推迟到明天"时，应该将时间调整为明天 ${new Date(now.getTime() + 24*60*60*1000).toISOString().split('T')[0]}
+
+**卡片修改能力：**
 当用户提到要修改${scenarioConfig.title}时，请在回复中包含修改指令，格式如下：
 
 **修改指令格式：**
@@ -205,6 +227,25 @@ export class CardModificationPromptService {
         prompt += '\n'
       }
     })
+
+    // 为会议场景添加特殊识别规则
+    if (scenario === 'meeting') {
+      prompt += `**会议主题识别特殊规则：**
+- 当用户说"开会"时，如果上下文中有具体内容（如"小组开会"、"项目开会"），提取"小组"、"项目"等作为会议主题
+- 当用户说"讨论"时，提取讨论的具体内容作为会议主题
+- 当用户说"分享"时，提取分享的具体内容作为会议主题
+- 当用户说"汇报"时，提取汇报的具体内容作为会议主题
+- 如果用户没有明确说明会议主题，但提到了参会人员（如"小组成员"），可以推断为"小组会议"
+- 如果用户没有明确说明会议主题，但提到了地点或项目，可以推断为相应的主题
+
+**示例：**
+- "7月10号通过小组成员在成都开会" → 会议主题：小组会议
+- "明天下午讨论项目进度" → 会议主题：项目进度讨论
+- "下周技术分享" → 会议主题：技术分享
+- "月底汇报工作" → 会议主题：工作汇报
+
+`
+    }
 
     prompt += `**重要说明：**
 - 基础信息卡片（basic-info）的数据存储在formData字段中

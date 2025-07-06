@@ -26,9 +26,9 @@ export const useUserInfoStore = defineStore('userInfo', () => {
     },
     // 会议信息
     meeting: {
-      title: '',
-      date: '',
-      time: '',
+      meetingTitle: '',
+      meetingDate: '',
+      startTime: '',
       duration: '',
       participants: '',
       location: ''

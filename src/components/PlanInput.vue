@@ -118,6 +118,7 @@ import { ref, nextTick, onMounted, onUnmounted, computed, watch } from 'vue'
 import { usePlanAgentStore } from '@/stores/planAgentStore.js'
 import { useCardStore } from '@/stores/cardStore.js'
 import { useProjectCardStore } from '@/stores/projectCardStore.js'
+import { useUserInfoStore } from '@/stores/userInfoStore.js'
 import { ProjectStorage } from '../utils/storage.js'
 import { CardModificationService } from '../services/cardModificationService.js'
 import { 
@@ -137,6 +138,7 @@ const props = defineProps({
 const planAgentStore = usePlanAgentStore()
 const cardStore = useCardStore()
 const projectCardStore = useProjectCardStore()
+const userInfoStore = useUserInfoStore()
 const cardModificationService = new CardModificationService()
 const inputValue = ref('')
 const currentState = ref('default')
@@ -351,6 +353,13 @@ const processAIResponse = (aiText) => {
             }
             console.log('[PlanInput] 发送basic-info卡片更新:', updateData)
             projectCardStore.updateCardData(card.id, updateData)
+            
+            // 同时更新userInfoStore，确保会议摘要卡片能实时更新
+            if (card.data.scenario === 'meeting' && card.data.formData) {
+              console.log('[PlanInput] 同步更新userInfoStore会议信息:', card.data.formData)
+              userInfoStore.updateUserInfo('meeting', card.data.formData)
+              userInfoStore.saveToStorage()
+            }
           } else {
             // 其他卡片直接更新整个data
             console.log('[PlanInput] 发送其他卡片更新:', card.data)

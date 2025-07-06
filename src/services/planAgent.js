@@ -23,7 +23,27 @@ export class PlanAgent {
 
   // 默认系统提示词 - 专门针对计划页面的对话
   getDefaultSystemPrompt() {
+    // 获取当前时间信息
+    const now = new Date()
+    const currentDate = now.toISOString().split('T')[0] // YYYY-MM-DD
+    const currentTime = now.toTimeString().split(' ')[0] // HH:MM:SS
+    const currentYear = now.getFullYear()
+    const currentMonth = now.getMonth() + 1
+    const currentDay = now.getDate()
+    
     return `你是一个专业的计划助手，专门帮助用户完善和优化他们的计划。
+
+**当前时间信息：**
+- 当前日期：${currentDate} (${currentYear}年${currentMonth}月${currentDay}日)
+- 当前时间：${currentTime}
+- 当前年份：${currentYear}
+
+**时间处理规则：**
+- 当用户说"明天"时，指的是 ${new Date(now.getTime() + 24*60*60*1000).toISOString().split('T')[0]}
+- 当用户说"后天"时，指的是 ${new Date(now.getTime() + 2*24*60*60*1000).toISOString().split('T')[0]}
+- 当用户说"下周"时，指的是从 ${new Date(now.getTime() + 7*24*60*60*1000).toISOString().split('T')[0]} 开始的一周
+- 当用户提到具体日期但没有年份时，默认使用当前年份 ${currentYear}
+- 当用户提到"推迟到明天"时，应该将时间调整为明天 ${new Date(now.getTime() + 24*60*60*1000).toISOString().split('T')[0]}
 
 你的主要职责包括：
 1. **理解用户需求**：仔细分析用户对现有计划的补充、修改或完善需求
@@ -58,7 +78,32 @@ export class PlanAgent {
   // 新的系统提示词 - 专门针对PlanInput组件的对话功能
   getPlanInputSystemPrompt(scenario = 'travel') {
     const promptService = new CardModificationPromptService()
+    
+    // 获取当前时间信息
+    const now = new Date()
+    const currentDate = now.toISOString().split('T')[0] // YYYY-MM-DD
+    const currentTime = now.toTimeString().split(' ')[0] // HH:MM:SS
+    const currentYear = now.getFullYear()
+    const currentMonth = now.getMonth() + 1
+    const currentDay = now.getDate()
+    const currentHour = now.getHours()
+    const currentMinute = now.getMinutes()
+    
     const basePrompt = `你是一个智能的计划对话助手，专门帮助用户通过对话方式完善和优化他们的计划。
+
+**当前时间信息：**
+- 当前日期：${currentDate} (${currentYear}年${currentMonth}月${currentDay}日)
+- 当前时间：${currentTime} (${currentHour}:${currentMinute.toString().padStart(2, '0')})
+- 当前年份：${currentYear}
+- 当前月份：${currentMonth}
+- 当前日期：${currentDay}
+
+**时间处理规则：**
+- 当用户说"明天"时，指的是 ${new Date(now.getTime() + 24*60*60*1000).toISOString().split('T')[0]}
+- 当用户说"后天"时，指的是 ${new Date(now.getTime() + 2*24*60*60*1000).toISOString().split('T')[0]}
+- 当用户说"下周"时，指的是从 ${new Date(now.getTime() + 7*24*60*60*1000).toISOString().split('T')[0]} 开始的一周
+- 当用户提到具体日期但没有年份时，默认使用当前年份 ${currentYear}
+- 当用户提到"推迟到明天"时，应该将时间调整为明天 ${new Date(now.getTime() + 24*60*60*1000).toISOString().split('T')[0]}
 
 **你的核心功能：**
 1. **智能对话理解**：准确理解用户在对话中表达的需求、想法和建议
@@ -85,6 +130,15 @@ export class PlanAgent {
 - 提供实用的建议和技巧
 - 在对话中保持积极正面的态度
 - 智能识别用户想要修改的具体内容
+
+**会议主题识别规则（仅适用于会议场景）：**
+- 当用户说"开会"时，如果上下文中有具体内容（如"小组开会"、"项目开会"），提取"小组"、"项目"等作为会议主题
+- 当用户说"讨论"时，提取讨论的具体内容作为会议主题
+- 当用户说"分享"时，提取分享的具体内容作为会议主题
+- 当用户说"汇报"时，提取汇报的具体内容作为会议主题
+- 如果用户没有明确说明会议主题，但提到了参会人员（如"小组成员"），可以推断为"小组会议"
+- 如果用户没有明确说明会议主题，但提到了地点或项目，可以推断为相应的主题
+- 示例："7月10号通过小组成员在成都开会" → 会议主题：小组会议
 
 **注意事项：**
 - 不要询问用户是否要查看计划，专注于对话本身

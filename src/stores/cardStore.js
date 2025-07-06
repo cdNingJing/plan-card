@@ -105,6 +105,14 @@ export const useCardStore = defineStore('card', () => {
       defaultState: 'expanded',
       priority: 1
     },
+    'meeting-confirm': {
+      name: '会议确认卡片',
+      icon: 'CheckCircle',
+      category: 'meeting',
+      defaultState: 'expanded',
+      priority: 2,
+      linkage: ['basic-info']
+    },
     participants: {
       name: '参与者卡片',
       icon: 'Users',
@@ -994,10 +1002,22 @@ export const useCardStore = defineStore('card', () => {
         entities: parseUserInput(input).entities || {}
       }
     } else if (input.includes('会议') || input.includes('开会') || input.includes('讨论') || input.includes('提醒') || input.includes('参与者') || input.includes('日程')) {
-      return {
-        scene: 'meeting',
-        cards: ['basic-info', 'meeting', 'participants', 'reminder', 'feedback', 'attachments'],
-        entities: parseUserInput(input).entities || {}
+      // 检查是否包含延期相关关键词
+      const postponementKeywords = ['推迟', '延期', '延迟', '改期', '延后', '明天', '后天']
+      const hasPostponementIntent = postponementKeywords.some(keyword => input.includes(keyword))
+      
+      if (hasPostponementIntent) {
+        return {
+          scene: 'meeting',
+          cards: ['basic-info', 'meeting-postponement', 'meeting-result'],
+          entities: parseUserInput(input).entities || {}
+        }
+      } else {
+        return {
+          scene: 'meeting',
+          cards: ['basic-info', 'meeting-summary', 'meeting-result'],
+          entities: parseUserInput(input).entities || {}
+        }
       }
     }
     return {
@@ -1058,6 +1078,7 @@ export const useCardStore = defineStore('card', () => {
       'tips': '贴心提示',
       'shop': '商品搜索',
       'meeting': '会议详情',
+      'meeting-confirm': '会议确认',
       'participants': '参与者管理',
       'reminder': '提醒设置',
       'feedback': '执行反馈',
@@ -1288,6 +1309,18 @@ export const useCardStore = defineStore('card', () => {
             date: '2024-01-15',
             time: '15:00',
             duration: '1小时'
+          }
+        case 'meeting-postponement':
+          return {
+            reason: context.entities?.reason || '时间冲突，需要调整',
+            eventId: context.entities?.eventId || 'meeting_' + Date.now(),
+            originalDate: context.entities?.originalDate || new Date().toISOString().split('T')[0],
+            originalTime: context.entities?.originalTime || '14:00'
+          }
+        case 'meeting-confirm':
+          return {
+            title: '会议确认',
+            description: '确认会议信息并发送提醒'
           }
         case 'participants':
           return {

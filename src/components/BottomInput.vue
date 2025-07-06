@@ -134,7 +134,7 @@ import { ProjectStorage, ProjectModel } from '../utils/storage.js'
 const props = defineProps({
   placeholder: {
     type: String,
-    default: '描述您的需求，如：我想和朋友一起去东京玩五天...'
+    default: '描述您的需求，如：好友旅行规划...'
   },
   initialValue: {
     type: String,

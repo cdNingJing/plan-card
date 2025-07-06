@@ -140,6 +140,36 @@
         @update="handleUpdate"
       />
       
+      <!-- 会议确认卡片 -->
+      <MeetingConfirmCard 
+        v-else-if="card.type === 'meeting-confirm'"
+        :data="card.data"
+        @update="handleMeetingConfirmUpdate"
+      />
+      
+      <!-- 会议信息整合卡片 -->
+      <MeetingSummaryCard 
+        v-else-if="card.type === 'meeting-summary'"
+        :data="card.data"
+        @update="handleMeetingSummaryUpdate"
+        @next="handleMeetingSummaryNext"
+      />
+      
+      <!-- 会议执行结果卡片 -->
+      <MeetingResultCard 
+        v-else-if="card.type === 'meeting-result'"
+        :data="card.data"
+        @update="handleMeetingResultUpdate"
+      />
+      
+      <!-- 会议延期卡片 -->
+      <MeetingPostponementCard 
+        v-else-if="card.type === 'meeting-postponement'"
+        :data="card.data"
+        @update="handleMeetingPostponementUpdate"
+        @next="handleMeetingPostponementNext"
+      />
+      
       <!-- 基础信息卡片 -->
       <BasicInfoCard 
         v-else-if="card.type === 'basic-info'"
@@ -311,6 +341,10 @@ import {
   Info
 } from 'lucide-vue-next'
 import { bookingStorage } from '@/utils/bookingStorage.js'
+import MeetingConfirmCard from './cards/MeetingConfirmCard.vue'
+import MeetingSummaryCard from './cards/MeetingSummaryCard.vue'
+import MeetingResultCard from './cards/MeetingResultCard.vue'
+import MeetingPostponementCard from './cards/MeetingPostponementCard.vue'
 
 import DestinationCard from './cards/DestinationCard.vue'
 import FlightCard from './cards/FlightCard.vue'
@@ -408,6 +442,9 @@ const getCardComponent = (type) => {
     gift: GiftCard,
     budget: BudgetCard,
     meeting: MeetingCard,
+    'meeting-confirm': MeetingConfirmCard,
+    'meeting-summary': MeetingSummaryCard,
+    'meeting-result': MeetingResultCard,
     'basic-info': BasicInfoCard,
     profile: ProfileCard,
     tips: TipsCard,
@@ -514,6 +551,97 @@ const handleSelectedProductsUpdate = (payload) => {
 const handleSelectedProductsPurchase = (payload) => {
   // 处理已选商品卡片的购买事件
   console.log('[SmartCard] 已选商品购买:', payload)
+}
+
+const handleMeetingConfirmUpdate = (payload) => {
+  // 处理会议确认卡片的更新事件
+  console.log('[SmartCard] 会议确认更新:', payload)
+  
+  if (payload.action === 'meetingReminderSent') {
+    // 会议提醒发送成功
+    console.log('[SmartCard] 会议提醒发送成功:', payload.data)
+  } else if (payload.action === 'meetingReminderFailed') {
+    // 会议提醒发送失败
+    console.log('[SmartCard] 会议提醒发送失败:', payload.error)
+  }
+}
+
+const handleMeetingSummaryUpdate = (payload) => {
+  // 处理会议信息整合卡片的更新事件
+  console.log('[SmartCard] 会议信息整合更新:', payload)
+  
+  if (payload.action === 'meetingReminderSent') {
+    // 会议提醒发送成功，准备进入结果卡片
+    console.log('[SmartCard] 会议提醒发送成功，准备显示结果:', payload)
+    
+    // 更新卡片数据，包含发送结果
+    emit('update-data', props.card.id, {
+      ...props.card.data,
+      sendResult: {
+        successCount: payload.meetingInfo?.attendees?.length || 0,
+        sendTime: new Date().toISOString(),
+        success: true
+      }
+    })
+  } else if (payload.action === 'meetingReminderFailed') {
+    // 会议提醒发送失败
+    console.log('[SmartCard] 会议提醒发送失败:', payload.error)
+  }
+}
+
+const handleMeetingSummaryNext = () => {
+  // 处理会议信息整合卡片的下一步事件
+  console.log('[SmartCard] 会议信息整合下一步')
+  // 这里可以触发下一个卡片的激活
+}
+
+const handleMeetingResultUpdate = (payload) => {
+  // 处理会议执行结果卡片的更新事件
+  console.log('[SmartCard] 会议执行结果更新:', payload)
+  
+  if (payload.action === 'createNewMeeting') {
+    // 创建新会议
+    console.log('[SmartCard] 创建新会议')
+  } else if (payload.action === 'viewMeetingDetails') {
+    // 查看会议详情
+    console.log('[SmartCard] 查看会议详情:', payload.meetingInfo)
+  }
+}
+
+const handleMeetingPostponementUpdate = (payload) => {
+  // 处理会议延期卡片的更新事件
+  console.log('[SmartCard] 会议延期更新:', payload)
+  
+  if (payload.action === 'meetingPostponed') {
+    // 会议延期成功
+    console.log('[SmartCard] 会议延期成功:', payload)
+    
+    // 更新卡片数据，包含延期结果
+    emit('update-data', props.card.id, {
+      ...props.card.data,
+      postponementResult: {
+        success: true,
+        originalDate: payload.postponementData.originalDate,
+        originalTime: payload.postponementData.originalTime,
+        newDate: payload.postponementData.newDate,
+        newTime: payload.postponementData.newTime,
+        reason: payload.postponementData.reason,
+        processedAt: new Date().toISOString()
+      }
+    })
+  } else if (payload.action === 'meetingPostponementFailed') {
+    // 会议延期失败
+    console.log('[SmartCard] 会议延期失败:', payload.error)
+  } else if (payload.action === 'cancelPostponement') {
+    // 取消延期
+    console.log('[SmartCard] 取消会议延期:', payload.message)
+  }
+}
+
+const handleMeetingPostponementNext = () => {
+  // 处理会议延期卡片的下一步事件
+  console.log('[SmartCard] 会议延期下一步')
+  // 这里可以触发下一个卡片的激活
 }
 
 const handleSelectedProductsAddToCart = (payload) => {

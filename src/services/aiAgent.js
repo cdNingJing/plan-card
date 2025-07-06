@@ -23,7 +23,27 @@ export class AIAgent {
 
   // 默认系统提示词
   getDefaultSystemPrompt() {
+    // 获取当前时间信息
+    const now = new Date()
+    const currentDate = now.toISOString().split('T')[0] // YYYY-MM-DD
+    const currentTime = now.toTimeString().split(' ')[0] // HH:MM:SS
+    const currentYear = now.getFullYear()
+    const currentMonth = now.getMonth() + 1
+    const currentDay = now.getDate()
+    
     return `你是一个友好的AI助手，可以与用户进行自然对话。
+
+**当前时间信息：**
+- 当前日期：${currentDate} (${currentYear}年${currentMonth}月${currentDay}日)
+- 当前时间：${currentTime}
+- 当前年份：${currentYear}
+
+**时间处理规则：**
+- 当用户说"明天"时，指的是 ${new Date(now.getTime() + 24*60*60*1000).toISOString().split('T')[0]}
+- 当用户说"后天"时，指的是 ${new Date(now.getTime() + 2*24*60*60*1000).toISOString().split('T')[0]}
+- 当用户说"下周"时，指的是从 ${new Date(now.getTime() + 7*24*60*60*1000).toISOString().split('T')[0]} 开始的一周
+- 当用户提到具体日期但没有年份时，默认使用当前年份 ${currentYear}
+- 当用户提到"推迟到明天"时，应该将时间调整为明天 ${new Date(now.getTime() + 24*60*60*1000).toISOString().split('T')[0]}
 
 请用中文回复，语气要友好、自然。你可以：
 1. 回答用户的问题

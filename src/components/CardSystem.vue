@@ -45,9 +45,9 @@ import { Sparkles } from 'lucide-vue-next'
 const cardStore = useCardStore()
 
 const examples = [
-  { id: 1, text: '我想和朋友一起去东京玩五天' },
-  { id: 2, text: '我想送妈妈一个园艺相关的礼物，预算500元以内' },
-  { id: 3, text: '明天下午三点的项目会议，请发提醒' }
+  { id: 1, text: '好友旅行规划' },
+  { id: 2, text: '母亲节礼物推荐' },
+  { id: 3, text: '会议确认提醒' }
 ]
 
 const emit = defineEmits(['use-example'])

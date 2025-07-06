@@ -47,7 +47,7 @@ export const useAgentStore = defineStore('agent', () => {
 每个场景必须包含以下卡片类型：
 - **旅行场景**：basic-info, flight, hotel, itinerary, packing
 - **购物场景**：basic-info, shop, selected-products, profile, tips 
-- **会议场景**：basic-info, meeting, participants, reminder, feedback, attachments
+- **会议场景**：basic-info, meeting-summary, meeting-result
 - **通用场景**：basic-info, suggestions, resources
 
 **可用工具说明：**
@@ -148,6 +148,28 @@ export const useAgentStore = defineStore('agent', () => {
     "limit": 10,
     "exclude_sponsored": true,
     "detail": 3
+  }
+}
+<SCENE_ANALYSIS_END>
+
+**会议场景示例：**
+<SCENE_ANALYSIS_START>
+{
+  "scene": "meeting",
+  "title": "项目讨论会议",
+  "cards": ["basic-info", "meeting-summary", "meeting-result"],
+  "entities": {
+    "title": "项目讨论会议",
+    "date": "2025-01-15",
+    "time": "14:00",
+    "attendees": [
+      {"name": "张三", "email": "zhangsan@example.com"},
+      {"name": "李四", "email": "lisi@example.com"},
+      {"name": "王五", "email": "wangwu@example.com"}
+    ],
+    "duration": "60分钟",
+    "location": "会议室A",
+    "description": "讨论项目进度和下一步计划"
   }
 }
 <SCENE_ANALYSIS_END>
