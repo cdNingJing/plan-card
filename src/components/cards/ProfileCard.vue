@@ -10,56 +10,50 @@
       <div class="basic-info-section" v-if="hasBasicInfo">
         <h4>基本信息</h4>
         <div class="info-grid">
-          <div class="info-item" v-if="data.recipient">
+          <div class="info-item" v-if="userInfo.recipient">
             <span class="info-label">收礼人：</span>
-            <span class="info-value">{{ data.recipient }}</span>
+            <span class="info-value">{{ userInfo.recipient }}</span>
           </div>
-          <div class="info-item" v-if="data.occasion">
+          <div class="info-item" v-if="userInfo.occasion">
             <span class="info-label">送礼场合：</span>
-            <span class="info-value">{{ data.occasion }}</span>
+            <span class="info-value">{{ userInfo.occasion }}</span>
           </div>
-          <div class="info-item" v-if="data.budget">
+          <div class="info-item" v-if="userInfo.budget">
             <span class="info-label">预算范围：</span>
-            <span class="info-value">{{ data.budget }}</span>
+            <span class="info-value">{{ userInfo.budget }}</span>
           </div>
-          <div class="info-item" v-if="data.interests">
+          <div class="info-item" v-if="userInfo.interests">
             <span class="info-label">兴趣爱好：</span>
-            <span class="info-value">{{ data.interests }}</span>
+            <span class="info-value">{{ userInfo.interests }}</span>
           </div>
         </div>
       </div>
       
       <div class="analysis-section">
         <h4>画像分析</h4>
-        <p class="analysis-text">{{ data.analysis || '正在分析收礼人画像...' }}</p>
-      </div>
-      
-      <div class="tags-section">
-        <h4>特征标签</h4>
-        <div class="tags-container">
-          <span 
-            v-for="tag in data.tags" 
-            :key="tag" 
-            class="tag"
-          >
-            {{ tag }}
-          </span>
-        </div>
+        <p class="analysis-text">{{ analysisText }}</p>
       </div>
       
       <!-- 礼物建议 -->
-      <div class="suggestions-section" v-if="data.giftSuggestions">
+      <div class="suggestions-section" v-if="parsedGiftSuggestions.length > 0">
         <h4>礼物建议</h4>
-        <div class="suggestions-list">
+        <div v-if="isGeneratingSuggestions" class="generating-state">
+          <div class="loading-spinner"></div>
+          <span>正在生成个性化礼物建议...</span>
+        </div>
+        <div v-else class="suggestions-list">
           <div 
-            v-for="suggestion in data.giftSuggestions" 
-            :key="suggestion.id"
-            class="suggestion-item"
+            v-for="suggestion in parsedGiftSuggestions" 
+            :key="suggestion.id || suggestion.title || suggestion.reason"
+            class="suggestion-item simple"
           >
-            <div class="suggestion-icon">💡</div>
             <div class="suggestion-content">
-              <div class="suggestion-title">{{ suggestion.title }}</div>
-              <div class="suggestion-reason">{{ suggestion.reason }}</div>
+              <div class="suggestion-title" v-if="suggestion.title">{{ suggestion.title }}</div>
+              <div class="suggestion-reason" v-if="suggestion.reason">{{ suggestion.reason }}</div>
+              <div class="suggestion-details">
+                <span class="price-range" v-if="suggestion.priceRange">{{ suggestion.priceRange }}</span>
+                <span class="purchase-advice" v-if="suggestion.purchaseAdvice">{{ suggestion.purchaseAdvice }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -71,6 +65,7 @@
 <script setup>
 import { defineProps, computed, watch, onMounted, onUnmounted, ref } from 'vue'
 import { useUserInfoStore } from '@/stores/userInfoStore.js'
+import { giftRecommendationService } from '@/services/giftRecommendationService.js'
 
 const props = defineProps({
   data: {
@@ -84,13 +79,87 @@ const userInfoStore = useUserInfoStore()
 // 组件挂载状态
 const isComponentMounted = ref(false)
 
-// 计算是否有基本信息
-const hasBasicInfo = computed(() => {
-  return props.data.recipient || props.data.occasion || props.data.budget || props.data.interests
+// 礼物建议状态
+const giftSuggestions = ref([])
+const isGeneratingSuggestions = ref(false)
+
+// 解析AI返回的建议，只保留结构化的推荐项，并去掉内容中的**
+const parsedGiftSuggestions = computed(() => {
+  // 过滤掉非结构化（如解释性前言、json代码块等）
+  return giftSuggestions.value
+    .filter(item => item && (item.title || item.reason || item.priceRange || item.purchaseAdvice))
+    .map(item => ({
+      ...item,
+      title: item.title ? item.title.replace(/\*\*/g, '') : '',
+      reason: item.reason ? item.reason.replace(/\*\*/g, '') : '',
+      priceRange: item.priceRange ? item.priceRange.replace(/\*\*/g, '') : '',
+      purchaseAdvice: item.purchaseAdvice ? item.purchaseAdvice.replace(/\*\*/g, '') : ''
+    }))
 })
 
-// 监听用户信息变化，实时更新画像
-watch(() => userInfoStore.getScenarioInfo('gift'), (newUserInfo) => {
+// 获取用户信息
+const userInfo = computed(() => userInfoStore.getScenarioInfo('gift'))
+
+// 计算是否有基本信息
+const hasBasicInfo = computed(() => {
+  return userInfo.value.recipient || userInfo.value.occasion || userInfo.value.budget || userInfo.value.interests
+})
+
+// 计算画像分析文本
+const analysisText = computed(() => {
+  const { recipient, occasion, interests } = userInfo.value
+  
+  if (!recipient) {
+    return '正在分析收礼人画像...'
+  }
+  
+  let analysis = `根据您提供的信息，"${recipient}" `
+  if (interests) {
+    analysis += `是一位热爱${interests}的`
+  }
+  if (occasion) {
+    analysis += `，在${occasion}这个特殊的日子里，`
+  }
+  analysis += `我们为您推荐最适合的礼物品类。`
+  
+  return analysis
+})
+
+// 生成礼物建议
+const generateGiftSuggestions = async (userInfo) => {
+  if (!isComponentMounted.value) return
+  
+  try {
+    isGeneratingSuggestions.value = true
+    console.log('[ProfileCard] 开始生成礼物建议，用户信息:', userInfo)
+    
+    const suggestions = await giftRecommendationService.generateGiftSuggestions(userInfo)
+    
+    if (isComponentMounted.value) {
+      giftSuggestions.value = suggestions
+      console.log('[ProfileCard] 礼物建议生成成功:', suggestions)
+    }
+  } catch (error) {
+    console.error('[ProfileCard] 生成礼物建议失败:', error)
+    if (isComponentMounted.value) {
+      // AI调用失败，清空建议
+      giftSuggestions.value = []
+    }
+  } finally {
+    if (isComponentMounted.value) {
+      isGeneratingSuggestions.value = false
+    }
+  }
+}
+
+// 检查用户信息是否有足够内容生成建议
+const hasEnoughInfoForSuggestions = (userInfo) => {
+  const { recipient, occasion, budget, interests, searchQuery } = userInfo || {}
+  return recipient || occasion || budget || interests || searchQuery
+}
+
+// 监听用户信息变化，实时更新画像和礼物建议
+watch(userInfo, async (newUserInfo, oldUserInfo) => {
   try {
     // 检查组件是否仍然挂载
     if (!isComponentMounted.value) {
@@ -98,16 +167,51 @@ watch(() => userInfoStore.getScenarioInfo('gift'), (newUserInfo) => {
       return
     }
     
-    // 触发组件重新渲染以更新画像
-    console.log('[ProfileCard] 检测到用户信息变化，更新画像')
+    console.log('[ProfileCard] 检测到用户信息变化，更新画像和礼物建议')
+    
+    // 检查是否有足够的信息生成建议
+    if (hasEnoughInfoForSuggestions(newUserInfo)) {
+      // 检查信息是否有实质性变化
+      const oldRecipient = oldUserInfo?.recipient || ''
+      const newRecipient = newUserInfo?.recipient || ''
+      const oldInterests = oldUserInfo?.interests || ''
+      const newInterests = newUserInfo?.interests || ''
+      const oldBudget = oldUserInfo?.budget || ''
+      const newBudget = newUserInfo?.budget || ''
+      const oldSearchQuery = oldUserInfo?.searchQuery || ''
+      const newSearchQuery = newUserInfo?.searchQuery || ''
+      
+      // 如果关键信息发生变化，重新生成建议
+      if (newRecipient !== oldRecipient || 
+          newInterests !== oldInterests || 
+          newBudget !== oldBudget || 
+          newSearchQuery !== oldSearchQuery) {
+        console.log('[ProfileCard] 检测到关键信息变化，重新生成礼物建议')
+        await generateGiftSuggestions(newUserInfo)
+      }
+    } else {
+      // 信息不足，清空建议
+      giftSuggestions.value = []
+    }
   } catch (error) {
     console.error('[ProfileCard] 监听用户信息变化时出错:', error)
   }
 }, { deep: true, immediate: false })
 
-onMounted(() => {
+onMounted(async () => {
   isComponentMounted.value = true
   userInfoStore.loadFromStorage()
+  
+  // 延迟初始化，确保用户信息已加载
+  setTimeout(async () => {
+    if (isComponentMounted.value) {
+      const currentUserInfo = userInfo.value
+      if (hasEnoughInfoForSuggestions(currentUserInfo)) {
+        console.log('[ProfileCard] 组件挂载，初始化礼物建议')
+        await generateGiftSuggestions(currentUserInfo)
+      }
+    }
+  }, 100)
 })
 
 onUnmounted(() => {
@@ -148,7 +252,6 @@ onUnmounted(() => {
 }
 
 .analysis-section h4,
-.tags-section h4,
 .basic-info-section h4,
 .suggestions-section h4 {
   margin: 0 0 12px 0;
@@ -168,20 +271,7 @@ onUnmounted(() => {
   border-left: 3px solid #4CAF50;
 }
 
-.tags-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
 
-.tag {
-  background: #E8F5E8;
-  color: #2E7D32;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
 
 .basic-info-section {
   background: #F8F9FA;
@@ -228,35 +318,68 @@ onUnmounted(() => {
   gap: 12px;
 }
 
-.suggestion-item {
+.suggestion-item.simple {
+  display: block;
+  background: #fff;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 16px;
+  margin-bottom: 8px;
+}
+.suggestion-item.simple:last-child {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+.suggestion-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+.suggestion-reason {
+  font-size: 0.92rem;
+  color: #666;
+  margin-bottom: 4px;
+  line-height: 1.6;
+}
+.suggestion-details {
+  font-size: 0.85rem;
+  color: #888;
+  margin-top: 2px;
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 2px;
+}
+.price-range {
+  color: #FF9800;
+  font-weight: 500;
+}
+.purchase-advice {
+  font-style: normal;
+}
+
+.generating-state {
+  display: flex;
+  align-items: center;
   gap: 12px;
-  padding: 12px;
+  padding: 20px;
   background: #FFFFFF;
   border-radius: 6px;
   border: 1px solid #FFE082;
 }
 
-.suggestion-icon {
-  font-size: 1.25rem;
-  flex-shrink: 0;
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #FFE082;
+  border-top: 2px solid #FF9800;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
-.suggestion-content {
-  flex: 1;
-}
-
-.suggestion-title {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #333333;
-  margin-bottom: 4px;
-}
-
-.suggestion-reason {
-  font-size: 0.8rem;
-  color: #666666;
-  line-height: 1.4;
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 </style> 
