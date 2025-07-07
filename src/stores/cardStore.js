@@ -1114,9 +1114,15 @@ export const useCardStore = defineStore('card', () => {
     if (aiResponse) {
       const analysis = parseSceneAnalysis(aiResponse)
       scene = analysis.scene || 'general'
-      cardTypes = Array.isArray(analysis.cards) ? analysis.cards : ['basic-info', 'suggestions', 'resources']
+      cardTypes = Array.isArray(analysis.cards) ? analysis.cards : []
       entities = analysis.entities || {} // 使用AI解析的实体信息
       console.log('[generateCards] 使用AI解析的实体信息:', entities)
+      
+      // 如果AI回复中没有解析到具体的卡片类型，则不生成通用卡片
+      if (!Array.isArray(analysis.cards) || analysis.cards.length === 0) {
+        console.log('[generateCards] AI回复中没有具体卡片类型，不生成通用卡片')
+        return []
+      }
     } else {
       // 使用关键词检测作为备选方案
       const analysis = detectScenarioByKeywords(input)
@@ -1128,8 +1134,8 @@ export const useCardStore = defineStore('card', () => {
     
     // 确保 cardTypes 是有效的数组
     if (!Array.isArray(cardTypes) || cardTypes.length === 0) {
-      console.warn('[generateCards] cardTypes 无效，使用默认值')
-      cardTypes = ['basic-info', 'suggestions', 'resources']
+      console.warn('[generateCards] cardTypes 无效，不生成卡片')
+      return []
     }
     
     // 更新当前场景和卡片配置

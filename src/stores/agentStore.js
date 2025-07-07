@@ -94,10 +94,11 @@ export const useAgentStore = defineStore('agent', () => {
 <SCENE_ANALYSIS_END>
 
 **字段说明：**
-- 必需字段：scene, title, cards
+- 必需字段：scene, title, cards, summary
 - 可选字段：entities 中的所有字段都可以为空或省略
 - 空值处理：如果某个字段无法确定，请设置为空字符串 "" 或空数组 []
 - 默认值：travelers默认为1，duration默认为1
+- summary字段：精简描述当前回复内容，不超过20字，用于快速了解对话内容
 
 **重要格式要求：**
 - 必须使用 <SCENE_ANALYSIS_START> 和 <SCENE_ANALYSIS_END> 标记包围JSON内容
@@ -127,7 +128,8 @@ export const useAgentStore = defineStore('agent', () => {
     "companions": ["朋友"],
     "duration": 7,
     "purpose": "旅游"
-  }
+  },
+  "summary": "创建成都到纽约7天旅行计划"
 }
 <SCENE_ANALYSIS_END>
 
@@ -148,7 +150,8 @@ export const useAgentStore = defineStore('agent', () => {
     "limit": 10,
     "exclude_sponsored": true,
     "detail": 3
-  }
+  },
+  "summary": "为妈妈推荐园艺礼物"
 }
 <SCENE_ANALYSIS_END>
 
@@ -169,7 +172,8 @@ export const useAgentStore = defineStore('agent', () => {
     "limit": 10,
     "exclude_sponsored": true,
     "detail": 3
-  }
+  },
+  "summary": "母亲节礼物推荐，预算1001元"
 }
 <SCENE_ANALYSIS_END>
 
@@ -191,7 +195,8 @@ export const useAgentStore = defineStore('agent', () => {
     "duration": "60分钟",
     "location": "会议室A",
     "description": "讨论项目进度和下一步计划"
-  }
+  },
+  "summary": "安排项目讨论会议"
 }
 <SCENE_ANALYSIS_END>
 

@@ -40,10 +40,14 @@ export class CardModificationPromptService {
           },
           travelers: {
             patterns: [
-              /(?:出行人数|人数|几个人|多少人).*?(\d+[人位个])/,
-              /(?:修改|更改|更新|改为|改成).*?(?:出行人数|人数).*?(\d+[人位个])/
+              /(?:出行人数|人数|几个人|多少人).*?(\d+)[人位个]/,
+              /(?:修改|更改|更新|改为|改成).*?(?:出行人数|人数).*?(\d+)[人位个]/
             ],
-            examples: ['4人', '出行人数4人', '人数改为2位']
+            examples: ['4人', '出行人数4人', '人数改为2位'],
+            valueMapper: (value) => {
+              const numMatch = value.match(/(\d+)/)
+              return numMatch ? parseInt(numMatch[1]) : 1
+            }
           },
           budget: {
             patterns: [
@@ -181,14 +185,17 @@ export class CardModificationPromptService {
 当用户提到要修改${scenarioConfig.title}时，请在回复中包含修改指令，格式如下：
 
 **修改指令格式：**
+<SCENE_ANALYSIS_START>
 {
   "action": "update_card",
   "target": "basic-info",
   "updates": {
     "field_name": "new_value"
   },
-  "message": "已为您更新相关信息"
+  "message": "已为您更新相关信息",
+  "infoSummary": "简要描述修改内容"
 }
+<SCENE_ANALYSIS_END>
 
 **${scenarioConfig.title}字段说明：**
 `
@@ -274,12 +281,15 @@ export class CardModificationPromptService {
       }
     })
 
-    prompt += `{
+    prompt += `<SCENE_ANALYSIS_START>
+{
   "action": "update_card",
   "target": "basic-info",
   "updates": ${JSON.stringify(exampleUpdates, null, 2)},
-  "message": "已为您更新${scenarioConfig.title}"
-}`
+  "message": "已为您更新${scenarioConfig.title}",
+  "infoSummary": "更新了${scenarioConfig.title}的相关信息"
+}
+<SCENE_ANALYSIS_END>`
 
     return prompt
   }
@@ -316,17 +326,15 @@ export class CardModificationPromptService {
   mapBudgetValue(value) {
     if (typeof value === 'string') {
       // 旅行场景的预算映射
-      if (value.includes('经济') || value.includes('3000以内')) return 'budget'
-      if (value.includes('舒适') || value.includes('3000-8000')) return 'comfort'
-      if (value.includes('豪华') || value.includes('8000以上')) return 'luxury'
+      if (value.includes('经济') || value.includes('3000以内')) return 3000
+      if (value.includes('舒适') || value.includes('3000-8000')) return 5000
+      if (value.includes('豪华') || value.includes('8000以上')) return 10000
       
       // 数字映射（旅行场景）
       const numMatch = value.match(/(\d+)/)
       if (numMatch) {
         const num = parseInt(numMatch[1])
-        if (num <= 3000) return 'budget'
-        if (num <= 8000) return 'comfort'
-        return 'luxury'
+        return num
       }
       
       // 礼物场景：直接返回原值，保持用户输入的格式
@@ -476,10 +484,11 @@ export class CardModificationPromptService {
   getMappingDescription(fieldKey, scenario) {
     const descriptions = {
       budget: {
-        travel: '≤3000元→budget, 3001-8000元→comfort, >8000元→luxury',
+        travel: '≤3000元→3000, 3001-8000元→5000, >8000元→10000，具体数字→直接返回数字',
         gift: '直接使用用户输入的文本值，如"1001元"、"500元以内"等'
       },
       recipient: '直接使用用户输入的文本值，如"妈妈"、"爸爸"等',
+      travelers: '提取数字部分，如"2人"→2，"4位"→4',
       occasion: '直接使用用户输入的文本值，如"母亲节"、"生日"等',
       interests: '直接使用用户输入的文本值，如"园艺"、"运动"等',
       duration: '30分钟→30, 1小时→60, 2小时→120, 半天→240',

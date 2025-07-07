@@ -254,38 +254,90 @@ function saveProjectAndTrigger(project) {
 
 // 发送消息
 function sendUserMessage(input) {
-  // 每次对话都新建项目，确保没有当前项目ID
-  ProjectStorage.setCurrentProjectId(null)
-  const project = new ProjectModel(input)
-  ProjectStorage.saveProject(project)
-  ProjectStorage.setCurrentProjectId(project.id)
-  const projectId = project.id
-  console.log('[BottomInput] 新项目已创建，id:', projectId)
+  // 检查是否包含场景关键词
+  const hasScenarioKeywords = checkScenarioKeywords(input)
+  
+  if (hasScenarioKeywords) {
+    // 检测到场景关键词，创建新项目
+    ProjectStorage.setCurrentProjectId(null)
+    const project = new ProjectModel(input)
+    ProjectStorage.saveProject(project)
+    ProjectStorage.setCurrentProjectId(project.id)
+    const projectId = project.id
+    console.log('[BottomInput] 检测到场景关键词，新项目已创建，id:', projectId)
 
-  if (!project.conversationHistory) project.conversationHistory = []
+    if (!project.conversationHistory) project.conversationHistory = []
 
-  const userMsg = {
-    id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-    role: 'user',
-    content: input,
-    timestamp: new Date().toISOString(),
-    status: 'done'
+    const userMsg = {
+      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      role: 'user',
+      content: input,
+      timestamp: new Date().toISOString(),
+      status: 'done'
+    }
+    project.conversationHistory.push(userMsg)
+    console.log('[BottomInput] 用户消息已写入项目', projectId, userMsg)
+
+    const aiMsg = {
+      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      role: 'assistant',
+      content: '',
+      timestamp: new Date().toISOString(),
+      status: 'loading'
+    }
+    project.conversationHistory.push(aiMsg)
+    console.log('[BottomInput] AI消息(loading)已写入项目', projectId, aiMsg)
+
+    saveProjectAndTrigger(project)
+    console.log('[BottomInput] 项目已保存', project)
+  } else {
+    // 没有检测到场景关键词，进行基础对话
+    console.log('[BottomInput] 未检测到场景关键词，进行基础对话')
+    
+    // 获取或创建临时对话项目
+    let projectId = ProjectStorage.getCurrentProjectId()
+    let project = null
+    
+    if (projectId) {
+      project = ProjectStorage.getProject(projectId)
+    }
+    
+    if (!project) {
+      // 创建临时对话项目
+      project = new ProjectModel(input)
+      project.title = '基础对话'
+      project.description = '基础对话项目'
+      ProjectStorage.saveProject(project)
+      ProjectStorage.setCurrentProjectId(project.id)
+      projectId = project.id
+      console.log('[BottomInput] 创建临时对话项目，id:', projectId)
+    }
+
+    if (!project.conversationHistory) project.conversationHistory = []
+
+    const userMsg = {
+      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      role: 'user',
+      content: input,
+      timestamp: new Date().toISOString(),
+      status: 'done'
+    }
+    project.conversationHistory.push(userMsg)
+    console.log('[BottomInput] 用户消息已写入临时项目', projectId, userMsg)
+
+    const aiMsg = {
+      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      role: 'assistant',
+      content: '',
+      timestamp: new Date().toISOString(),
+      status: 'loading'
+    }
+    project.conversationHistory.push(aiMsg)
+    console.log('[BottomInput] AI消息(loading)已写入临时项目', projectId, aiMsg)
+
+    saveProjectAndTrigger(project)
+    console.log('[BottomInput] 临时项目已保存', project)
   }
-  project.conversationHistory.push(userMsg)
-  console.log('[BottomInput] 用户消息已写入项目', projectId, userMsg)
-
-  const aiMsg = {
-    id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-    role: 'assistant',
-    content: '',
-    timestamp: new Date().toISOString(),
-    status: 'loading'
-  }
-  project.conversationHistory.push(aiMsg)
-  console.log('[BottomInput] AI消息(loading)已写入项目', projectId, aiMsg)
-
-  saveProjectAndTrigger(project)
-  console.log('[BottomInput] 项目已保存', project)
 }
 
 // AI接口返回后写入AI回复
@@ -295,76 +347,88 @@ function onAIResponse(aiText) {
   let project = ProjectStorage.getProject(projectId)
   if (!project || !project.conversationHistory) return
 
-  // 使用 cardStore 的 parseSceneAnalysis 方法来解析AI回复
-  let scene = null, cards = null, projectTitle = null
-  try {
-    const analysis = cardStore.parseSceneAnalysis(aiText)
-    if (analysis && analysis.scene) {
-      scene = analysis.scene
-      cards = analysis.cards
-      projectTitle = analysis.title || project.description
-      
-      console.log('[BottomInput] 成功解析AI场景分析:', analysis)
-      
-      // 插入卡片生成提示
-      const tipMsg = {
-        id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-        role: 'assistant',
-        content: '即将为您生成计划卡片...',
-        timestamp: new Date().toISOString(),
-        status: 'done'
-      }
-      project.conversationHistory.push(tipMsg)
-      console.log('[BottomInput] 立即插入卡片生成提示', tipMsg)
-      
-      // 生成卡片并更新当前项目
-      const validCards = Array.isArray(cards) ? cards : ['basic-info', 'suggestions', 'resources']
-      // 使用AI解析的实体信息，如果没有则使用本地解析
-      const context = analysis.entities ? { entities: analysis.entities } : { entities: cardStore.parseUserInput(project.description).entities }
-      const newCards = cardStore.generateCardsByScene(scene, validCards, context)
-      project.title = projectTitle
-      project.cards = newCards
-      project.cardCount = newCards.length
-      console.log('[BottomInput] 已根据AI场景分析生成卡片并更新项目', project)
-      
-      // 检测到场景分析后，自动跳转到计划页面
-      setTimeout(() => {
-        if (typeof window !== 'undefined') {
-          const url = new URL(window.location)
-          url.pathname = '/plan'
-          url.searchParams.set('projectId', project.id)
-          url.searchParams.set('planData', JSON.stringify({
-            title: projectTitle,
-            description: project.description,
-            type: scene
-          }))
-          console.log('[BottomInput] 检测到场景分析，自动跳转到计划页面:', url.toString())
-          window.location.href = url.toString()
+  // 首先检查用户输入是否包含场景相关关键词
+  const userInput = project.description || ''
+  const hasScenarioKeywords = checkScenarioKeywords(userInput)
+  
+  console.log('[BottomInput] 检查场景关键词:', { userInput, hasScenarioKeywords })
+
+  // 只有在检测到场景关键词时才进行场景分析
+  if (hasScenarioKeywords) {
+    // 使用 cardStore 的 parseSceneAnalysis 方法来解析AI回复
+    let scene = null, cards = null, projectTitle = null
+    try {
+      const analysis = cardStore.parseSceneAnalysis(aiText)
+      if (analysis && analysis.scene) {
+        scene = analysis.scene
+        cards = analysis.cards
+        projectTitle = analysis.title || project.description
+        
+        console.log('[BottomInput] 成功解析AI场景分析:', analysis)
+        
+        // 插入卡片生成提示
+        const tipMsg = {
+          id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+          role: 'assistant',
+          content: '即将为您生成计划卡片...',
+          timestamp: new Date().toISOString(),
+          status: 'done'
         }
-      }, 2000) // 2秒后跳转，让用户看到AI回复
+        project.conversationHistory.push(tipMsg)
+        console.log('[BottomInput] 立即插入卡片生成提示', tipMsg)
+        
+        // 生成卡片并更新当前项目
+        const validCards = Array.isArray(cards) ? cards : ['basic-info', 'suggestions', 'resources']
+        // 使用AI解析的实体信息，如果没有则使用本地解析
+        const context = analysis.entities ? { entities: analysis.entities } : { entities: cardStore.parseUserInput(project.description).entities }
+        const newCards = cardStore.generateCardsByScene(scene, validCards, context)
+        project.title = projectTitle
+        project.cards = newCards
+        project.cardCount = newCards.length
+        console.log('[BottomInput] 已根据AI场景分析生成卡片并更新项目', project)
+        
+        // 检测到场景分析后，自动跳转到计划页面
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            const url = new URL(window.location)
+            url.pathname = '/plan'
+            url.searchParams.set('projectId', project.id)
+            url.searchParams.set('planData', JSON.stringify({
+              title: projectTitle,
+              description: project.description,
+              type: scene
+            }))
+            console.log('[BottomInput] 检测到场景分析，自动跳转到计划页面:', url.toString())
+            window.location.href = url.toString()
+          }
+        }, 2000) // 2秒后跳转，让用户看到AI回复
+      }
+    } catch (e) {
+      console.warn('[BottomInput] 场景分析解析失败，使用备选方案:', e)
+      // 备选方案：使用关键词检测
+      const fallbackAnalysis = cardStore.detectScenarioByKeywords(aiText)
+      if (fallbackAnalysis && fallbackAnalysis.scene) {
+        scene = fallbackAnalysis.scene
+        cards = fallbackAnalysis.cards
+        projectTitle = project.description
+        
+        console.log('[BottomInput] 使用备选方案解析场景:', fallbackAnalysis)
+        
+        // 生成卡片并更新当前项目
+        const validCards = Array.isArray(cards) ? cards : ['basic-info', 'suggestions', 'resources']
+        const context = { entities: fallbackAnalysis.entities || {} }
+        const newCards = cardStore.generateCardsByScene(scene, validCards, context)
+        project.title = projectTitle
+        project.cards = newCards
+        project.cardCount = newCards.length
+        console.log('[BottomInput] 已根据备选方案生成卡片并更新项目', project)
+      }
     }
-  } catch (e) {
-    console.warn('[BottomInput] 场景分析解析失败，使用备选方案:', e)
-    // 备选方案：使用关键词检测
-    const fallbackAnalysis = cardStore.detectScenarioByKeywords(aiText)
-    if (fallbackAnalysis && fallbackAnalysis.scene) {
-      scene = fallbackAnalysis.scene
-      cards = fallbackAnalysis.cards
-      projectTitle = project.description
-      
-      console.log('[BottomInput] 使用备选方案解析场景:', fallbackAnalysis)
-      
-      // 生成卡片并更新当前项目
-      const validCards = Array.isArray(cards) ? cards : ['basic-info', 'suggestions', 'resources']
-      const context = { entities: fallbackAnalysis.entities || {} }
-      const newCards = cardStore.generateCardsByScene(scene, validCards, context)
-      project.title = projectTitle
-      project.cards = newCards
-      project.cardCount = newCards.length
-      console.log('[BottomInput] 已根据备选方案生成卡片并更新项目', project)
-    }
+  } else {
+    console.log('[BottomInput] 未检测到场景关键词，进行基础对话，不创建场景')
   }
 
+  // 更新AI回复内容
   let inserted = false
   for (let i = project.conversationHistory.length - 1; i >= 0; i--) {
     const msg = project.conversationHistory[i]
@@ -378,6 +442,44 @@ function onAIResponse(aiText) {
   }
   saveProjectAndTrigger(project)
   console.log('[BottomInput] AI回复后项目已保存', project)
+}
+
+// 检查用户输入是否包含场景相关关键词
+function checkScenarioKeywords(input) {
+  if (!input || typeof input !== 'string') return false
+  
+  const lowerInput = input.toLowerCase()
+  
+  // 旅行场景关键词 - 更精确的匹配
+  const travelKeywords = [
+    '旅行', '旅游', '出行', '游玩', '度假', '机票', '酒店', '景点', '行程', '攻略',
+    'travel', 'trip', 'vacation', 'journey', 'flight', 'hotel', 'destination'
+  ]
+  
+  // 礼物场景关键词 - 移除过于宽泛的词
+  const giftKeywords = [
+    '礼物', '购物', '购买', '买', '商品', '比价', '商品搜索',
+    'gift', 'present', 'shop', 'buy', 'purchase'
+  ]
+  
+  // 会议场景关键词
+  const meetingKeywords = [
+    '会议', '开会', '讨论', '提醒', '参与者', '日程', '安排', '预约',
+    'meeting', 'discussion', 'schedule', 'appointment', 'participant'
+  ]
+  
+  // 排除一些常见的非场景词汇
+  const excludeWords = ['你好', 'hello', 'hi', '在吗', '在么', '请问', '谢谢', '感谢']
+  if (excludeWords.some(word => lowerInput.includes(word))) {
+    return false
+  }
+  
+  // 检查是否包含任何场景关键词
+  const hasTravelKeywords = travelKeywords.some(keyword => lowerInput.includes(keyword))
+  const hasGiftKeywords = giftKeywords.some(keyword => lowerInput.includes(keyword))
+  const hasMeetingKeywords = meetingKeywords.some(keyword => lowerInput.includes(keyword))
+  
+  return hasTravelKeywords || hasGiftKeywords || hasMeetingKeywords
 }
 
 // 错误处理

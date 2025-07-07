@@ -298,15 +298,22 @@ export class CardModificationService {
       
       // 确保场景信息正确设置
       if (card.data.formData && Object.keys(card.data.formData).length > 0) {
-        // 根据字段内容推断场景
-        if (card.data.formData.recipient || card.data.formData.budget || card.data.formData.searchQuery) {
-          card.data.scenario = 'gift'
-        } else if (card.data.formData.departure || card.data.formData.destination) {
-          card.data.scenario = 'travel'
-        } else if (card.data.formData.meetingTitle || card.data.formData.participants) {
-          card.data.scenario = 'meeting'
+        // 只有当卡片原本没有scenario时才推断
+        if (!card.data.scenario) {
+          if (card.data.formData.recipient || card.data.formData.budget || card.data.formData.searchQuery) {
+            card.data.scenario = 'gift'
+          } else if (card.data.formData.departure || card.data.formData.destination) {
+            card.data.scenario = 'travel'
+          } else if (card.data.formData.meetingTitle || card.data.formData.participants) {
+            card.data.scenario = 'meeting'
+          }
+          if (card.data.scenario) {
+            console.log(`[CardModificationService] 设置卡片场景: ${card.data.scenario}`)
+          }
+        } else {
+          // 保持原有场景，不覆盖
+          console.log(`[CardModificationService] 保持原有卡片场景: ${card.data.scenario}`)
         }
-        console.log(`[CardModificationService] 设置卡片场景: ${card.data.scenario}`)
       }
     } else {
       // 其他卡片的正常处理
