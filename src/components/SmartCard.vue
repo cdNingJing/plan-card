@@ -196,13 +196,6 @@
         @update="handleUpdate"
       />
       
-      <!-- 画像卡片 -->
-      <ProfileCard 
-        v-else-if="card.type === 'profile'"
-        :data="card.data"
-        @update="handleUpdate"
-      />
-      
       <!-- 提示卡片 -->
       <TipsCard 
         v-else-if="card.type === 'tips'"
@@ -354,7 +347,6 @@ import BudgetCard from './cards/BudgetCard.vue'
 import MeetingCard from './cards/MeetingCard.vue'
 import GenericCard from './cards/GenericCard.vue'
 import BasicInfoCard from './cards/BasicInfoCard.vue'
-import ProfileCard from './cards/ProfileCard.vue'
 import TipsCard from './cards/TipsCard.vue'
 import ShopCard from './cards/ShopCard.vue'
 import SelectedProductsCard from './cards/SelectedProductsCard.vue'
@@ -446,7 +438,6 @@ const getCardComponent = (type) => {
     'meeting-summary': MeetingSummaryCard,
     'meeting-result': MeetingResultCard,
     'basic-info': BasicInfoCard,
-    profile: ProfileCard,
     tips: TipsCard,
     shop: ShopCard,
     'selected-products': SelectedProductsCard,

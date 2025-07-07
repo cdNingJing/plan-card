@@ -129,7 +129,7 @@ export const useAgentStore = defineStore('agent', () => {
     "duration": 7,
     "purpose": "旅游"
   },
-  "summary": "创建成都到纽约7天旅行计划"
+  "summary": "已为您识别需求，正在为您生成相关卡片。"
 }
 <SCENE_ANALYSIS_END>
 
@@ -151,7 +151,7 @@ export const useAgentStore = defineStore('agent', () => {
     "exclude_sponsored": true,
     "detail": 3
   },
-  "summary": "为妈妈推荐园艺礼物"
+  "summary": "已为您识别需求，正在为您生成相关卡片。"
 }
 <SCENE_ANALYSIS_END>
 
@@ -173,7 +173,7 @@ export const useAgentStore = defineStore('agent', () => {
     "exclude_sponsored": true,
     "detail": 3
   },
-  "summary": "母亲节礼物推荐，预算1001元"
+  "summary": "已为您识别需求，正在为您生成相关卡片。"
 }
 <SCENE_ANALYSIS_END>
 
@@ -196,7 +196,7 @@ export const useAgentStore = defineStore('agent', () => {
     "location": "会议室A",
     "description": "讨论项目进度和下一步计划"
   },
-  "summary": "安排项目讨论会议"
+  "summary": "已为您识别需求，正在为您生成相关卡片。"
 }
 <SCENE_ANALYSIS_END>
 

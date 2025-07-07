@@ -222,7 +222,7 @@ export class CardModificationService {
 
     const result = {
       success: updatedCount > 0,
-      message: `成功更新了 ${updatedCount} 张卡片`,
+      message: '',
       updatedCards: targetCards
     }
     

@@ -76,7 +76,7 @@
                   </div>
                 </template>
                 <template v-else-if="item.status === 'done'">
-                  <span>{{ parseAIContent(item.content) }}</span>
+                  <span>{{ parseAIContentDone(item.content) }}</span>
                 </template>
                 <template v-else-if="item.status === 'error'">
                   <span class="error-message">{{ item.errorMsg || '请求失败，请重试' }}</span>
@@ -148,11 +148,41 @@ const chatHistoryRef = ref(null)
 const isFocused = ref(false)
 const historyVersion = ref(0)
 
+const parseAIContentDone = (content) => {
+  if (typeof content === 'string') {
+    // 检查是否包含 <SCENE_ANALYSIS_START> 标记
+    const sceneMatch = content.match(/<SCENE_ANALYSIS_START>([\s\S]*?)<SCENE_ANALYSIS_END>/);
+    if (sceneMatch) {
+      try {
+        const jsonStr = sceneMatch[1].trim();
+        const parsed = JSON.parse(jsonStr);
+        
+        // 检查是否是修改指令（包含 action: update_card）
+        if (parsed.action === 'update_card' && parsed.message) {
+          return parsed.message;
+        }
+        
+        // 检查是否是礼物建议数组（不包含修改指令）
+        if (Array.isArray(parsed)) {
+          // 这是礼物建议，返回原始内容，不提取message
+          return content;
+        }
+        
+        // 其他情况，如果有 message 字段则显示
+        if (parsed.message) {
+          return parsed.message;
+        }
+      } catch (e) {
+        // JSON解析失败，返回原始内容
+      }
+    }
+    return content;
+  }
+  return content
+}
+
 // 解析AI回复内容的函数
 const parseAIContent = (content) => {
-  if (typeof content === 'string') {
-    return content
-  }
   
   if (typeof content === 'object' && content !== null) {
     // 如果是数组，提取文本内容
@@ -370,17 +400,7 @@ const processAIResponse = (aiText) => {
         console.warn('[PlanInput] 没有需要更新的卡片')
       }
       
-      // 添加修改确认消息到对话历史
-      const confirmMsg = {
-        id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-        role: 'assistant',
-        content: result.message || modification.message || '已为您更新了相关信息',
-        timestamp: new Date().toISOString(),
-        status: 'done'
-      }
-      
       if (!project.conversationHistory) project.conversationHistory = []
-      project.conversationHistory.push(confirmMsg)
       ProjectStorage.saveProject(project)
       console.log('[PlanInput] 确认消息已添加到对话历史')
       
@@ -490,94 +510,7 @@ const handleClickOutside = (event) => {
   }
 }
 
-// 测试卡片修改功能
-const testCardModification = () => {
-  console.log('[PlanInput] 开始测试卡片修改功能')
-  
-  const project = ProjectStorage.getProject(props.projectId)
-  if (!project) {
-    console.warn('[PlanInput] 测试失败：项目不存在')
-    return
-  }
-  
-  console.log('[PlanInput] 项目卡片:', project.cards)
-  
-  // 查找basic-info卡片
-  const basicInfoCard = project.cards.find(card => card.type === 'basic-info')
-  if (!basicInfoCard) {
-    console.warn('[PlanInput] 测试失败：未找到basic-info卡片')
-    return
-  }
-  
-  console.log('[PlanInput] 找到basic-info卡片:', basicInfoCard)
-  console.log('[PlanInput] 当前projectCardStore状态:', {
-    projectCards: projectCardStore.projectCards,
-    updateVersion: projectCardStore.updateVersion
-  })
-  
-  // 直接使用projectCardStore更新卡片数据
-  const updateData = {
-    formData: {
-      destination: '北京',
-      title: '北京五日游',
-      duration: 5,
-      budget: 5000
-    }
-  }
-  
-  console.log('[PlanInput] 准备更新卡片数据:', updateData)
-  const success = projectCardStore.updateCardData(basicInfoCard.id, updateData)
-  
-  if (success) {
-    console.log('[PlanInput] 卡片更新成功')
-    console.log('[PlanInput] 更新后的projectCardStore状态:', {
-      projectCards: projectCardStore.projectCards,
-      updateVersion: projectCardStore.updateVersion
-    })
-    
-    // 保存到项目
-    basicInfoCard.data = { ...basicInfoCard.data, ...updateData }
-    ProjectStorage.saveProject(project)
-    
-    console.log('[PlanInput] 测试完成，请检查BasicInfoCard是否更新')
-  } else {
-    console.warn('[PlanInput] 卡片更新失败')
-  }
-}
 
-// 测试预算修改功能
-const testBudgetModification = () => {
-  console.log('[PlanInput] 开始测试预算修改功能')
-  
-  // 模拟AI回复中的预算修改指令
-  const aiResponse = `已为您更新预算信息。
-
-{
-  "action": "update_card",
-  "target": "basic-info",
-  "updates": {
-    "budget": "1000元"
-  },
-  "message": "已为您更新预算为1000元"
-}`
-
-  console.log('[PlanInput] 模拟AI回复:', aiResponse)
-  
-  // 解析AI回复
-  const parsedContent = parseAIContent(aiResponse)
-  console.log('[PlanInput] 解析后的内容:', parsedContent)
-  
-  // 处理AI回复
-  processAIResponse(parsedContent)
-  
-  console.log('[PlanInput] 预算修改测试完成，请检查ShopCard是否更新')
-}
-
-// 暴露测试函数到全局（仅用于调试）
-if (typeof window !== 'undefined') {
-  window.testPlanInputBudget = testBudgetModification
-  console.log('[PlanInput] 预算修改测试函数已暴露到全局: window.testPlanInputBudget()')
-}
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
@@ -602,8 +535,7 @@ defineExpose({
   expand,
   collapse,
   toggleFullscreen,
-  clearHistory,
-  testCardModification
+  clearHistory
 })
 </script>
 

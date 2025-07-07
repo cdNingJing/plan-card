@@ -278,14 +278,7 @@ onMounted(() => {
   if (projectId) {
     const project = ProjectStorage.getProject(projectId)
     if (project && project.conversationHistory) {
-      // 移除"即将为您生成计划卡片..."的assistant消息
-      const filtered = project.conversationHistory.filter(
-        msg => !(msg.role === 'assistant' && msg.content === '即将为您生成计划卡片...')
-      )
-      if (filtered.length !== project.conversationHistory.length) {
-        project.conversationHistory = filtered
-        ProjectStorage.saveProject(project)
-      }
+
     }
     // 使用AI分析结果生成卡片
     if (project) {

@@ -76,7 +76,7 @@
                   </div>
                 </template>
                 <template v-else-if="item.status === 'done'">
-                  <span>{{ item.content }}</span>
+                  <span>{{ parseAIContentDone(item.content) }}</span>
                 </template>
                 <template v-else-if="item.status === 'error'">
                   <span class="error-message">{{ item.errorMsg || '请求失败，请重试' }}</span>
@@ -340,6 +340,40 @@ function sendUserMessage(input) {
   }
 }
 
+const parseAIContentDone = (content) => {
+  if (typeof content === 'string') {
+    // 检查是否包含 <SCENE_ANALYSIS_START> 标记
+    const sceneMatch = content.match(/<SCENE_ANALYSIS_START>([\s\S]*?)<SCENE_ANALYSIS_END>/);
+    if (sceneMatch) {
+      try {
+        const jsonStr = sceneMatch[1].trim();
+        const parsed = JSON.parse(jsonStr);
+
+        // 优先显示 summary 字段
+        if (parsed.summary) {
+          return parsed.summary;
+        }
+        // 检查是否是修改指令（包含 action: update_card）
+        if (parsed.action === 'update_card' && parsed.message) {
+          return parsed.message;
+        }
+        // 检查是否是礼物建议数组（不包含修改指令）
+        if (Array.isArray(parsed)) {
+          return content;
+        }
+        // 其他情况，如果有 message 字段则显示
+        if (parsed.message) {
+          return parsed.message;
+        }
+      } catch (e) {
+        // JSON解析失败，返回原始内容
+      }
+    }
+    return content;
+  }
+  return content;
+}
+
 // AI接口返回后写入AI回复
 function onAIResponse(aiText) {
   const projectId = ProjectStorage.getCurrentProjectId()
@@ -365,17 +399,6 @@ function onAIResponse(aiText) {
         projectTitle = analysis.title || project.description
         
         console.log('[BottomInput] 成功解析AI场景分析:', analysis)
-        
-        // 插入卡片生成提示
-        const tipMsg = {
-          id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-          role: 'assistant',
-          content: '即将为您生成计划卡片...',
-          timestamp: new Date().toISOString(),
-          status: 'done'
-        }
-        project.conversationHistory.push(tipMsg)
-        console.log('[BottomInput] 立即插入卡片生成提示', tipMsg)
         
         // 生成卡片并更新当前项目
         const validCards = Array.isArray(cards) ? cards : ['basic-info', 'suggestions', 'resources']
