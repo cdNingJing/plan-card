@@ -53,6 +53,81 @@ export const basicInfoFieldsConfig = {
       }
     ]
   },
+  // 商务行程场景 - 专注于商务出差所需信息
+  'business-travel': {
+    title: '商务行程基础信息',
+    description: '请填写商务出差相关信息，我们将为您安排完整的商务行程',
+    fields: [
+      {
+        key: 'departure',
+        label: '出发地',
+        type: 'text',
+        placeholder: '请输入出发城市',
+        required: true
+      },
+      {
+        key: 'destination',
+        label: '目的地',
+        type: 'text',
+        placeholder: '请输入目的地',
+        required: true
+      },
+      {
+        key: 'startDate',
+        label: '出发日期',
+        type: 'date',
+        required: true,
+        min: new Date().toISOString().split('T')[0]
+      },
+      {
+        key: 'endDate',
+        label: '返程日期',
+        type: 'date',
+        required: false,
+        min: new Date().toISOString().split('T')[0]
+      },
+      {
+        key: 'clientLocation',
+        label: '客户地点',
+        type: 'text',
+        placeholder: '请输入客户公司地址或地点',
+        required: false
+      },
+      {
+        key: 'meetingTime',
+        label: '会议时间',
+        type: 'datetime-local',
+        required: false,
+        min: new Date().toISOString().slice(0, 16)
+      },
+      {
+        key: 'seatPreference',
+        label: '座位偏好',
+        type: 'select',
+        options: [
+          { value: 'aisle', label: '靠走道' },
+          { value: 'window', label: '靠窗' },
+          { value: 'front', label: '前排' },
+          { value: 'any', label: '无特殊要求' }
+        ],
+        required: false,
+        defaultValue: 'aisle'
+      },
+      {
+        key: 'hotelPreference',
+        label: '酒店偏好',
+        type: 'select',
+        options: [
+          { value: 'near_client', label: '靠近客户' },
+          { value: 'near_airport', label: '靠近机场' },
+          { value: 'city_center', label: '市中心' },
+          { value: 'any', label: '无特殊要求' }
+        ],
+        required: false,
+        defaultValue: 'near_client'
+      }
+    ]
+  },
 
   // 礼物场景 - 专注于购买接口所需信息
   gift: {

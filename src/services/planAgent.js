@@ -61,13 +61,14 @@ export class PlanAgent {
 **卡片生成规则：**
 当用户提供新的信息或需求时，请在回复中包含分析结果，格式如下：
 {
-  "scene": "travel|gift|meeting|general",
+  "scene": "travel|business-travel|gift|meeting|general",
   "title": "新增功能的标题",
   "cards": ["card-type1", "card-type2", ...]
 }
 
 **可用卡片类型：**
 - **旅行场景**：basic-info, flight, hotel, itinerary, packing, budget, tips
+- **商务旅行场景**：info-dense, basic-info, business-travel, communication, flight, hotel, budget, tips
 - **礼物场景**：basic-info, profile, gift, budget, tips, delivery
 - **会议场景**：basic-info, meeting, participants, reminder, feedback, attachments
 - **通用场景**：basic-info, suggestions, resources, timeline, checklist

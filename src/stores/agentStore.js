@@ -39,6 +39,7 @@ export const useAgentStore = defineStore('agent', () => {
 **场景识别规则：**
 请根据用户的描述，判断其需求属于以下哪种场景之一：
 - **旅行场景 (travel)**：包含旅行、旅游、出行、游玩、度假、机票、酒店、景点等关键词
+- **商务旅行场景 (business-travel)**：包含商务旅行、出差、商务会议、客户会议、商务出行等关键词
 - **购物场景 (gift)**：包含购物、搜索、购买、商品、推荐、比价、商品搜索等关键词  
 - **会议场景 (meeting)**：包含会议、开会、讨论、提醒、参与者、日程等关键词
 - **通用场景 (general)**：其他类型的计划、安排、规划等需求
@@ -46,6 +47,7 @@ export const useAgentStore = defineStore('agent', () => {
 **卡片规划规则：**
 每个场景必须包含以下卡片类型：
 - **旅行场景**：basic-info, flight, hotel, itinerary, packing
+- **商务旅行场景**：info-dense, basic-info, business-travel, communication, flight, hotel
 - **购物场景**：basic-info, shop, selected-products, profile, tips 
 - **会议场景**：basic-info, meeting-summary, meeting-result
 - **通用场景**：basic-info, suggestions, resources
@@ -58,6 +60,7 @@ export const useAgentStore = defineStore('agent', () => {
 
 **工具使用规则：**
 - 当用户提到旅行、旅游、出行等需求时，使用 createPlanCard 工具，type 设为 'travel'
+- 当用户提到商务旅行、出差、商务会议等需求时，使用 createPlanCard 工具，type 设为 'business-travel'
 - 当用户提到购物、搜索、购买、商品搜索等需求时，使用 createPlanCard 工具，type 设为 'gift'  
 - 当用户提到会议、开会、讨论等需求时，使用 createPlanCard 工具，type 设为 'meeting'
 - 当用户提到其他计划、安排、规划等需求时，使用 createPlanCard 工具，type 设为 'general'
@@ -75,7 +78,7 @@ export const useAgentStore = defineStore('agent', () => {
 
 <SCENE_ANALYSIS_START>
 {
-  "scene": "travel|gift|meeting|general",
+  "scene": "travel|business-travel|gift|meeting|general",
   "title": "本次计划的简明标题",
   "cards": ["basic-info", "flight", "hotel", ...],
   "entities": {
@@ -130,6 +133,28 @@ export const useAgentStore = defineStore('agent', () => {
     "purpose": "旅游"
   },
   "summary": "已为您识别需求，正在为您生成相关卡片。"
+}
+<SCENE_ANALYSIS_END>
+
+**商务旅行场景示例：**
+<SCENE_ANALYSIS_START>
+{
+  "scene": "business-travel",
+  "title": "纽约商务会议临时行程",
+  "cards": ["basic-info", "business-travel", "communication", "flight", "hotel"],
+  "entities": {
+    "departure": "",
+    "destination": "纽约",
+    "startDate": "",
+    "endDate": "",
+    "travelers": 1,
+    "travelType": "business",
+    "budget": "",
+    "companions": [],
+    "duration": 1,
+    "purpose": "客户会议"
+  },
+  "summary": "已为您识别商务旅行需求，正在为您生成相关卡片。"
 }
 <SCENE_ANALYSIS_END>
 
@@ -252,7 +277,7 @@ export const useAgentStore = defineStore('agent', () => {
           },
           type: {
             type: 'string',
-            enum: ['travel', 'gift', 'meeting', 'general'],
+            enum: ['travel', 'business-travel', 'gift', 'meeting', 'general'],
             description: '计划类型'
           }
         },

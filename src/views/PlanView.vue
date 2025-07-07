@@ -22,8 +22,23 @@
       </div>
     </main>
     
+    <!-- 悬浮信息密集型卡片 -->
+    <FloatingInfoDenseCard
+      v-if="showFloatingCard"
+      :card-data="floatingCardData"
+      :scenario="currentScenario"
+      :is-visible="showFloatingCard"
+      :project-id="currentProject?.id || ''"
+      @close="closeFloatingCard"
+      @book-flight="handleBookFlight"
+      @book-hotel="handleBookHotel"
+      @book-transport="handleBookTransport"
+      @reschedule-event="handleRescheduleEvent"
+    />
+    
     <!-- 底部输入组件 -->
     <PlanInput 
+      v-if="!showFloatingCard"
       :projectId="currentProject?.id || ''"
       placeholder="继续添加需求或修改计划..."
       :scenario="getCurrentScenario()"
@@ -37,6 +52,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, User, Bot } from 'lucide-vue-next'
 import SmartCard from '../components/SmartCard.vue'
 import PlanInput from '../components/PlanInput.vue'
+import FloatingInfoDenseCard from '../components/FloatingInfoDenseCard.vue'
 import { ProjectStorage, ProjectModel } from '../utils/storage.js'
 import { useCardStore } from '../stores/cardStore.js'
 import { useProjectCardStore } from '../stores/projectCardStore.js'
@@ -51,6 +67,11 @@ const userInput = ref('')
 const currentProject = ref(null)
 const conversationHistory = ref([])
 const showConversation = ref(true)
+
+// 悬浮卡片管理
+const showFloatingCard = ref(false)
+const floatingCardData = ref({})
+const currentScenario = ref('business-travel')
 
 // 使用projectCardStore的卡片数据
 const cards = computed(() => projectCardStore.projectCards)
@@ -134,6 +155,14 @@ const saveProject = () => {
         
         // 设置当前项目ID
         ProjectStorage.setCurrentProjectId(projectId)
+        
+        // 检查是否需要显示悬浮卡片
+        const scenario = getCurrentScenario()
+        if (scenario === 'business-travel') {
+          setTimeout(() => {
+            showFloatingInfoCard(scenario)
+          }, 500)
+        }
       } else {
         console.warn('[PlanView] 项目不存在，projectId:', projectId)
       }
@@ -224,6 +253,38 @@ const getCurrentScenario = () => {
   return 'travel'
 }
 
+// 悬浮卡片管理方法
+const showFloatingInfoCard = (scenario = 'business-travel', data = {}) => {
+  currentScenario.value = scenario
+  floatingCardData.value = data
+  showFloatingCard.value = true
+}
+
+const closeFloatingCard = () => {
+  showFloatingCard.value = false
+}
+
+// 处理悬浮卡片的事件
+const handleBookFlight = (flightData) => {
+  console.log('预订航班:', flightData)
+  // 这里可以添加预订逻辑
+}
+
+const handleBookHotel = (hotelData) => {
+  console.log('预订酒店:', hotelData)
+  // 这里可以添加预订逻辑
+}
+
+const handleBookTransport = (transportData) => {
+  console.log('预订交通:', transportData)
+  // 这里可以添加预订逻辑
+}
+
+const handleRescheduleEvent = (eventId) => {
+  console.log('重新安排事件:', eventId)
+  // 这里可以添加重新安排逻辑
+}
+
 // 监听 projectId 路由参数变化，强制重新加载
 watch(() => route.query.projectId, (newId) => {
   if (newId) {
@@ -243,6 +304,17 @@ onMounted(() => {
   if (route.query.projectId) {
     loadProject(route.query.projectId)
     return
+  }
+  
+  // 检查是否需要显示悬浮卡片
+  const checkAndShowFloatingCard = () => {
+    const scenario = getCurrentScenario()
+    if (scenario === 'business-travel') {
+      // 延迟显示悬浮卡片，确保页面加载完成
+      setTimeout(() => {
+        showFloatingInfoCard(scenario)
+      }, 1000)
+    }
   }
   // 其次处理 planData 跳转
   if (route.query.planData) {

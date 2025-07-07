@@ -54,6 +54,20 @@ export const useCardStore = defineStore('card', () => {
       defaultState: 'collapsed',
       priority: 3
     },
+    'business-travel': {
+      name: '商务行程概览',
+      icon: 'Briefcase',
+      category: 'business-travel',
+      defaultState: 'expanded',
+      priority: 1
+    },
+    communication: {
+      name: '通讯管理',
+      icon: 'Mail',
+      category: 'business-travel',
+      defaultState: 'collapsed',
+      priority: 2
+    },
     itinerary: {
       name: '行程卡片',
       icon: 'Calendar',
@@ -439,12 +453,22 @@ export const useCardStore = defineStore('card', () => {
         
         const analysis = JSON.parse(jsonStr)
         
+        // 特殊处理：如果AI返回的是travel但包含商务相关关键词，转换为business-travel
+        let finalScene = analysis.scene || 'general'
+        let finalCards = analysis.cards || ['basic-info']
+        if (analysis.scene === 'travel' && analysis.entities?.travelType === 'business') {
+          finalScene = 'business-travel'
+          // 强制修正卡片类型为商务专用
+          finalCards = ['basic-info', 'business-travel', 'flight', 'hotel', 'communication']
+          console.log('[parseSceneAnalysis] 检测到商务旅行，转换为business-travel场景，并修正卡片类型')
+        }
+        
         // 提取实体信息
         const entities = extractEntitiesFromAIResponse(aiResponse)
         
         return {
-          scene: analysis.scene || 'general',
-          cards: analysis.cards || ['basic-info'],
+          scene: finalScene,
+          cards: finalCards,
           title: analysis.title || '',
           entities: entities // 添加解析的实体信息
         }
@@ -488,12 +512,22 @@ export const useCardStore = defineStore('card', () => {
         
         const analysis = JSON.parse(jsonStr)
         
+        // 特殊处理：如果AI返回的是travel但包含商务相关关键词，转换为business-travel
+        let finalScene = analysis.scene || 'general'
+        let finalCards = analysis.cards || ['basic-info']
+        if (analysis.scene === 'travel' && analysis.entities?.travelType === 'business') {
+          finalScene = 'business-travel'
+          // 强制修正卡片类型为商务专用
+          finalCards = ['basic-info', 'business-travel', 'flight', 'hotel', 'communication']
+          console.log('[parseSceneAnalysis] 传统解析检测到商务旅行，转换为business-travel场景，并修正卡片类型')
+        }
+        
         // 提取实体信息
         const entities = extractEntitiesFromAIResponse(aiResponse)
         
         return {
-          scene: analysis.scene || 'general',
-          cards: analysis.cards || ['basic-info'],
+          scene: finalScene,
+          cards: finalCards,
           title: analysis.title || '',
           entities: entities // 添加解析的实体信息
         }
@@ -982,8 +1016,16 @@ export const useCardStore = defineStore('card', () => {
   }
   
   const detectScenarioByKeywords = (input) => {
+    // 商务行程场景关键词识别
+    if (/商务|出差|客户会|商务会议|商务旅行|临时出差|紧急出差/.test(input)) {
+      return {
+        scene: 'business-travel',
+        cards: ['basic-info', 'business-travel', 'flight', 'hotel', 'communication'],
+        entities: parseUserInput(input).entities || {}
+      }
+    }
     // 增强礼物场景关键词识别
-    if (/礼物|送|买.*礼物|购买.*礼物|给.+买礼物|给.+送礼物/.test(input)) {
+    else if (/礼物|送|买.*礼物|购买.*礼物|给.+买礼物|给.+送礼物/.test(input)) {
       return {
         scene: 'gift',
         cards: ['basic-info', 'profile', 'gift', 'budget', 'tips'],
@@ -1048,6 +1090,11 @@ export const useCardStore = defineStore('card', () => {
       cardTypes.unshift('basic-info')
     }
     
+    // 在商务旅行场景中，过滤掉info-dense卡片，因为会使用悬浮卡片
+    if (scene === 'business-travel') {
+      cardTypes = cardTypes.filter(type => type !== 'info-dense')
+    }
+    
     cardTypes.forEach((cardType, index) => {
       const card = createCardByType(cardType, scene, index, context)
       if (card) {
@@ -1064,10 +1111,14 @@ export const useCardStore = defineStore('card', () => {
     const cardTitles = {
       'basic-info': {
         travel: '旅行基础信息',
+        'business-travel': '商务行程基础信息',
         gift: '礼物推荐基础信息', 
         meeting: '会议基础信息',
         general: '基础信息'
       },
+      'business-travel': '商务行程概览',
+      'communication': '通讯管理',
+      'info-dense': '行程决策概览',
       'flight': '航班推荐',
       'hotel': '酒店推荐',
       'itinerary': '行程规划',
@@ -1088,7 +1139,7 @@ export const useCardStore = defineStore('card', () => {
     }
     
     const title = cardTitles[cardType]?.[scene] || cardTitles[cardType] || cardType
-    const baseData = generateCardData(cardType, context)
+    const baseData = generateCardData(cardType, { ...context, scene })
     // 强制覆盖 basic-info 的 scenario 字段为当前 scene
     if (cardType === 'basic-info') {
       baseData.scenario = scene
@@ -1098,7 +1149,8 @@ export const useCardStore = defineStore('card', () => {
       type: cardType,
       title: title,
       state: 'collapsed',
-      data: baseData
+      data: baseData,
+      scenario: cardType === 'info-dense' ? scene : undefined // 为信息密集型卡片添加场景信息
     }
     console.log('[createCardByType]', cardType, 'scene:', scene, 'card:', card)
     return card
@@ -1165,6 +1217,64 @@ export const useCardStore = defineStore('card', () => {
         case 'hotel':
           return {
             recommendations: []
+          }
+        case 'business-travel':
+          return {
+            flightInfo: null,
+            hotelInfo: null,
+            weatherInfo: null,
+            transportInfo: null,
+            conflicts: [],
+            preparations: [
+              {
+                id: 'prep_1',
+                task: '准备会议材料',
+                completed: false
+              },
+              {
+                id: 'prep_2',
+                task: '确认客户地址',
+                completed: false
+              },
+              {
+                id: 'prep_3',
+                task: '预订交通工具',
+                completed: false
+              }
+            ]
+          }
+        case 'communication':
+          return {
+            emailTasks: [
+              {
+                id: 'email_1',
+                type: 'conflict',
+                typeText: '冲突调整',
+                status: 'draft',
+                statusText: '草稿',
+                title: '调整冲突日程',
+                recipient: '同事',
+                priority: '高',
+                preview: '由于临时出差，需要调整明天的会议安排...'
+              }
+            ],
+            notifications: [
+              {
+                id: 'notif_1',
+                type: 'notification',
+                typeText: '出差通知',
+                status: 'pending',
+                title: '出差通知',
+                recipient: '家人',
+                method: '微信',
+                scheduledTime: '今天 18:00',
+                message: '明天临时出差到纽约，预计后天回来'
+              }
+            ],
+            autoReply: {
+              enabled: false,
+              message: '您好，我正在出差中，预计后天回来，紧急事务请电话联系。'
+            }
           }
         case 'itinerary':
           return {

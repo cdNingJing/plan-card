@@ -479,6 +479,12 @@ function checkScenarioKeywords(input) {
     'travel', 'trip', 'vacation', 'journey', 'flight', 'hotel', 'destination'
   ]
   
+  // 商务旅行场景关键词
+  const businessTravelKeywords = [
+    '商务旅行', '出差', '商务会议', '客户会议', '商务出行', '商务', '临时', '客户',
+    'business travel', 'business trip', 'client meeting', 'business meeting', 'temporary'
+  ]
+  
   // 礼物场景关键词 - 移除过于宽泛的词
   const giftKeywords = [
     '礼物', '购物', '购买', '买', '商品', '比价', '商品搜索',
@@ -499,10 +505,11 @@ function checkScenarioKeywords(input) {
   
   // 检查是否包含任何场景关键词
   const hasTravelKeywords = travelKeywords.some(keyword => lowerInput.includes(keyword))
+  const hasBusinessTravelKeywords = businessTravelKeywords.some(keyword => lowerInput.includes(keyword))
   const hasGiftKeywords = giftKeywords.some(keyword => lowerInput.includes(keyword))
   const hasMeetingKeywords = meetingKeywords.some(keyword => lowerInput.includes(keyword))
   
-  return hasTravelKeywords || hasGiftKeywords || hasMeetingKeywords
+  return hasTravelKeywords || hasBusinessTravelKeywords || hasGiftKeywords || hasMeetingKeywords
 }
 
 // 错误处理

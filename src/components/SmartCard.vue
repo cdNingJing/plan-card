@@ -180,6 +180,20 @@
         @collapse="handleBasicInfoCollapse"
       />
       
+      <!-- 商务行程概览卡片 -->
+      <BusinessTravelCard 
+        v-else-if="card.type === 'business-travel'"
+        :data="card.data"
+        @update="handleUpdate"
+      />
+      
+      <!-- 通讯管理卡片 -->
+      <CommunicationCard 
+        v-else-if="card.type === 'communication'"
+        :data="card.data"
+        @update="handleUpdate"
+      />
+      
       <!-- 行程卡片 -->
       <GenericCard 
         v-else-if="card.type === 'itinerary'"
@@ -331,7 +345,9 @@ import {
   Bell,
   CheckCircle,
   Paperclip,
-  Info
+  Info,
+  Briefcase,
+  Mail
 } from 'lucide-vue-next'
 import { bookingStorage } from '@/utils/bookingStorage.js'
 import MeetingConfirmCard from './cards/MeetingConfirmCard.vue'
@@ -350,6 +366,8 @@ import BasicInfoCard from './cards/BasicInfoCard.vue'
 import TipsCard from './cards/TipsCard.vue'
 import ShopCard from './cards/ShopCard.vue'
 import SelectedProductsCard from './cards/SelectedProductsCard.vue'
+import BusinessTravelCard from './cards/BusinessTravelCard.vue'
+import CommunicationCard from './cards/CommunicationCard.vue'
 
 const props = defineProps({
   card: {
@@ -419,7 +437,9 @@ const iconMap = {
   Bell,
   CheckCircle,
   Paperclip,
-  Info
+  Info,
+  Briefcase,
+  Mail
 }
 
 const getIcon = (iconName) => {
@@ -638,6 +658,27 @@ const handleMeetingPostponementNext = () => {
 const handleSelectedProductsAddToCart = (payload) => {
   // 处理已选商品卡片的添加到购物车事件
   console.log('[SmartCard] 已选商品添加到购物车:', payload)
+}
+
+// 信息密集型卡片事件处理
+const handleBookFlight = (flightInfo) => {
+  console.log('[SmartCard] 预订航班:', flightInfo)
+  // 这里可以触发航班预订流程
+}
+
+const handleBookHotel = (hotelInfo) => {
+  console.log('[SmartCard] 预订酒店:', hotelInfo)
+  // 这里可以触发酒店预订流程
+}
+
+const handleBookTransport = (transportInfo) => {
+  console.log('[SmartCard] 预订交通:', transportInfo)
+  // 这里可以触发交通预订流程
+}
+
+const handleRescheduleEvent = (eventId) => {
+  console.log('[SmartCard] 重新安排事件:', eventId)
+  // 这里可以触发事件重新安排流程
 }
 </script>
 

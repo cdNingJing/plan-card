@@ -74,6 +74,10 @@ const examples = ref([
   {
     id: 3,
     text: "会议确认提醒"
+  },
+  {
+    id: 4,
+    text: "我明天下午临时要去纽约开客户会"
   }
 ])
 
