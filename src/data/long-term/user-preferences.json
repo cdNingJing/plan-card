@@ -1,0 +1,48 @@
+{
+  "user_preferences": {
+    "theme": "light",
+    "language": "zh-CN",
+    "notifications": true,
+    "auto_save": true,
+    "font_size": 14,
+    "sidebar_collapsed": false,
+    "compact_mode": false,
+    "show_animations": true,
+    "high_contrast": false
+  },
+  "display_settings": {
+    "color_scheme": "auto",
+    "font_family": "system-ui",
+    "line_height": 1.5,
+    "word_spacing": 0,
+    "letter_spacing": 0
+  },
+  "privacy_settings": {
+    "data_collection": false,
+    "analytics": true,
+    "crash_reports": true,
+    "telemetry": false,
+    "ad_tracking": false
+  },
+  "accessibility": {
+    "screen_reader": false,
+    "keyboard_navigation": true,
+    "focus_indicators": true,
+    "reduced_motion": false,
+    "high_contrast": false
+  },
+  "notifications": {
+    "email_notifications": false,
+    "push_notifications": true,
+    "sound_notifications": true,
+    "desktop_notifications": true,
+    "notification_frequency": "immediate"
+  },
+  "data_management": {
+    "auto_backup": true,
+    "backup_frequency": "daily",
+    "backup_location": "local",
+    "sync_enabled": false,
+    "data_retention_days": 30
+  }
+} 

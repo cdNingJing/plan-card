@@ -1,6 +1,8 @@
 const express = require('express')
 const nodemailer = require('nodemailer')
 const cors = require('cors')
+const fs = require('fs').promises
+const path = require('path')
 require('dotenv').config()
 
 const app = express()
@@ -258,6 +260,293 @@ app.get('/api/health', (req, res) => {
     message: 'Meeting reminder server is running',
     timestamp: new Date().toISOString()
   })
+})
+
+// AI长期数据文件操作API
+app.get('/api/ai-long-term-data', async (req, res) => {
+  try {
+    const filePath = path.join(__dirname, '../src/data/long-term/ai-long-term-data.json')
+    const data = await fs.readFile(filePath, 'utf8')
+    const jsonData = JSON.parse(data)
+    
+    res.json({
+      success: true,
+      data: jsonData
+    })
+  } catch (error) {
+    console.error('[AI Long Term Data] 读取失败:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message || '读取长期数据失败'
+    })
+  }
+})
+
+app.post('/api/ai-long-term-data', async (req, res) => {
+  try {
+    const { key, value } = req.body
+    
+    if (!key || !value) {
+      return res.status(400).json({
+        success: false,
+        error: '缺少必填字段: key, value'
+      })
+    }
+    
+    const filePath = path.join(__dirname, '../src/data/long-term/ai-long-term-data.json')
+    
+    // 读取现有数据
+    let data
+    try {
+      const fileContent = await fs.readFile(filePath, 'utf8')
+      data = JSON.parse(fileContent)
+    } catch (error) {
+      // 如果文件不存在或为空，创建默认结构
+      data = {
+        ai_long_term_data: {
+          description: "AI助手提取的长期数据，包括用户偏好、重要信息等",
+          created_at: new Date().toISOString(),
+          last_updated: new Date().toISOString(),
+          data_count: 0,
+          data_entries: {}
+        }
+      }
+    }
+    
+    // 更新数据
+    data.ai_long_term_data.data_entries[key] = {
+      value: value,
+      timestamp: new Date().toISOString(),
+      created_at: new Date().toISOString()
+    }
+    
+    // 更新统计信息
+    data.ai_long_term_data.last_updated = new Date().toISOString()
+    data.ai_long_term_data.data_count = Object.keys(data.ai_long_term_data.data_entries).length
+    
+    // 写入文件
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8')
+    
+    console.log('[AI Long Term Data] 保存成功:', key, value)
+    
+    res.json({
+      success: true,
+      message: '长期数据保存成功！',
+      data: data
+    })
+    
+  } catch (error) {
+    console.error('[AI Long Term Data] 保存失败:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message || '保存长期数据失败'
+    })
+  }
+})
+
+app.delete('/api/ai-long-term-data/:key', async (req, res) => {
+  try {
+    const { key } = req.params
+    const filePath = path.join(__dirname, '../src/data/long-term/ai-long-term-data.json')
+    
+    // 读取现有数据
+    const fileContent = await fs.readFile(filePath, 'utf8')
+    const data = JSON.parse(fileContent)
+    
+    // 删除指定键的数据
+    if (data.ai_long_term_data.data_entries[key]) {
+      delete data.ai_long_term_data.data_entries[key]
+      
+      // 更新统计信息
+      data.ai_long_term_data.last_updated = new Date().toISOString()
+      data.ai_long_term_data.data_count = Object.keys(data.ai_long_term_data.data_entries).length
+      
+      // 写入文件
+      await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8')
+      
+      console.log('[AI Long Term Data] 删除成功:', key)
+      
+      res.json({
+        success: true,
+        message: '长期数据删除成功！',
+        data: data
+      })
+    } else {
+      res.status(404).json({
+        success: false,
+        error: '指定的数据键不存在'
+      })
+    }
+    
+  } catch (error) {
+    console.error('[AI Long Term Data] 删除失败:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message || '删除长期数据失败'
+    })
+  }
+})
+
+app.delete('/api/ai-long-term-data', async (req, res) => {
+  try {
+    const filePath = path.join(__dirname, '../src/data/long-term/ai-long-term-data.json')
+    
+    // 重置为默认结构
+    const data = {
+      ai_long_term_data: {
+        description: "AI助手提取的长期数据，包括用户偏好、重要信息等",
+        created_at: new Date().toISOString(),
+        last_updated: new Date().toISOString(),
+        data_count: 0,
+        data_entries: {}
+      }
+    }
+    
+    // 写入文件
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8')
+    
+    console.log('[AI Long Term Data] 清空成功')
+    
+    res.json({
+      success: true,
+      message: '长期数据已清空！',
+      data: data
+    })
+    
+  } catch (error) {
+    console.error('[AI Long Term Data] 清空失败:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message || '清空长期数据失败'
+    })
+  }
+})
+
+// AI短期记忆文件操作API
+app.get('/api/ai-short-term-memory', async (req, res) => {
+  try {
+    const filePath = path.join(__dirname, '../src/data/short-term/ai-short-term-memory.json')
+    const data = await fs.readFile(filePath, 'utf8')
+    const jsonData = JSON.parse(data)
+    res.json({
+      success: true,
+      data: jsonData
+    })
+  } catch (error) {
+    console.error('[AI Short Term Memory] 读取失败:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message || '读取短期记忆失败'
+    })
+  }
+})
+
+app.post('/api/ai-short-term-memory', async (req, res) => {
+  try {
+    const { key, value } = req.body
+    if (!key || !value) {
+      return res.status(400).json({
+        success: false,
+        error: '缺少必填字段: key, value'
+      })
+    }
+    const filePath = path.join(__dirname, '../src/data/short-term/ai-short-term-memory.json')
+    let data
+    try {
+      const fileContent = await fs.readFile(filePath, 'utf8')
+      data = JSON.parse(fileContent)
+    } catch (error) {
+      data = {
+        ai_short_term_memory: {
+          description: "AI助手提取的短期记忆，包括当前会话中的重要信息",
+          created_at: new Date().toISOString(),
+          last_updated: new Date().toISOString(),
+          data_count: 0,
+          data_entries: {}
+        }
+      }
+    }
+    data.ai_short_term_memory.data_entries[key] = {
+      value: value,
+      timestamp: new Date().toISOString(),
+      created_at: new Date().toISOString()
+    }
+    data.ai_short_term_memory.last_updated = new Date().toISOString()
+    data.ai_short_term_memory.data_count = Object.keys(data.ai_short_term_memory.data_entries).length
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8')
+    console.log('[AI Short Term Memory] 保存成功:', key, value)
+    res.json({
+      success: true,
+      message: '短期记忆保存成功！',
+      data: data
+    })
+  } catch (error) {
+    console.error('[AI Short Term Memory] 保存失败:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message || '保存短期记忆失败'
+    })
+  }
+})
+
+app.delete('/api/ai-short-term-memory/:key', async (req, res) => {
+  try {
+    const { key } = req.params
+    const filePath = path.join(__dirname, '../src/data/short-term/ai-short-term-memory.json')
+    const fileContent = await fs.readFile(filePath, 'utf8')
+    const data = JSON.parse(fileContent)
+    if (data.ai_short_term_memory.data_entries[key]) {
+      delete data.ai_short_term_memory.data_entries[key]
+      data.ai_short_term_memory.last_updated = new Date().toISOString()
+      data.ai_short_term_memory.data_count = Object.keys(data.ai_short_term_memory.data_entries).length
+      await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8')
+      console.log('[AI Short Term Memory] 删除成功:', key)
+      res.json({
+        success: true,
+        message: '短期记忆删除成功！',
+        data: data
+      })
+    } else {
+      res.status(404).json({
+        success: false,
+        error: '指定的数据键不存在'
+      })
+    }
+  } catch (error) {
+    console.error('[AI Short Term Memory] 删除失败:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message || '删除短期记忆失败'
+    })
+  }
+})
+
+app.delete('/api/ai-short-term-memory', async (req, res) => {
+  try {
+    const filePath = path.join(__dirname, '../src/data/short-term/ai-short-term-memory.json')
+    const data = {
+      ai_short_term_memory: {
+        description: "AI助手提取的短期记忆，包括当前会话中的重要信息",
+        created_at: new Date().toISOString(),
+        last_updated: new Date().toISOString(),
+        data_count: 0,
+        data_entries: {}
+      }
+    }
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8')
+    console.log('[AI Short Term Memory] 清空成功')
+    res.json({
+      success: true,
+      message: '短期记忆已清空！',
+      data: data
+    })
+  } catch (error) {
+    console.error('[AI Short Term Memory] 清空失败:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message || '清空短期记忆失败'
+    })
+  }
 })
 
 // 会议提醒 API

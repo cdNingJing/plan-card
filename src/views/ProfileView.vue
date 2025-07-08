@@ -97,8 +97,10 @@ import { ref, nextTick, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useHistoryStore } from '@/stores/historyStore'
 import HistoryCard from '@/components/cards/HistoryCard.vue'
-import RecommendCard from '@/components/cards/RecommendCard.vue'
-import EmptyCard from '@/components/cards/EmptyCard.vue'
+import LongTermDataCard from '@/components/cards/LongTermDataCard.vue'
+import ShortTermDataCard from '@/components/cards/ShortTermDataCard.vue'
+import aiService from '@/services/aiService.js'
+import aiDataStorage from '@/utils/aiDataStorage.js'
 
 const historyStore = useHistoryStore()
 const { messages } = storeToRefs(historyStore)
@@ -108,8 +110,8 @@ const chatMessagesRef = ref(null)
 
 const cards = ref([
   { id: 1, component: HistoryCard, props: { messages }, gradient: 'linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%)', inputShadowFocus: '0 4px 18px 0 rgba(60, 60, 120, 0.18), 0 2px 0 0 #6366f1' },
-  { id: 2, component: RecommendCard, props: { messages }, gradient: 'linear-gradient(135deg, #fdf6e3 0%, #fbc2eb 100%)', inputBg: 'linear-gradient(135deg, #fbc2eb 60%, #fdf6e3 100%)', inputPlaceholder: '请输入第二卡片内容…', inputShadow: '0 2px 12px 0 rgba(251, 194, 235, 0.10), 0 1.5px 0 0 #fbc2eb', inputShadowFocus: '0 4px 18px 0 rgba(251, 194, 235, 0.18), 0 2px 0 0 #e75480' },
-  { id: 3, component: EmptyCard, props: { messages }, gradient: 'linear-gradient(135deg, #d1fae5 0%, #60a5fa 100%)', inputBg: 'linear-gradient(135deg, #60a5fa 60%, #d1fae5 100%)', inputPlaceholder: '请输入第三卡片内容…', inputShadow: '0 2px 12px 0 rgba(96, 165, 250, 0.10), 0 1.5px 0 0 #60a5fa', inputShadowFocus: '0 4px 18px 0 rgba(96, 165, 250, 0.18), 0 2px 0 0 #059669' }
+  { id: 2, component: LongTermDataCard, props: {}, gradient: 'linear-gradient(135deg, #d1fae5 0%, #10b981 100%)', inputBg: 'linear-gradient(135deg, #10b981 60%, #d1fae5 100%)', inputPlaceholder: '长期记忆卡片…', inputShadow: '0 2px 12px 0 rgba(16, 185, 129, 0.10), 0 1.5px 0 0 #10b981', inputShadowFocus: '0 4px 18px 0 rgba(16, 185, 129, 0.18), 0 2px 0 0 #059669' },
+  { id: 3, component: ShortTermDataCard, props: {}, gradient: 'linear-gradient(135deg, #fef3c7 0%, #f59e0b 100%)', inputBg: 'linear-gradient(135deg, #f59e0b 60%, #fef3c7 100%)', inputPlaceholder: '短期记忆卡片…', inputShadow: '0 2px 12px 0 rgba(245, 158, 11, 0.10), 0 1.5px 0 0 #f59e0b', inputShadowFocus: '0 4px 18px 0 rgba(245, 158, 11, 0.18), 0 2px 0 0 #d97706' },
 ])
 const currentCardIndex = ref(0)
 const isInputFocus = ref(false)
@@ -158,21 +160,114 @@ const addMessage = (content, type = 'user') => {
   scrollToBottom()
 }
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
   const value = inputValue.value.trim()
   if (value) {
+    // 添加用户消息
     addMessage(value, 'user')
     inputValue.value = ''
-    setTimeout(() => {
-      const responses = [
-        '很有趣，能再详细说说吗？',
-        '收到，继续聊聊你的想法吧。',
-        '我明白了，还有其他想补充的吗？',
-        '谢谢你的分享！'
-      ]
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)]
-      addMessage(randomResponse, 'bot')
-    }, 800)
+    
+    // 显示加载状态
+    addMessage('正在思考中...', 'bot')
+    
+    try {
+      // 调用AI服务
+      const response = await aiService.sendMessage(value)
+      
+      if (response.success) {
+        // 移除加载消息
+        historyStore.messages.pop()
+        
+        // 处理AI回复
+        const aiContent = response.data.choices[0].message.content
+        let parsedData = null
+        
+        try {
+          // 尝试解析结构化数据
+          console.log('AI完整回复内容:', aiContent)
+          
+          // 使用更精确的正则表达式匹配JSON内容
+          const startMatch = aiContent.match(/<START>\s*(\{[\s\S]*?\})\s*<END>/)
+          console.log('startMatch', startMatch)
+          if (startMatch) {
+            const jsonContent = startMatch[1].trim()
+            console.log('jsonContent', jsonContent)
+            try {
+              parsedData = JSON.parse(jsonContent)
+              console.log('结构化数据 parsedData', parsedData)
+              
+              // 使用answer字段作为回答显示
+              if (parsedData.answer) {
+                addMessage(parsedData.answer, 'bot')
+              } else {
+                addMessage(aiContent, 'bot')
+              }
+              
+              // 处理长期数据和短期记忆
+              if (parsedData.longTermData && parsedData.longTermData.trim()) {
+                console.log('长期数据:', parsedData.longTermData)
+                try {
+                  const timestamp = new Date().toISOString()
+                  const key = `ai_long_term_${timestamp}`
+                  const result = await aiDataStorage.saveLongTermData(key, parsedData.longTermData)
+                  if (result.success) {
+                    console.log('长期数据保存成功:', result.message)
+                  } else {
+                    console.error('长期数据保存失败:', result.message)
+                  }
+                } catch (error) {
+                  console.error('保存长期数据时发生错误:', error)
+                }
+              }
+              
+              if (parsedData.shortTermMemory && parsedData.shortTermMemory.trim()) {
+                console.log('短期记忆:', parsedData.shortTermMemory)
+                try {
+                  const timestamp = new Date().toISOString()
+                  const key = `ai_short_term_${timestamp}`
+                  const result = await aiDataStorage.saveShortTermData(key, parsedData.shortTermMemory)
+                  if (result.success) {
+                    console.log('短期记忆保存成功:', result.message)
+                  } else {
+                    console.error('短期记忆保存失败:', result.message)
+                  }
+                } catch (error) {
+                  console.error('保存短期记忆时发生错误:', error)
+                }
+              }
+            } catch (jsonParseError) {
+              console.error('JSON解析失败:', jsonParseError)
+              // JSON解析失败时，直接显示原始内容
+              addMessage(aiContent, 'bot')
+            }
+          } else {
+            // 如果没有找到结构化格式，直接显示原始内容
+            addMessage(aiContent, 'bot')
+          }
+        } catch (parseError) {
+          console.error('解析AI回复失败:', parseError)
+          // 解析失败时显示原始内容
+          addMessage(aiContent, 'bot')
+        }
+        
+        console.log('AI回复成功:', response.data)
+      } else {
+        // 移除加载消息
+        historyStore.messages.pop()
+        
+        // 添加错误消息
+        addMessage('抱歉，我现在无法回答您的问题，请稍后再试。', 'bot')
+        console.error('AI回复失败:', response.error)
+      }
+    } catch (error) {
+      // 移除加载消息
+      historyStore.messages.pop()
+      
+      // 添加错误消息
+      addMessage('抱歉，发生了网络错误，请检查网络连接。', 'bot')
+      console.error('AI服务错误:', error)
+    }
+    
     currentCardIndex.value = 0
     hideSideCards() // 提交后隐藏侧边卡片
   }
@@ -270,8 +365,8 @@ function onOverviewTouchEnd() {
 
 // 卡片label
 cards.value[0].label = '聊天记录';
-cards.value[1].label = '推荐内容';
-cards.value[2].label = '空卡片';
+cards.value[1].label = '长期记忆';
+cards.value[2].label = '短期记忆';
 
 // 页面加载时启动侧边卡片定时器
 startSideCardTimer()

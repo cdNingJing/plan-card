@@ -82,6 +82,27 @@ export default defineConfig({
         target: 'https://api-dev.braininc.net/be/svc-adapter/amazon',
         changeOrigin: true,
         rewrite: path => path.replace(/^\/api\/amazon/, '')
+      },
+      '/api/ai': {
+        target: 'https://cerebras-proxy.brain.loocaa.com:1443',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/api\/ai/, '/v1/chat/completions'),
+        configure: (proxy, options) => {
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            // 确保 Authorization header 被正确转发
+            if (req.headers['authorization']) {
+              proxyReq.setHeader('authorization', req.headers['authorization']);
+            }
+            // 添加必要的headers
+            proxyReq.setHeader('Accept', 'application/json');
+            proxyReq.setHeader('Content-Type', 'application/json');
+            console.log('AI API代理请求:', req.method, req.url)
+          })
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            console.log('AI API代理响应:', proxyRes.statusCode, req.url)
+          })
+        }
       }
     }
   }

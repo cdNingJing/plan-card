@@ -1,156 +1,253 @@
-// AI 配置文件
-export const aiConfig = {
+/**
+ * AI 配置文件
+ * 管理 AI 相关的配置参数
+ */
+
+import aiLongTermData from '@/data/long-term/ai-long-term-data.json'
+
+function summaryToMarkdown(data, level = 2) {
+  if (typeof data === 'string') return data
+  if (Array.isArray(data)) {
+    return data.map(item => `- ${summaryToMarkdown(item, level + 1)}`).join('\n')
+  }
+  if (typeof data === 'object' && data !== null) {
+    let md = ''
+    for (const key in data) {
+      md += `${'#'.repeat(level)} ${key}\n`;
+      md += summaryToMarkdown(data[key], level + 1) + '\n'
+    }
+    return md
+  }
+  return ''
+}
+
+const summary = aiLongTermData.ai_long_term_data?.summary
+const summaryMarkdown = summary ? summaryToMarkdown(summary, 2) : ''
+
+export const AI_CONFIG = {
   // API 配置
-  apiUrl: '/api/claude', // 使用本地代理地址
-  apiKey: 'DlJYSkMVj1x4zoe8jZnjvxfHG6z5yGxK', // 您的 API 密钥
-  model: 'claude-3-7-sonnet-20250219', // 使用的模型
-  
-  // 请求配置
-  temperature: 0.7,
-  maxTokens: 64000,
-  timeout: 30000,
-  
-  // 是否启用流式响应
-  enableStreaming: true,
-  
-  // 自定义 API 调用函数
-  customAPICall: null
+  api: {
+    baseURL: '', // 使用相对路径，通过Vite代理
+    endpoint: '/api/ai',
+    model: 'deepseek-r1-distill-llama-70b',
+    apiKey: 'DlJYSkMVj1x4zoe8jZnjvxfHG6z5yGxK'
+  },
+
+  // 模型配置
+  model: {
+    name: 'deepseek-r1-distill-llama-70b',
+    maxTokens: 4096,
+    temperature: 0.7,
+    topP: 0.9,
+    frequencyPenalty: 0,
+    presencePenalty: 0
+  },
+
+  // 对话配置
+  conversation: {
+    maxHistoryLength: 10,
+    systemPrompt: `你是一个富有创意和洞察力的AI助手，请用中文回答问题。当前时间：${new Date().toLocaleString('zh-CN')}。
+
+【用户长期档案总结】
+${summaryMarkdown}
+
+你的任务是：
+1. 分析用户问题的深层含义和关键信息
+2. 提供专业、实用且富有创意的回答
+3. 提取可以长期保存的重要信息
+4. 识别当前对话中的短期需求和意图
+
+**重要：请严格按照以下格式返回回答，必须包含<START>和<END>标记！**
+
+<START>
+{
+  "answer": "你的专业回答，包含实用的建议和天马行空的创意想法",
+  "longTermData": "提取用户关系、偏好、重要信息等需要长期保存的数据，如：用户关系状态、个人偏好、重要日期等",
+  "shortTermMemory": "提取当前对话中的短期需求、意图、行动计划等，如：购买需求、时间安排、具体目标等"
 }
+<END>
 
-// 设置自定义 API 调用函数
-export const setCustomAPICall = (apiCallFunction) => {
-  aiConfig.customAPICall = apiCallFunction
-}
+**注意：每次回答都必须以<START>开始，以<END>结束，这是最重要的格式要求！**
 
+示例分析：
+用户说："我有一个女朋友，我想给他买一个礼物"
+- 长期数据：用户有女朋友关系，需要记录这个重要关系
+- 短期记忆：用户有购买礼物的需求，需要推荐和计划
+- 回答：提供实用建议 + 天马行空的创意礼物想法`,
+    defaultTimeout: 30000,
+    retryAttempts: 3,
+    retryDelay: 1000
+  },
 
+  // 缓存配置
+  cache: {
+    enabled: true,
+    maxCacheSize: 100,
+    cacheExpiration: 3600000, // 1小时
+    cacheKey: 'ai_conversation_cache'
+  },
 
-// OpenAI 兼容的 API 调用函数
-export const openAICompatibleCall = async (requestData) => {
-  try {
-    const response = await fetch(aiConfig.apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${aiConfig.apiKey}`,
-        'User-Agent': 'PlanCard/1.0'
-      },
-      body: JSON.stringify({
-        model: aiConfig.model,
-        messages: requestData.messages,
-        temperature: aiConfig.temperature,
-        max_tokens: aiConfig.maxTokens,
-        tools: requestData.tools,
-        tool_choice: requestData.tool_choice,
-        stream: aiConfig.enableStreaming
-      })
-    })
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(`API 调用失败: ${response.status} - ${errorData.error?.message || response.statusText}`)
-    }
-    
-    return await response.json()
-  } catch (error) {
-    console.error('OpenAI API 调用失败:', error)
-    throw error
+  // 错误处理配置
+  errorHandling: {
+    showUserFriendlyErrors: true,
+    logErrors: true,
+    fallbackResponse: '抱歉，我现在无法回答您的问题，请稍后再试。'
+  },
+
+  // 功能开关
+  features: {
+    streaming: false,
+    voiceInput: false,
+    imageGeneration: false,
+    codeCompletion: true,
+    translation: true
   }
 }
 
+/**
+ * 获取配置值
+ * @param {string} path - 配置路径，如 'api.baseURL'
+ * @returns {*} 配置值
+ */
+export function getConfig(path) {
+  const keys = path.split('.')
+  let value = AI_CONFIG
+  
+  for (const key of keys) {
+    if (value && typeof value === 'object' && key in value) {
+      value = value[key]
+    } else {
+      return undefined
+    }
+  }
+  
+  return value
+}
 
+/**
+ * 设置配置值
+ * @param {string} path - 配置路径
+ * @param {*} value - 配置值
+ */
+export function setConfig(path, value) {
+  const keys = path.split('.')
+  const lastKey = keys.pop()
+  let current = AI_CONFIG
+  
+  for (const key of keys) {
+    if (!(key in current) || typeof current[key] !== 'object') {
+      current[key] = {}
+    }
+    current = current[key]
+  }
+  
+  current[lastKey] = value
+}
 
-// Claude API 调用函数
-export const claudeAPICall = async (requestData) => {
-  try {
-    // 转换消息格式为 Claude 格式，移除不被支持的字段
-    const messages = requestData.messages
-      .filter(msg => msg.role !== 'system')
-      .map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }))
-    const systemMessage = requestData.messages.find(msg => msg.role === 'system')
-    
-    // 构建 Claude API 请求
-    const claudeRequest = {
-      model: aiConfig.model,
-      max_tokens: aiConfig.maxTokens,
-      messages: messages,
-      ...(systemMessage && { system: systemMessage.content })
-    }
-    
-    // 如果有工具调用，添加工具定义
-    if (requestData.tools && requestData.tools.length > 0) {
-      claudeRequest.tools = requestData.tools.map(tool => ({
-        name: tool.function.name,
-        description: tool.function.description,
-        input_schema: tool.function.parameters
-      }))
-    }
-    
-    console.log('Claude API 请求:', claudeRequest)
-    
-    const response = await fetch(aiConfig.apiUrl, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${aiConfig.apiKey}`
-      },
-      body: JSON.stringify(claudeRequest)
-    })
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(`Claude API 调用失败: ${response.status} - ${errorData.error?.message || response.statusText}`)
-    }
-    
-    const claudeResponse = await response.json()
-    console.log('Claude API 响应:', claudeResponse)
-    
-    // 转换为 OpenAI 格式的响应
-    const openAIResponse = {
-      choices: [{
-        message: {
-          role: 'assistant',
-          content: claudeResponse.content?.[0]?.text || '抱歉，我无法处理您的请求。'
-        }
-      }]
-    }
-    
-    // 处理工具调用
-    if (claudeResponse.content) {
-      const toolUses = claudeResponse.content.filter(item => item.type === 'tool_use')
-      if (toolUses.length > 0) {
-        openAIResponse.choices[0].message.tool_calls = toolUses.map(toolUse => ({
-          id: toolUse.id,
-          type: 'function',
-          function: {
-            name: toolUse.name,
-            arguments: JSON.stringify(toolUse.input)
-          }
-        }))
-      }
-    }
-    
-    return openAIResponse
-    
-  } catch (error) {
-    console.error('Claude API 调用失败:', error)
-    throw error
+/**
+ * 获取API配置
+ * @returns {Object} API配置对象
+ */
+export function getApiConfig() {
+  return AI_CONFIG.api
+}
+
+/**
+ * 获取模型配置
+ * @returns {Object} 模型配置对象
+ */
+export function getModelConfig() {
+  return AI_CONFIG.model
+}
+
+/**
+ * 获取对话配置
+ * @returns {Object} 对话配置对象
+ */
+export function getConversationConfig() {
+  return AI_CONFIG.conversation
+}
+
+/**
+ * 验证配置
+ * @returns {Object} 验证结果
+ */
+export function validateConfig() {
+  const errors = []
+  
+  if (!AI_CONFIG.api.baseURL) {
+    errors.push('API baseURL 未配置')
+  }
+  
+  if (!AI_CONFIG.api.apiKey) {
+    errors.push('API Key 未配置')
+  }
+  
+  if (!AI_CONFIG.model.name) {
+    errors.push('模型名称未配置')
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors: errors
   }
 }
 
-// 获取当前配置的 API 调用函数
-export const getAPICall = () => {
-  if (aiConfig.customAPICall) {
-    return aiConfig.customAPICall
-  }
-  
-  // 如果是 Claude API，使用专门的调用函数
-  if (aiConfig.apiUrl.includes('anthropic') || aiConfig.apiUrl.includes('/api/claude')) {
-    return claudeAPICall
-  }
-  
-  return openAICompatibleCall
-} 
+/**
+ * 重置配置到默认值
+ */
+export function resetConfig() {
+  // 这里可以重新加载默认配置
+  Object.assign(AI_CONFIG, {
+    api: {
+      baseURL: '', // 使用相对路径，通过Vite代理
+      endpoint: '/api/ai',
+      model: 'deepseek-r1-distill-llama-70b',
+      apiKey: 'DlJYSkMVj1x4zoe8jZnjvxfHG6z5yGxK'
+    },
+    model: {
+      name: 'deepseek-r1-distill-llama-70b',
+      maxTokens: 4096,
+      temperature: 0.7,
+      topP: 0.9,
+      frequencyPenalty: 0,
+      presencePenalty: 0
+    },
+    conversation: {
+      maxHistoryLength: 10,
+      systemPrompt: `你是一个富有创意和洞察力的AI助手，请用中文回答问题。当前时间：${new Date().toLocaleString('zh-CN')}。
+
+【用户长期档案总结】
+${summaryMarkdown}
+
+你的任务是：
+1. 分析用户问题的深层含义和关键信息
+2. 提供专业、实用且富有创意的回答
+3. 提取可以长期保存的重要信息
+4. 识别当前对话中的短期需求和意图
+
+**重要：请严格按照以下格式返回回答，必须包含<START>和<END>标记！**
+
+<START>
+{
+  "answer": "你的专业回答，包含实用的建议和天马行空的创意想法",
+  "longTermData": "提取用户关系、偏好、重要信息等需要长期保存的数据，如：用户关系状态、个人偏好、重要日期等",
+  "shortTermMemory": "提取当前对话中的短期需求、意图、行动计划等，如：购买需求、时间安排、具体目标等"
+}
+<END>
+
+**注意：每次回答都必须以<START>开始，以<END>结束，这是最重要的格式要求！**
+
+示例分析：
+用户说："我有一个女朋友，我想给他买一个礼物"
+- 长期数据：用户有女朋友关系，需要记录这个重要关系
+- 短期记忆：用户有购买礼物的需求，需要推荐和计划
+- 回答：提供实用建议 + 天马行空的创意礼物想法`,
+      defaultTimeout: 30000,
+      retryAttempts: 3,
+      retryDelay: 1000
+    }
+  })
+}
+
+export default AI_CONFIG 

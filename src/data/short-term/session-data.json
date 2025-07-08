@@ -1,0 +1,60 @@
+{
+  "session_data": {
+    "session_id": "abc123def456ghi789",
+    "login_time": "2024-01-01T10:00:00.000Z",
+    "current_page": "/profile",
+    "last_activity": "2024-01-01T10:30:00.000Z",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "ip_address": "192.168.1.100",
+    "device_info": {
+      "platform": "Windows",
+      "browser": "Chrome",
+      "version": "120.0.0.0",
+      "screen_resolution": "1920x1080",
+      "viewport_size": "1920x937"
+    }
+  },
+  "navigation_state": {
+    "current_route": "/profile",
+    "previous_route": "/home",
+    "route_history": ["/home", "/profile"],
+    "scroll_positions": {
+      "/home": 0,
+      "/profile": 150
+    },
+    "breadcrumbs": ["首页", "个人资料"],
+    "tab_state": {
+      "active_tab": "profile",
+      "open_tabs": ["home", "profile", "settings"]
+    }
+  },
+  "user_activity": {
+    "clicks_count": 25,
+    "keypress_count": 150,
+    "mouse_movements": 1000,
+    "idle_time": 300,
+    "page_views": 5,
+    "session_duration": 1800,
+    "last_interaction": "2024-01-01T10:30:00.000Z"
+  },
+  "form_data": {
+    "current_form": "profile_edit",
+    "unsaved_changes": true,
+    "draft_data": {
+      "name": "张三",
+      "email": "zhangsan@example.com",
+      "bio": "这是一段个人简介..."
+    },
+    "validation_errors": []
+  },
+  "preferences_cache": {
+    "recent_searches": ["Vue.js", "JavaScript", "CSS"],
+    "favorite_items": ["item1", "item2", "item3"],
+    "recent_files": ["document1.json", "document2.txt"],
+    "ui_state": {
+      "sidebar_open": true,
+      "theme": "light",
+      "language": "zh-CN"
+    }
+  }
+} 
