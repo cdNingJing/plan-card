@@ -28,32 +28,55 @@
 
         <!-- 内容区域 -->
         <div class="info-dense-grid">
+          <!-- 基础信息卡片 -->
+          <div class="basic-info-card" v-if="sectionData.basicInfo">
+            <div class="basic-info-row" v-if="sectionData.basicInfo.meetingSubject">
+              <span class="basic-info-label">会议主题：</span>{{ sectionData.basicInfo.meetingSubject }}
+            </div>
+            <div class="basic-info-row" v-if="sectionData.basicInfo.meetingDate">
+              <span class="basic-info-label">会议时间：</span>{{ sectionData.basicInfo.meetingDate }}
+            </div>
+            <div class="basic-info-row" v-if="sectionData.basicInfo.meetingLocation">
+              <span class="basic-info-label">会议地点：</span>{{ sectionData.basicInfo.meetingLocation }}
+            </div>
+          </div>
+          
           <!-- 信息提示卡片 -->
-          <div class="info-notice-card" v-if="showHotelPendingNotice">
+          <div class="info-notice-card" v-if="showBasicInfoNotice">
             <div class="notice-header">
               <span class="notice-title">信息提示</span>
             </div>
             <div class="notice-content">
               <p class="notice-text">
-                由于{{ pendingReasons }}，无法为您推荐{{ pendingTargets }}。
+                请补充：<span style="color:#d35400;font-weight:600">{{ missingBasicFields }}</span>，以便为您推荐合适的行程与服务。
               </p>
-              <p class="notice-suggestion">请补充会议地点、客户公司名称、具体地址等信息。</p>
             </div>
           </div>
           
+          <!-- 航班信息提示卡片 -->
+          <div class="info-notice-card" v-if="showFlightNotice">
+            <div class="notice-header">
+              <span class="notice-title">航班信息提示</span>
+            </div>
+            <div class="notice-content">
+              <p class="notice-text">
+                请补充：<span style="color:#d35400;font-weight:600">{{ missingFlightFields }}</span>，以便为您推荐合适的航班。
+              </p>
+            </div>
+          </div>
           <!-- 航班卡片 -->
-          <div class="dense-card flight-dense-card" v-if="sectionData.flight">
+          <div class="dense-card flight-dense-card" v-if="sectionData.flight && !showFlightNotice">
             <div class="dense-card-title-row">
               <span class="dense-card-title">推荐航班</span>
-              <span class="flight-status" :class="sectionData.flight?.status">{{ sectionData.flight?.statusText }}</span>
+              <span class="flight-status" v-if="sectionData.flight.statusText" :class="sectionData.flight?.status">{{ sectionData.flight?.statusText }}</span>
             </div>
             <div class="flight-main">
-              <div class="flight-route">
+              <div class="flight-route" v-if="sectionData.flight.departure && sectionData.flight.destination">
                 <span class="city">{{ sectionData.flight?.departure }}</span>
                 <span class="arrow">→</span>
                 <span class="city">{{ sectionData.flight?.destination }}</span>
               </div>
-              <div class="flight-time">
+              <div class="flight-time" v-if="sectionData.flight.departureTime && sectionData.flight.arrivalTime && sectionData.flight.duration">
                 <span>{{ sectionData.flight?.departureTime }}</span>
                 <span>-</span>
                 <span>{{ sectionData.flight?.arrivalTime }}</span>
@@ -61,8 +84,8 @@
               </div>
             </div>
             <div class="flight-footer">
-              <span class="seat">座位：{{ sectionData.flight?.seatPreference }}</span>
-              <span class="price">¥{{ sectionData.flight?.price }}</span>
+              <span class="seat" v-if="sectionData.flight.seatPreference">座位：{{ sectionData.flight?.seatPreference }}</span>
+              <span class="price" v-if="sectionData.flight.price">¥{{ sectionData.flight?.price }}</span>
             </div>
           </div>
           <!-- 酒店卡片 -->
@@ -247,49 +270,141 @@ const config = computed(() => infoDenseConfig)
 // 动态数据
 const sectionData = ref({})
 
+// 模拟基础信息（唯一数据源）
+function getBasicInfoMock() {
+  return {
+    meetingSubject: '纽约客户会',
+    meetingDate: '2025-07-10',
+    meetingLocation: '纽约曼哈顿时代广场希尔顿酒店  ',
+    departure: '上海',
+    destination: '纽约',
+    departureTime: '2025-07-10 08:00',
+    arrivalTime: '2025-07-11 18:00',
+    // 航班相关
+    seatPreference: '靠窗',
+    flightPrice: '5680',
+    // 酒店相关
+    hotelName: '纽约中央公园希尔顿酒店',
+    hotelDistance: '步行5分钟',
+    hotelRating: '4.8',
+    hotelMembershipLevel: '金卡会员',
+    hotelBenefits: ['免费升房', '延迟退房', '免费早餐'],
+    hotelPrice: '1200',
+    // 天气相关
+    temperature: 28,
+    condition: '多云转晴',
+    humidity: 65,
+    packingSuggestions: ['商务正装', '轻便外套', '雨伞', '充电器', '会议资料'],
+    // 交通相关
+    transportFrom: '肯尼迪机场',
+    transportTo: '曼哈顿时代广场希尔顿酒店',
+    transportMethod: 'Uber 专车',
+    transportCost: '85',
+    transportDuration: '45分钟',
+    transportEstimatedTime: '12:30 到达',
+    // 辅助信息
+    name: '张三',
+    phone: '138****8888',
+    company: '上海智行科技',
+    email: 'zhangsan@example.com'
+  }
+}
+
+// 生成航班数据
+function getFlightFromBasicInfo(info) {
+  // 只需出发地、目的地、起飞时间都存在才返回航班数据，否则返回 null
+  if (!info?.departure || !info?.destination || !info?.departureTime) return null
+  return {
+    status: 'available',
+    statusText: '可预订',
+    departure: info.departure,
+    destination: info.destination,
+    departureTime: info.departureTime,
+    arrivalTime: info.arrivalTime || '',
+    duration: info.arrivalTime && info.departureTime ? calcDuration(info.departureTime, info.arrivalTime) : '',
+    seatPreference: info.seatPreference || '',
+    price: info.flightPrice || ''
+  }
+}
+// 生成酒店数据
+function getHotelFromBasicInfo(info) {
+  if (!info?.meetingLocation || !info?.hotelName) return null
+  return {
+    status: 'available',
+    statusText: '可预订',
+    name: info.hotelName,
+    distance: info.hotelDistance || '',
+    rating: info.hotelRating || '',
+    membershipLevel: info.hotelMembershipLevel || '',
+    benefits: info.hotelBenefits || [],
+    price: info.hotelPrice || ''
+  }
+}
+// 生成天气数据
+function getWeatherFromBasicInfo(info) {
+  if (!info?.temperature && !info?.condition) return null
+  return {
+    temperature: info.temperature,
+    condition: info.condition,
+    humidity: info.humidity,
+    packingSuggestions: info.packingSuggestions || []
+  }
+}
+// 生成交通数据
+function getTransportFromBasicInfo(info) {
+  if (!info?.meetingLocation || !info?.transportFrom || !info?.transportTo) return null
+  return {
+    from: info.transportFrom,
+    to: info.transportTo,
+    method: info.transportMethod || '',
+    cost: info.transportCost || '',
+    duration: info.transportDuration || '',
+    estimatedTime: info.transportEstimatedTime || ''
+  }
+}
+// 生成日程冲突
+function getScheduleFromBasicInfo(info) {
+  const conflicts = []
+  if (info && info.arrivalTime && info.meetingDate) {
+    const flightArrive = new Date(info.arrivalTime.replace(/-/g, '/'))
+    const meetingTime = new Date(info.meetingDate.replace(/-/g, '/'))
+    if (flightArrive > meetingTime) {
+      conflicts.push({
+        id: 'conflict_1',
+        time: info.meetingDate,
+        type: '会议',
+        title: info.meetingSubject || '客户会议',
+        suggestion: '建议调整航班或会议时间，避免冲突'
+      })
+    }
+  }
+  return { conflicts }
+}
+// 计算时长
+function calcDuration(start, end) {
+  try {
+    const s = new Date(start.replace(/-/g, '/'))
+    const e = new Date(end.replace(/-/g, '/'))
+    const ms = e - s
+    if (ms > 0) {
+      const h = Math.floor(ms / 3600000)
+      const m = Math.floor((ms % 3600000) / 60000)
+      return `${h}h ${m}m`
+    }
+  } catch { }
+  return ''
+}
+
 // 初始化数据
 const initializeData = () => {
+  const info = getBasicInfoMock()
   sectionData.value = {
-    flight: {
-      status: 'available',
-      statusText: '可预订',
-      departure: '上海',
-      destination: '纽约',
-      departureTime: '2024-07-01 14:30',
-      arrivalTime: '2024-07-01 18:00',
-      duration: '13h 30m',
-      seatPreference: '靠窗',
-      price: '5680'
-    },
-    hotel: {
-      status: 'pending',
-      statusText: '待确认',
-      name: '待确认',
-      distance: '待确认',
-      rating: '待确认',
-      membershipLevel: '金卡会员',
-      benefits: ['待确认'],
-      price: '待确认'
-    },
-    weather: {
-      temperature: 28,
-      condition: '多云转晴',
-      humidity: 65,
-      packingSuggestions: ['商务正装', '轻便外套', '雨伞', '充电器', '会议资料']
-    },
-    transport: {
-      from: '肯尼迪机场',
-      to: '待确认',
-      method: '待确认',
-      cost: '待确认',
-      duration: '待确认',
-      estimatedTime: '待确认'
-    },
-    schedule: {
-      conflicts: [
-        { id: 'conflict_1', time: '明天 14:00', type: '会议', title: '团队周会', suggestion: '建议推迟到后天上午' }
-      ]
-    }
+    basicInfo: info,
+    flight: getFlightFromBasicInfo(info),
+    hotel: getHotelFromBasicInfo(info),
+    weather: getWeatherFromBasicInfo(info),
+    transport: getTransportFromBasicInfo(info),
+    schedule: getScheduleFromBasicInfo(info)
   }
 }
 
@@ -348,6 +463,33 @@ const pendingTargets = computed(() => {
   if (sectionData.value.hotel?.name === '待确认') targets.push('酒店')
   if (sectionData.value.transport?.to === '待确认') targets.push('交通方案')
   return targets.join('和')
+})
+
+const showBasicInfoNotice = computed(() => {
+  const info = sectionData.value.basicInfo || {}
+  return !info.meetingDate || !info.meetingLocation
+})
+
+const missingBasicFields = computed(() => {
+  const info = sectionData.value.basicInfo || {}
+  const missing = []
+  if (!info.meetingDate) missing.push('会议时间')
+  if (!info.meetingLocation) missing.push('会议地点')
+  return missing.join('、')
+})
+
+const showFlightNotice = computed(() => {
+  const flight = sectionData.value.flight || {}
+  return !flight.departure || !flight.destination || !flight.departureTime
+})
+
+const missingFlightFields = computed(() => {
+  const info = sectionData.value.basicInfo || {}
+  const missing = []
+  if (!info.departure) missing.push('出发地')
+  if (!info.destination) missing.push('目的地')
+  if (!info.departureTime) missing.push('起飞时间')
+  return missing.join('、')
 })
 </script>
 
@@ -763,5 +905,24 @@ const pendingTargets = computed(() => {
   font-weight: 600;
   margin: 24px 0 16px 0;
   text-align: center;
+}
+
+.basic-info-card {
+  grid-column: 1 / -1;
+  background: #f4f8fb;
+  border: 1px solid #e3eaf2;
+  border-radius: 10px;
+  padding: 14px 20px 10px 20px;
+  margin-bottom: 10px;
+  font-size: 0.98rem;
+}
+.basic-info-row {
+  margin-bottom: 4px;
+  color: #34495e;
+}
+.basic-info-label {
+  font-weight: 600;
+  color: #1976d2;
+  margin-right: 6px;
 }
 </style> 
