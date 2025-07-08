@@ -78,6 +78,10 @@ const examples = ref([
   {
     id: 4,
     text: "我明天下午临时要去纽约开客户会"
+  },
+  {
+    id: 5,
+    text: "个人画像"
   }
 ])
 
@@ -89,6 +93,12 @@ function createNewProject(input) {
 }
 
 const handleExample = (text) => {
+  // 如果是个人画像，跳转到个人画像页面
+  if (text === "个人画像") {
+    router.push('/profile')
+    return
+  }
+  
   // 设置输入框的值，让 BottomInput 来处理项目创建
   bottomInputRef.value.setValue(text)
   // 清空首页对话历史
