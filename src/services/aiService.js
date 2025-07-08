@@ -62,9 +62,8 @@ class AIService {
       })
 
       if (response.success) {
-        // 添加到对话历史
+        // 只添加用户消息到对话历史，AI回复由调用方处理
         this.addToHistory('user', message)
-        this.addToHistory('assistant', response.data.choices[0].message.content)
 
         // 缓存响应
         if (getConfig('cache.enabled')) {

@@ -38,6 +38,8 @@ export const useHistoryStore = defineStore('history', {
     clearMessages() {
       this.messages = []
       localStorage.removeItem('chat_history')
+      // 确保清空后立即保存状态
+      this.saveMessages()
     },
     
     // 设置当前卡片索引

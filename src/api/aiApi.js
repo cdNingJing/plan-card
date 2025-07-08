@@ -31,9 +31,9 @@ class AIApiService {
   async chatCompletion(messages, options = {}) {
     try {
       const requestBody = {
+        ...options,
         model: this.model,
-        messages: messages,
-        ...options
+        messages: messages
       }
 
       console.log('AI API 请求体:', JSON.stringify(requestBody, null, 2))

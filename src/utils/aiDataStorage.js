@@ -6,6 +6,7 @@
 
 import aiLongTermData from '@/data/long-term/ai-long-term-data.json'
 import aiShortTermMemory from '@/data/short-term/ai-short-term-memory.json'
+import aiService from '@/services/aiService.js'
 
 class AIDataStorage {
   constructor() {
@@ -41,6 +42,15 @@ class AIDataStorage {
         // 更新本地缓存
         this.longTermData = result.data
         console.log('长期数据已保存到文件:', key, value)
+        
+        // 保存成功后触发总结接口
+        try {
+          await this.triggerLongTermSummary()
+          console.log('长期数据总结已触发')
+        } catch (summaryError) {
+          console.error('触发长期数据总结失败:', summaryError)
+        }
+        
         return { 
           success: true, 
           message: '长期数据保存成功！',
@@ -369,6 +379,189 @@ class AIDataStorage {
     } catch (error) {
       console.error('删除短期记忆失败:', error)
       return { success: false, message: `删除失败: ${error.message}` }
+    }
+  }
+
+  /**
+   * 更新长期数据summary
+   * @param {Object} summary - summary数据对象
+   * @returns {Object} 更新结果
+   */
+  async updateSummary(summary) {
+    try {
+      if (!summary) {
+        return { success: false, message: '请输入summary数据！' }
+      }
+
+      // 调用后端API更新summary
+      const response = await fetch(`${this.apiBaseUrl}/ai-long-term-data/summary`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ summary })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // 更新本地缓存
+        this.longTermData = result.data
+        console.log('长期数据summary已更新:', summary)
+        return { 
+          success: true, 
+          message: 'summary更新成功！',
+          data: this.longTermData
+        }
+      } else {
+        return { success: false, message: result.error || '更新失败' }
+      }
+    } catch (error) {
+      console.error('更新summary失败:', error)
+      return { success: false, message: `更新失败: ${error.message}` }
+    }
+  }
+
+  /**
+   * 更新短期记忆summary
+   * @param {Object} summary - summary数据对象
+   * @returns {Object} 更新结果
+   */
+  async updateShortTermSummary(summary) {
+    try {
+      if (!summary) {
+        return { success: false, message: '请输入summary数据！' }
+      }
+
+      // 调用后端API更新summary
+      const response = await fetch(`${this.apiBaseUrl}/ai-short-term-memory/summary`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ summary })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // 更新本地缓存
+        this.shortTermData = result.data
+        console.log('短期记忆summary已更新:', summary)
+        return { 
+          success: true, 
+          message: 'summary更新成功！',
+          data: this.shortTermData
+        }
+      } else {
+        return { success: false, message: result.error || '更新失败' }
+      }
+    } catch (error) {
+      console.error('更新短期记忆summary失败:', error)
+      return { success: false, message: `更新失败: ${error.message}` }
+    }
+  }
+
+  /**
+   * 触发长期数据总结
+   * @returns {Object} 总结结果
+   */
+  async triggerLongTermSummary() {
+    try {
+      // 获取最新的长期数据
+      const longTermData = await this.getLongTermData()
+      const dataEntries = longTermData.ai_long_term_data.data_entries || {}
+      
+      if (Object.keys(dataEntries).length === 0) {
+        console.log('没有长期数据需要总结')
+        return { success: true, message: '没有数据需要总结' }
+      }
+
+      // 构建数据文本用于AI总结
+      const dataText = Object.entries(dataEntries)
+        .map(([key, data]) => `${key}: ${data.value}`)
+        .join('\n')
+
+      // 调用AI接口生成总结
+      const aiResponse = await aiService.sendMessage(
+        `请根据以下长期数据生成一个结构化的总结。请仔细分析用户提供的信息，将相关内容整理到合适的分类中。
+
+要求：
+1. 根据用户实际提供的信息动态创建分类，不要使用固定模板
+2. 每个分类下的内容要具体明确，避免宽泛的描述
+3. 如果用户提到多个同类信息，应该分别列出
+4. 只包含用户实际提到的信息，不要添加推测内容
+
+请严格按照以下JSON格式返回：
+
+<START>
+{
+  "summary": {
+    // 根据用户信息动态创建分类，例如：
+    // "用户关系": { "具体关系类型": "具体描述" },
+    // "兴趣爱好": { "具体爱好": "具体描述" },
+    // "行程安排": { "具体日期或计划": "具体描述" },
+    // "位置信息": { "具体位置": "具体描述" },
+    // 等等...
+  }
+}
+<END>
+
+长期数据内容：
+${dataText}`,
+        {
+          conversationHistory: [] // 不使用历史上下文，专注于总结任务
+        }
+      )
+
+      if (aiResponse.success) {
+        // 解析AI返回的总结
+        const aiContent = aiResponse.data?.choices[0]?.message?.content
+        if (aiContent) {
+          // 清理AI回复中的标签
+          const cleanContent = aiContent.replace(/<think>[\s\S]*?<\/think>/g, '')
+          
+                     // 尝试解析JSON格式的总结
+           let summary = null
+           try {
+             const startMatch = cleanContent.match(/<START>\s*(\{[\s\S]*?\})\s*<END>/)
+             if (startMatch) {
+               const jsonContent = startMatch[1].trim()
+               const parsedData = JSON.parse(jsonContent)
+               // 使用summary字段作为总结
+               summary = parsedData.summary || cleanContent
+             } else {
+               summary = cleanContent
+             }
+           } catch (parseError) {
+             console.error('解析AI总结失败，使用原始内容:', parseError)
+             summary = cleanContent
+           }
+
+          // 保存总结到后端
+          const saveResult = await this.updateSummary(summary)
+          if (saveResult.success) {
+            console.log('长期数据总结已生成并保存:', summary)
+            return { 
+              success: true, 
+              message: '总结生成并保存成功！',
+              data: this.longTermData
+            }
+          } else {
+            console.error('保存总结失败:', saveResult.message)
+            return { success: false, message: saveResult.message }
+          }
+        } else {
+          console.error('AI返回内容为空')
+          return { success: false, message: 'AI返回内容为空' }
+        }
+      } else {
+        console.error('AI总结生成失败:', aiResponse.message)
+        return { success: false, message: aiResponse.message }
+      }
+    } catch (error) {
+      console.error('触发长期数据总结失败:', error)
+      return { success: false, message: `总结失败: ${error.message}` }
     }
   }
 }

@@ -128,6 +128,23 @@ const currentCard = computed(() => cards.value[currentCardIndex.value])
 // 固定输入框 placeholder
 const fixedPlaceholder = ref('输入您的问题...')
 
+// 后台数据加载函数
+const loadBackgroundData = async () => {
+  try {
+    // 加载长期数据
+    const longTermData = await aiDataStorage.getLongTermData()
+    const longTermDataCount = longTermData.ai_long_term_data.data_count || 0
+    console.log('后台长期数据 data_count:', longTermDataCount)
+    
+    // 加载短期数据
+    const shortTermData = await aiDataStorage.getShortTermData()
+    const shortTermDataCount = shortTermData.ai_short_term_memory.data_count || 0
+    console.log('后台短期记忆 data_count:', shortTermDataCount)
+  } catch (error) {
+    console.error('后台数据加载失败:', error)
+  }
+}
+
 // 组件挂载时加载历史消息和卡片位置
 onMounted(() => {
   // 只在本地没有历史数据时发送欢迎消息
@@ -139,8 +156,20 @@ onMounted(() => {
       type: 'bot'
     });
   }
+  
   // 初始滚动到底部
   scrollToBottom();
+  
+  // 立即加载一次后台数据
+  loadBackgroundData();
+  
+  // 设置定时器，每30秒在后台加载一次数据
+  const backgroundTimer = setInterval(loadBackgroundData, 30000);
+  
+  // 组件卸载时清理定时器
+  onUnmounted(() => {
+    clearInterval(backgroundTimer);
+  });
 });
 
 // 组件卸载时保存消息和卡片位置
@@ -208,10 +237,9 @@ const handleSubmit = async () => {
           role: msg.type === 'user' ? 'user' : 'assistant',
           content: msg.content
         }))
-        .slice(-10) // 只保留最近10条消息作为上下文
       
       console.log('构建的历史上下文:', historyContext)
-      
+
       // 调用AI服务，传递历史上下文
       const response = await aiService.sendMessage(value, {
         conversationHistory: historyContext
@@ -222,39 +250,40 @@ const handleSubmit = async () => {
         historyStore.messages.pop()
         
         // 处理AI回复
-        const aiContent = response.data.choices[0].message.content
+        const aiContent = response?.data?.choices[0]?.message?.content
+
+        // 先删除<think></think>标签中的内容
+        const cleanContent = aiContent.replace(/<think>[\s\S]*?<\/think>/g, '')
         let parsedData = null
-        
+        console.log('cleanContent', cleanContent)
         try {
-          // 尝试解析结构化数据
-          console.log('AI完整回复内容:', aiContent)
-          
           // 使用更精确的正则表达式匹配JSON内容
-          const startMatch = aiContent.match(/<START>\s*(\{[\s\S]*?\})\s*<END>/)
+          const startMatch = cleanContent.match(/<START>\s*(\{[\s\S]*?\})\s*<END>/)
           console.log('startMatch', startMatch)
+
           if (startMatch) {
             const jsonContent = startMatch[1].trim()
-            console.log('jsonContent', jsonContent)
             try {
               parsedData = JSON.parse(jsonContent)
-              console.log('结构化数据 parsedData', parsedData)
               
-              // 使用answer字段作为回答显示
+              // 使用answer字段作为回答显示，并保存到历史记录
               if (parsedData.answer) {
                 addMessage(parsedData.answer, 'bot')
               } else {
-                addMessage(aiContent, 'bot')
+                // 如果没有answer字段，使用清理后的内容
+                addMessage(cleanContent, 'bot')
               }
               
               // 处理长期数据和短期记忆
               if (parsedData.longTermData && parsedData.longTermData.trim()) {
-                console.log('长期数据:', parsedData.longTermData)
                 try {
                   const timestamp = new Date().toISOString()
                   const key = `ai_long_term_${timestamp}`
                   const result = await aiDataStorage.saveLongTermData(key, parsedData.longTermData)
                   if (result.success) {
                     console.log('长期数据保存成功:', result.message)
+                    // 保存成功后立即加载后台数据
+                    loadBackgroundData();
                   } else {
                     console.error('长期数据保存失败:', result.message)
                   }
@@ -271,6 +300,8 @@ const handleSubmit = async () => {
                   const result = await aiDataStorage.saveShortTermData(key, parsedData.shortTermMemory)
                   if (result.success) {
                     console.log('短期记忆保存成功:', result.message)
+                    // 保存成功后立即加载后台数据
+                    loadBackgroundData();
                   } else {
                     console.error('短期记忆保存失败:', result.message)
                   }
@@ -281,16 +312,16 @@ const handleSubmit = async () => {
             } catch (jsonParseError) {
               console.error('JSON解析失败:', jsonParseError)
               // JSON解析失败时，直接显示原始内容
-              addMessage(aiContent, 'bot')
+              addMessage(cleanContent, 'bot')
             }
           } else {
             // 如果没有找到结构化格式，直接显示原始内容
-            addMessage(aiContent, 'bot')
+            addMessage(cleanContent, 'bot')
           }
         } catch (parseError) {
           console.error('解析AI回复失败:', parseError)
           // 解析失败时显示原始内容
-          addMessage(aiContent, 'bot')
+          addMessage(cleanContent, 'bot')
         }
         
         console.log('AI回复成功:', response.data)

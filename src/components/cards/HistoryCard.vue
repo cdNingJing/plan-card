@@ -41,47 +41,13 @@ const props = defineProps({ messages: Array })
 const historyStore = useHistoryStore()
 
 const historyContainerRef = ref(null)
-const isAutoSendEnabled = ref(false)
-let autoSendInterval = null
 
-const mockMessages = [
-  '你好！我是你的智能助手，有什么可以帮助你的吗？',
-  '今天天气不错，适合出去走走呢！',
-  '我注意到你最近很活跃，继续保持！',
-  '有什么新的想法或问题想讨论吗？',
-  '我随时都在这里为你服务！',
-  '今天过得怎么样？',
-  '有什么有趣的事情想分享吗？',
-  '我很好奇你的想法，能告诉我更多吗？'
-]
 
-const toggleAutoSend = () => {
-  isAutoSendEnabled.value = !isAutoSendEnabled.value
-  
-  if (isAutoSendEnabled.value) {
-    startAutoSend()
-  } else {
-    stopAutoSend()
-  }
-}
 
-const startAutoSend = () => {
-  autoSendInterval = setInterval(() => {
-    const randomMessage = mockMessages[Math.floor(Math.random() * mockMessages.length)]
-    historyStore.addMessage({
-      id: Date.now() + Math.random(),
-      content: randomMessage,
-      type: 'bot'
-    })
-  }, 5000) // 每5秒发送一条
-}
 
-const stopAutoSend = () => {
-  if (autoSendInterval) {
-    clearInterval(autoSendInterval)
-    autoSendInterval = null
-  }
-}
+
+
+
 
 // 清空历史对话
 const clearHistory = () => {
@@ -109,9 +75,11 @@ onMounted(() => {
   historyStore.loadMessages();
   console.log('加载到的历史消息:', historyStore.messages);
 
-  // 只在本地没有历史数据时发送欢迎消息
+  // 只在本地没有历史数据且store中也没有消息时发送欢迎消息
   const hasHistory = !!localStorage.getItem('chat_history');
-  if (!hasHistory) {
+  const hasStoreMessages = historyStore.messages && historyStore.messages.length > 0;
+  
+  if (!hasHistory && !hasStoreMessages) {
     historyStore.addMessage({
       id: Date.now() + Math.random(),
       content: '欢迎来到聊天室！我是你的智能助手，很高兴为你服务。',
@@ -123,9 +91,7 @@ onMounted(() => {
   scrollToBottom();
 });
 
-onUnmounted(() => {
-  stopAutoSend()
-})
+
 </script>
 
 <style scoped>
@@ -247,6 +213,6 @@ onUnmounted(() => {
 
 .bubble-content {
   display: block;
-  white-space: pre-wrap;
+  /* white-space: pre-wrap; */
 }
 </style> 

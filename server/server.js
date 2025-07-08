@@ -422,6 +422,64 @@ app.delete('/api/ai-long-term-data', async (req, res) => {
   }
 })
 
+// 更新summary数据
+app.put('/api/ai-long-term-data/summary', async (req, res) => {
+  try {
+    const { summary } = req.body
+    
+    if (!summary) {
+      return res.status(400).json({
+        success: false,
+        error: '缺少必填字段: summary'
+      })
+    }
+    
+    const filePath = path.join(__dirname, '../src/data/long-term/ai-long-term-data.json')
+    
+    // 读取现有数据
+    let data
+    try {
+      const fileContent = await fs.readFile(filePath, 'utf8')
+      data = JSON.parse(fileContent)
+    } catch (error) {
+      // 如果文件不存在或为空，创建默认结构
+      data = {
+        ai_long_term_data: {
+          description: "AI助手提取的长期数据，包括用户偏好、重要信息等",
+          created_at: new Date().toISOString(),
+          last_updated: new Date().toISOString(),
+          data_count: 0,
+          data_entries: {}
+        }
+      }
+    }
+    
+    // 更新summary数据
+    data.ai_long_term_data.summary = summary
+    
+    // 更新统计信息
+    data.ai_long_term_data.last_updated = new Date().toISOString()
+    
+    // 写入文件
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8')
+    
+    console.log('[AI Long Term Data] summary更新成功:', summary)
+    
+    res.json({
+      success: true,
+      message: 'summary更新成功！',
+      data: data
+    })
+    
+  } catch (error) {
+    console.error('[AI Long Term Data] summary更新失败:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message || '更新summary失败'
+    })
+  }
+})
+
 // AI短期记忆文件操作API
 app.get('/api/ai-short-term-memory', async (req, res) => {
   try {
@@ -545,6 +603,64 @@ app.delete('/api/ai-short-term-memory', async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message || '清空短期记忆失败'
+    })
+  }
+})
+
+// 更新短期记忆summary数据
+app.put('/api/ai-short-term-memory/summary', async (req, res) => {
+  try {
+    const { summary } = req.body
+    
+    if (!summary) {
+      return res.status(400).json({
+        success: false,
+        error: '缺少必填字段: summary'
+      })
+    }
+    
+    const filePath = path.join(__dirname, '../src/data/short-term/ai-short-term-memory.json')
+    
+    // 读取现有数据
+    let data
+    try {
+      const fileContent = await fs.readFile(filePath, 'utf8')
+      data = JSON.parse(fileContent)
+    } catch (error) {
+      // 如果文件不存在或为空，创建默认结构
+      data = {
+        ai_short_term_memory: {
+          description: "AI助手提取的短期记忆，包括当前会话中的重要信息",
+          created_at: new Date().toISOString(),
+          last_updated: new Date().toISOString(),
+          data_count: 0,
+          data_entries: {}
+        }
+      }
+    }
+    
+    // 更新summary数据
+    data.ai_short_term_memory.summary = summary
+    
+    // 更新统计信息
+    data.ai_short_term_memory.last_updated = new Date().toISOString()
+    
+    // 写入文件
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8')
+    
+    console.log('[AI Short Term Memory] summary更新成功:', summary)
+    
+    res.json({
+      success: true,
+      message: 'summary更新成功！',
+      data: data
+    })
+    
+  } catch (error) {
+    console.error('[AI Short Term Memory] summary更新失败:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message || '更新summary失败'
     })
   }
 })
