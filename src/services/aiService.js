@@ -48,6 +48,9 @@ class AIService {
       // 构建消息数组
       const messages = this.buildMessages(message, options)
 
+      // 提取标准 OpenAI 参数，排除自定义参数
+      const { conversationHistory, ...openAIOptions } = options
+
       // 发送请求
       const response = await aiApiService.chatCompletion(messages, {
         max_tokens: getConfig('model.maxTokens'),
@@ -55,7 +58,7 @@ class AIService {
         top_p: getConfig('model.topP'),
         frequency_penalty: getConfig('model.frequencyPenalty'),
         presence_penalty: getConfig('model.presencePenalty'),
-        ...options
+        ...openAIOptions
       })
 
       if (response.success) {
@@ -116,9 +119,18 @@ class AIService {
       })
     }
 
+    // 优先使用传入的历史上下文，否则使用内部存储的历史
+    let historyToInclude = []
+    if (options.conversationHistory && Array.isArray(options.conversationHistory)) {
+      historyToInclude = options.conversationHistory
+      console.log('使用传入的历史上下文:', historyToInclude.length, '条消息')
+    } else {
+      const maxHistory = getConfig('conversation.maxHistoryLength')
+      historyToInclude = this.conversationHistory.slice(-maxHistory * 2)
+      console.log('使用内部存储的历史:', historyToInclude.length, '条消息')
+    }
+
     // 添加对话历史
-    const maxHistory = getConfig('conversation.maxHistoryLength')
-    const historyToInclude = this.conversationHistory.slice(-maxHistory * 2)
     messages.push(...historyToInclude)
 
     // 添加当前消息
@@ -127,6 +139,7 @@ class AIService {
       content: message
     })
 
+    console.log('构建的消息数组:', messages.length, '条消息')
     return messages
   }
 

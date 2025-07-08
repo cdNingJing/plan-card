@@ -1,5 +1,19 @@
 <template>
-  <div class="history-card-root" ref="historyContainerRef">
+  <div class="history-card-root">
+    <!-- 固定头部 -->
+    <div class="history-header">
+      <div class="header-title">
+        <span class="title-text">聊天记录</span>
+      </div>
+      <button 
+        @click="clearHistory" 
+        class="clear-btn"
+        title="清空所有聊天记录"
+      >
+        <span class="clear-text">清空</span>
+      </button>
+    </div>
+    
     <!-- 自动发送开关 -->
     <!-- <div class="auto-send-toggle">
       <button 
@@ -10,8 +24,11 @@
       </button>
     </div> -->
     
-    <div v-for="message in messages" :key="message.id" :class="['history-bubble', message.type]">
-      <span class="bubble-content">{{ message.content }}</span>
+    <!-- 可滚动的内容区域 -->
+    <div class="history-content" ref="historyContainerRef">
+      <div v-for="message in messages" :key="message.id" :class="['history-bubble', message.type]">
+        <span class="bubble-content">{{ message.content }}</span>
+      </div>
     </div>
   </div>
 </template>
@@ -66,6 +83,13 @@ const stopAutoSend = () => {
   }
 }
 
+// 清空历史对话
+const clearHistory = () => {
+  if (confirm('确定要清空所有聊天记录吗？此操作不可恢复。')) {
+    historyStore.clearMessages()
+  }
+}
+
 // 滚动到底部
 const scrollToBottom = () => {
   nextTick(() => {
@@ -81,20 +105,23 @@ watch(() => props.messages, () => {
 }, { deep: true })
 
 onMounted(() => {
-  // 页面加载时自动发送欢迎消息
-  if (props.messages && props.messages.length === 0) {
-    setTimeout(() => {
-      historyStore.addMessage({
-        id: Date.now() + Math.random(),
-        content: '欢迎来到聊天室！我是你的智能助手，很高兴为你服务。',
-        type: 'bot'
-      })
-    }, 1000)
+  // 主动加载历史数据
+  historyStore.loadMessages();
+  console.log('加载到的历史消息:', historyStore.messages);
+
+  // 只在本地没有历史数据时发送欢迎消息
+  const hasHistory = !!localStorage.getItem('chat_history');
+  if (!hasHistory) {
+    historyStore.addMessage({
+      id: Date.now() + Math.random(),
+      content: '欢迎来到聊天室！我是你的智能助手，很高兴为你服务。',
+      type: 'bot'
+    });
   }
-  
+
   // 初始滚动到底部
-  scrollToBottom()
-})
+  scrollToBottom();
+});
 
 onUnmounted(() => {
   stopAutoSend()
@@ -105,13 +132,84 @@ onUnmounted(() => {
 .history-card-root {
   display: flex;
   flex-direction: column;
-  gap: 14px;
   width: 100%;
   height: 100%;
-  padding: 0;
   position: relative;
+}
+
+/* 固定头部样式 */
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0 12px 0;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+  margin-bottom: 8px;
+  flex-shrink: 0;
+  background: inherit;
+  z-index: 10;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-icon {
+  font-size: 18px;
+}
+
+.title-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.clear-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #dc2626;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.clear-btn:hover {
+  background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+  border-color: #f87171;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px 0 rgba(220, 38, 38, 0.15);
+}
+
+.clear-btn:active {
+  transform: translateY(0);
+}
+
+.clear-icon {
+  font-size: 16px;
+}
+
+.clear-text {
+  font-size: 13px;
+}
+
+/* 可滚动的内容区域 */
+.history-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
   overflow-y: auto;
   overflow-x: hidden;
+  padding: 0;
+  min-height: 0;
 }
 
 .auto-send-toggle {
@@ -119,29 +217,6 @@ onUnmounted(() => {
   top: 8px;
   right: 8px;
   z-index: 10;
-}
-
-.toggle-btn {
-  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-  border: 1px solid #d1d5db;
-  border-radius: 12px;
-  padding: 6px 12px;
-  font-size: 12px;
-  color: #6b7280;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-weight: 500;
-}
-
-.toggle-btn.active {
-  background: linear-gradient(135deg, #6366f1 0%, #60a5fa 100%);
-  color: #fff;
-  border-color: #6366f1;
-}
-
-.toggle-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px 0 rgba(60, 60, 120, 0.15);
 }
 
 .history-bubble {

@@ -82,7 +82,7 @@
             v-model="inputValue"
             class="profile-chat-input"
             type="text"
-            :placeholder="currentCard.inputPlaceholder"
+            :placeholder="fixedPlaceholder"
             :style="{ background: currentCard.inputBg }"
             @keydown.enter="handleSubmit"
           />
@@ -93,7 +93,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick, computed } from 'vue'
+import { ref, nextTick, computed, onMounted, onUnmounted, markRaw } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useHistoryStore } from '@/stores/historyStore'
 import HistoryCard from '@/components/cards/HistoryCard.vue'
@@ -103,21 +103,51 @@ import aiService from '@/services/aiService.js'
 import aiDataStorage from '@/utils/aiDataStorage.js'
 
 const historyStore = useHistoryStore()
-const { messages } = storeToRefs(historyStore)
+const { messages, currentCardIndex: storeCurrentCardIndex } = storeToRefs(historyStore)
 
 const inputValue = ref('')
 const chatMessagesRef = ref(null)
 
 const cards = ref([
-  { id: 1, component: HistoryCard, props: { messages }, gradient: 'linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%)', inputShadowFocus: '0 4px 18px 0 rgba(60, 60, 120, 0.18), 0 2px 0 0 #6366f1' },
-  { id: 2, component: LongTermDataCard, props: {}, gradient: 'linear-gradient(135deg, #d1fae5 0%, #10b981 100%)', inputBg: 'linear-gradient(135deg, #10b981 60%, #d1fae5 100%)', inputPlaceholder: '长期记忆卡片…', inputShadow: '0 2px 12px 0 rgba(16, 185, 129, 0.10), 0 1.5px 0 0 #10b981', inputShadowFocus: '0 4px 18px 0 rgba(16, 185, 129, 0.18), 0 2px 0 0 #059669' },
-  { id: 3, component: ShortTermDataCard, props: {}, gradient: 'linear-gradient(135deg, #fef3c7 0%, #f59e0b 100%)', inputBg: 'linear-gradient(135deg, #f59e0b 60%, #fef3c7 100%)', inputPlaceholder: '短期记忆卡片…', inputShadow: '0 2px 12px 0 rgba(245, 158, 11, 0.10), 0 1.5px 0 0 #f59e0b', inputShadowFocus: '0 4px 18px 0 rgba(245, 158, 11, 0.18), 0 2px 0 0 #d97706' },
+  { id: 1, component: markRaw(HistoryCard), props: { messages }, gradient: 'linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%)', inputShadowFocus: '0 4px 18px 0 rgba(60, 60, 120, 0.18), 0 2px 0 0 #6366f1' },
+  { id: 2, component: markRaw(LongTermDataCard), props: {}, gradient: 'linear-gradient(135deg, #d1fae5 0%, #10b981 100%)', inputBg: 'linear-gradient(135deg, #d1fae5 0%, #10b981 100%)', inputPlaceholder: '长期记忆卡片…', inputShadow: '0 2px 12px 0 rgba(16, 185, 129, 0.10), 0 1.5px 0 0 #10b981', inputShadowFocus: '0 4px 18px 0 rgba(16, 185, 129, 0.18), 0 2px 0 0 #059669' },
+  { id: 3, component: markRaw(ShortTermDataCard), props: {}, gradient: 'linear-gradient(135deg, #fef3c7 0%, #f59e0b 100%)', inputBg: 'linear-gradient(135deg, #fef3c7 0%, #f59e0b 100%)', inputPlaceholder: '短期记忆卡片…', inputShadow: '0 2px 12px 0 rgba(245, 158, 11, 0.10), 0 1.5px 0 0 #f59e0b', inputShadowFocus: '0 4px 18px 0 rgba(245, 158, 11, 0.18), 0 2px 0 0 #d97706' },
 ])
-const currentCardIndex = ref(0)
+
+// 使用 store 中的卡片索引
+const currentCardIndex = computed({
+  get: () => storeCurrentCardIndex.value,
+  set: (value) => historyStore.setCurrentCardIndex(value)
+})
+
 const isInputFocus = ref(false)
 const isOverviewMode = ref(false)
 const showSideCards = ref(false)
 const currentCard = computed(() => cards.value[currentCardIndex.value])
+
+// 固定输入框 placeholder
+const fixedPlaceholder = ref('输入您的问题...')
+
+// 组件挂载时加载历史消息和卡片位置
+onMounted(() => {
+  // 只在本地没有历史数据时发送欢迎消息
+  const hasHistory = !!localStorage.getItem('chat_history');
+  if (!hasHistory) {
+    historyStore.addMessage({
+      id: Date.now() + Math.random(),
+      content: '欢迎来到聊天室！我是你的智能助手，很高兴为你服务。',
+      type: 'bot'
+    });
+  }
+  // 初始滚动到底部
+  scrollToBottom();
+});
+
+// 组件卸载时保存消息和卡片位置
+onUnmounted(() => {
+  historyStore.saveMessages()
+  historyStore.saveCurrentCardIndex()
+})
 
 const scrollToBottom = () => {
   nextTick(() => {
@@ -171,8 +201,21 @@ const handleSubmit = async () => {
     addMessage('正在思考中...', 'bot')
     
     try {
-      // 调用AI服务
-      const response = await aiService.sendMessage(value)
+      // 构建历史消息上下文
+      const historyContext = historyStore.messages
+        .filter(msg => msg.type === 'user' || msg.type === 'bot')
+        .map(msg => ({
+          role: msg.type === 'user' ? 'user' : 'assistant',
+          content: msg.content
+        }))
+        .slice(-10) // 只保留最近10条消息作为上下文
+      
+      console.log('构建的历史上下文:', historyContext)
+      
+      // 调用AI服务，传递历史上下文
+      const response = await aiService.sendMessage(value, {
+        conversationHistory: historyContext
+      })
       
       if (response.success) {
         // 移除加载消息
@@ -268,7 +311,7 @@ const handleSubmit = async () => {
       console.error('AI服务错误:', error)
     }
     
-    currentCardIndex.value = 0
+    // 保持在当前卡片，不自动跳转到历史记录页面
     hideSideCards() // 提交后隐藏侧边卡片
   }
   // 打印全局历史消息
@@ -309,19 +352,19 @@ function onTouchEnd() {
   else if (deltaX > 60) {
     // 向左滑动，显示上一张卡片
     if (currentCardIndex.value > 0) {
-      currentCardIndex.value--
+      historyStore.setCurrentCardIndex(currentCardIndex.value - 1)
     } else {
       // 如果是第一张卡片，跳转到最后一张
-      currentCardIndex.value = cards.value.length - 1
+      historyStore.setCurrentCardIndex(cards.value.length - 1)
     }
     hideSideCards() // 切换卡片时隐藏侧边卡片
   } else if (deltaX < -60) {
     // 向右滑动，显示下一张卡片
     if (currentCardIndex.value < cards.value.length - 1) {
-      currentCardIndex.value++
+      historyStore.setCurrentCardIndex(currentCardIndex.value + 1)
     } else {
       // 如果是最后一张卡片，跳转到第一张
-      currentCardIndex.value = 0
+      historyStore.setCurrentCardIndex(0)
     }
     hideSideCards() // 切换卡片时隐藏侧边卡片
   }
@@ -332,7 +375,7 @@ function onTouchEnd() {
 
 // 选择卡片
 const selectCard = (index) => {
-  currentCardIndex.value = index
+  historyStore.setCurrentCardIndex(index)
   isOverviewMode.value = false
   hideSideCards() // 选择卡片时隐藏侧边卡片
 }

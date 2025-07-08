@@ -1,52 +1,56 @@
 <template>
   <div class="short-term-data-card">
+    <!-- 固定头部 -->
     <div class="card-header">
       <div class="header-left">
         <h3>短期记忆</h3>
         <p class="subtitle">当前会话的重要信息</p>
       </div>
       <button class="toggle-btn" @click="showSummary = !showSummary">
-        {{ showSummary ? '显示明细' : '显示总结' }}
+        {{ showSummary ? '小计' : '总结' }}
       </button>
     </div>
     
-    <div v-if="showSummary && summaryMarkdown" class="summary-block">
-      <MarkdownCard :content="summaryMarkdown" />
-    </div>
-    
-    <div v-else class="data-content">
-      <div v-if="shortTermRecords.length === 0" class="empty-state">
-        <div class="empty-icon">💭</div>
-        <p>暂无短期记忆</p>
-        <span>AI会在这里保存当前会话的重要信息</span>
+    <!-- 可滚动的内容区域 -->
+    <div class="card-content" ref="cardContentRef">
+      <div v-if="showSummary && summaryMarkdown" class="summary-block">
+        <MarkdownCard :content="summaryMarkdown" />
       </div>
-      <div v-else class="data-list">
-        <div 
-          v-for="(record, index) in shortTermRecords" 
-          :key="index"
-          class="data-item"
-        >
-          <div class="data-header">
-            <span class="data-time">{{ index + 1 }}</span>
-            <span class="data-key">{{ formatTime(record.time) }}</span>
+      
+      <div v-else class="data-content">
+        <div v-if="shortTermRecords.length === 0" class="empty-state">
+          <div class="empty-icon">💭</div>
+          <p>暂无短期记忆</p>
+          <span>AI会在这里保存当前会话的重要信息</span>
+        </div>
+        <div v-else class="data-list">
+          <div 
+            v-for="(record, index) in shortTermRecords" 
+            :key="index"
+            class="data-item"
+          >
+            <div class="data-header">
+              <span class="data-time">{{ index + 1 }}</span>
+              <span class="data-key">{{ formatTime(record.time) }}</span>
+            </div>
+            <div class="data-value">{{ record.value }}</div>
           </div>
-          <div class="data-value">{{ record.value }}</div>
         </div>
       </div>
     </div>
-    
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import aiDataStorage from '@/utils/aiDataStorage.js'
 import MarkdownCard from './MarkdownCard.vue'
 
 const shortTermRecords = ref([])
 const summary = ref(null)
 const summaryMarkdown = ref('')
-const showSummary = ref(true)
+const showSummary = ref(false)
+const cardContentRef = ref(null)
 
 const formatTime = (timeString) => {
   try {
@@ -78,6 +82,14 @@ function summaryToMarkdown(data, level = 2) {
   return ''
 }
 
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (cardContentRef.value) {
+      cardContentRef.value.scrollTop = cardContentRef.value.scrollHeight
+    }
+  })
+}
+
 const loadShortTermData = async () => {
   try {
     const records = await aiDataStorage.getShortTermRecords(20)
@@ -86,6 +98,8 @@ const loadShortTermData = async () => {
     const data = await aiDataStorage.getShortTermData()
     summary.value = data.summary || null
     summaryMarkdown.value = summary.value ? summaryToMarkdown(summary.value, 2) : ''
+    await nextTick()
+    scrollToBottom()
   } catch (error) {
     console.error('加载短期数据失败:', error)
   }
@@ -108,7 +122,6 @@ onMounted(async () => {
   border-radius: 20px;
   padding: 20px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  overflow: auto;
 }
 
 .card-header {
@@ -116,6 +129,10 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 20px;
+  flex-shrink: 0;
+  background: inherit;
+  z-index: 10;
+  background: none;
 }
 
 .header-left {
@@ -156,9 +173,14 @@ onMounted(async () => {
   color: #6b7280;
 }
 
-.data-content {
+/* 可滚动的内容区域 */
+.card-content {
   flex: 1;
   overflow-y: auto;
+  min-height: 0;
+}
+
+.data-content {
   margin-bottom: 15px;
 }
 
@@ -246,21 +268,21 @@ onMounted(async () => {
 }
 
 /* 滚动条样式 */
-.data-content::-webkit-scrollbar {
+.card-content::-webkit-scrollbar {
   width: 4px;
 }
 
-.data-content::-webkit-scrollbar-track {
+.card-content::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.05);
   border-radius: 2px;
 }
 
-.data-content::-webkit-scrollbar-thumb {
+.card-content::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.2);
   border-radius: 2px;
 }
 
-.data-content::-webkit-scrollbar-thumb:hover {
+.card-content::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.3);
 }
 </style> 

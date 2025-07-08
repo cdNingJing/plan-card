@@ -36,6 +36,8 @@ class AIApiService {
         ...options
       }
 
+      console.log('AI API 请求体:', JSON.stringify(requestBody, null, 2))
+
       const response = await fetch(`${this.baseURL}${this.endpoint}`, {
         method: 'POST',
         headers: {
@@ -46,7 +48,11 @@ class AIApiService {
         body: JSON.stringify(requestBody)
       })
 
+      console.log('AI API 响应状态:', response.status, response.statusText)
+
       if (!response.ok) {
+        const errorText = await response.text()
+        console.error('AI API 错误响应:', errorText)
         throw new Error(`API请求失败: ${response.status} ${response.statusText}`)
       }
 
