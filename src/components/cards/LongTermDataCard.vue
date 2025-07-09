@@ -7,9 +7,9 @@
         <p class="subtitle">AI提取的重要信息</p>
       </div>
       <div class="header-right">
-        <button class="toggle-btn" @click="showSummary = !showSummary">
-          {{ showSummary ? '小计' : '总结' }}
-        </button>
+      <button class="toggle-btn" @click="showSummary = !showSummary">
+        {{ showSummary ? '小计' : '总结' }}
+      </button>
         <button class="clear-all-btn" @click="clearAllData" title="清空所有长期数据">
           <span class="clear-all-text">清空</span>
         </button>
@@ -18,27 +18,27 @@
     
     <!-- 可滚动的内容区域 -->
     <div class="card-content" ref="cardContentRef">
-      <!-- 用 Markdown 卡片展示 summary -->
-      <div v-if="showSummary && summaryMarkdown" class="summary-block">
-        <MarkdownCard :content="summaryMarkdown" />
+    <!-- 用 Markdown 卡片展示 summary -->
+    <div v-if="showSummary && summaryMarkdown" class="summary-block">
+      <MarkdownCard :content="summaryMarkdown" />
+    </div>
+    
+    <div v-else class="data-content">
+      <div v-if="longTermRecords.length === 0" class="empty-state">
+        <div class="empty-icon">📚</div>
+        <p>暂无长期数据</p>
+        <span>AI会在这里保存您的重要信息</span>
       </div>
       
-      <div v-else class="data-content">
-        <div v-if="longTermRecords.length === 0" class="empty-state">
-          <div class="empty-icon">📚</div>
-          <p>暂无长期数据</p>
-          <span>AI会在这里保存您的重要信息</span>
-        </div>
-        
-        <div v-else class="data-list">
-          <div 
-            v-for="(record, index) in longTermRecords" 
-            :key="index"
-            class="data-item"
-          >
-            <div class="data-header">
-              <span class="data-time">{{ index + 1 }}</span>
-              <span class="data-key">{{ formatTime(record.time) }}</span>
+      <div v-else class="data-list">
+        <div 
+          v-for="(record, index) in longTermRecords" 
+          :key="index"
+          class="data-item"
+        >
+          <div class="data-header">
+            <span class="data-time">{{ index + 1 }}</span>
+            <span class="data-key">{{ formatTime(record.time) }}</span>
               <button 
                 @click="deleteSingleRecord(record.key)" 
                 class="delete-btn"
@@ -222,14 +222,14 @@ onMounted(async () => {
 
 .card-header h3 {
   margin: 0 0 5px 0;
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 600;
   color: #374151;
 }
 
 .subtitle {
   margin: 0;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: #6b7280;
 }
 
@@ -238,7 +238,7 @@ onMounted(async () => {
   border: 1px solid #e5e7eb;
   border-radius: 4px;
   padding: 3px 10px;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: #374151;
   font-weight: 500;
   cursor: pointer;
@@ -257,7 +257,7 @@ onMounted(async () => {
   border: 1px solid #fecaca;
   border-radius: 4px;
   padding: 3px 8px;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: #dc2626;
   font-weight: 500;
   cursor: pointer;
@@ -272,7 +272,7 @@ onMounted(async () => {
 }
 
 .clear-all-text {
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 /* 可滚动的内容区域 */
@@ -293,18 +293,18 @@ onMounted(async () => {
 }
 
 .empty-icon {
-  font-size: 48px;
+  font-size: 3rem;
   margin-bottom: 10px;
 }
 
 .empty-state p {
   margin: 0 0 5px 0;
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 500;
 }
 
 .empty-state span {
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .data-list {
@@ -342,7 +342,7 @@ onMounted(async () => {
   padding: 2px 4px;
   border-radius: 3px;
   transition: all 0.2s;
-  font-size: 14px;
+  font-size: 0.875rem;
   line-height: 1;
 }
 
@@ -356,7 +356,7 @@ onMounted(async () => {
 }
 
 .data-time {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: #6b7280;
   background: rgba(107, 114, 128, 0.1);
   padding: 2px 6px;
@@ -364,7 +364,7 @@ onMounted(async () => {
 }
 
 .data-key {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: #059669;
   background: rgba(5, 150, 105, 0.1);
   padding: 2px 6px;
@@ -373,7 +373,7 @@ onMounted(async () => {
 }
 
 .data-value {
-  font-size: 14px;
+  font-size: 0.875rem;
   line-height: 1.4;
   color: #374151;
   word-break: break-word;
@@ -386,7 +386,7 @@ onMounted(async () => {
 
 .stats {
   text-align: center;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: #6b7280;
 }
 

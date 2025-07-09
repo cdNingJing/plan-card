@@ -127,7 +127,7 @@ onMounted(() => {
 }
 
 .title-text {
-  font-size: 16px;
+  font-size: 0.85rem;
   font-weight: 600;
   color: #1e293b;
 }
@@ -140,7 +140,7 @@ onMounted(() => {
   border: 1px solid #fecaca;
   border-radius: 12px;
   padding: 8px 12px;
-  font-size: 14px;
+  font-size: 0.625rem;
   color: #dc2626;
   cursor: pointer;
   transition: all 0.2s;
@@ -163,7 +163,7 @@ onMounted(() => {
 }
 
 .clear-text {
-  font-size: 13px;
+  font-size: 0.5625rem;
 }
 
 /* 可滚动的内容区域 */
@@ -189,7 +189,7 @@ onMounted(() => {
   max-width: 80%;
   padding: 12px 18px;
   border-radius: 18px;
-  font-size: 16px;
+  font-size: 0.85rem;
   line-height: 1.6;
   word-break: break-all;
   box-shadow: 0 2px 8px 0 rgba(60, 60, 120, 0.06);

@@ -526,7 +526,7 @@ const overviewCardUniformStyle = {
 }
 
 .sidecard-icon {
-  font-size: 24px;
+  font-size: 1.25rem;
   font-weight: bold;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   opacity: 0.8;
@@ -689,7 +689,7 @@ const overviewCardUniformStyle = {
   border-radius: 16px;
   background: linear-gradient(135deg, #f5f7fa 60%, #e0e7ff 100%);
   padding: 18px 20px;
-  font-size: 17px;
+  font-size: 0.8125rem;
   outline: none;
   color: #222;
   box-shadow: 0 2px 12px 0 rgba(60, 60, 120, 0.10), 0 1.5px 0 0 #e5e7eb;
@@ -709,7 +709,7 @@ const overviewCardUniformStyle = {
   border: none;
   border-radius: 12px;
   padding: 12px 22px;
-  font-size: 16px;
+  font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
@@ -759,14 +759,14 @@ const overviewCardUniformStyle = {
 
 .profile-overview-header h3 {
   margin: 0 0 8px 0;
-  font-size: 24px;
+  font-size: 1.25rem;
   font-weight: 600;
   color: #1e293b;
 }
 
 .profile-overview-header p {
   margin: 0;
-  font-size: 14px;
+  font-size: 0.625rem;
   color: #64748b;
 }
 
