@@ -31,8 +31,8 @@
     </div>
     <!-- 下方内容区，模拟对话气泡 -->
     <div v-if="showContentArea" class="island-content-area">
-      <div class="bubble" v-for="(msg, idx) in mockDialog" :key="idx" @click="handleBubbleClick(msg)">
-        {{ msg }}
+      <div class="bubble" v-for="(item, idx) in mockApiData" :key="idx" @click="handleBubbleClick(item.content)">
+        <span v-html="processContentWithColors(item)"></span>
       </div>
     </div>
   </div>
@@ -42,6 +42,7 @@
 import { computed, ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { X } from 'lucide-vue-next'
 import aiDataStorage from '@/utils/aiDataStorage.js'
+import aiService from '@/services/aiService.js'
 
 // 内容数组（扩充为10条以上）
 const STREAM_TEXTS = [
@@ -74,18 +75,20 @@ const showContentArea = ref(true)
 
 const toggleExpand = () => {
   isWide.value = !isWide.value
+  // 如果点击灵动岛主区域，且内容区域是关闭状态，则重新打开
+  if (!showContentArea.value) {
+    showContentArea.value = true
+  }
 }
 
 const handleDelete = () => {
   showContentArea.value = false
-  currentContent.value = ''
-  newContent.value = ''
-  contentUpdateTrigger.value++
 }
 
 // 顶部灵动岛主区域宽高样式
 const mainStyle = computed(() => {
   const hasContent = currentContent.value || newContent.value
+  const hasContentArea = showContentArea.value
   
   if (isLoading.value) {
     return {
@@ -95,6 +98,23 @@ const mainStyle = computed(() => {
       height: '35px',
       minHeight: '35px',
       padding: '0 8px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
+    }
+  }
+  
+  // 如果内容区域被收起，灵动岛缩小到最小状态
+  if (!hasContentArea) {
+    return {
+      width: '40px',
+      maxWidth: '40px',
+      minWidth: '40px',
+      height: '5px',
+      minHeight: '5px',
+      padding: '0 4px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -236,13 +256,17 @@ const animateSwap = async (newMsg) => {
   }, 500)
 }
 
-const handleBubbleClick = (msg) => {
+const handleBubbleClick = async (msg) => {
   animateSwap(msg)
-  setTimeout(() => {
+  setTimeout(async () => {
     contentTransition.value = 'idle'
     isLoading.value = true
     stopLogRolling()
     startLogRolling()
+    
+    // 模拟重新调用接口获取最新数据
+    await fetchMockApiData()
+    
     setTimeout(() => {
       isLoading.value = false
       stopLogRolling()
@@ -255,10 +279,27 @@ const handleBubbleClick = (msg) => {
   }, 800)
 }
 
+// 处理内容颜色显示的方法
+const processContentWithColors = (item) => {
+  let processedContent = item.content
+  
+  availableTools.forEach(tool => {
+    const regex = new RegExp(tool.title, 'g')
+    // 检查该工具是否在usedTools数组中
+    const isUsed = item.usedTools && item.usedTools.includes(tool.title)
+    const color = isUsed ? '#3182ce' : '#808080' // 淡绿色或灰色
+    processedContent = processedContent.replace(regex, `<span style="color: ${color};">${tool.title}</span>`)
+  })
+  
+  return processedContent
+}
+
 onMounted(async () => {
   startLogRolling()
   // 加载真实数据
   await loadRealData()
+  // 模拟调用接口获取数据
+  await fetchMockApiData()
   // 不自动启动动画，等待用户交互
 })
 
@@ -266,15 +307,280 @@ onBeforeUnmount(() => {
   stopLogRolling()
 })
 
-// 模拟对话内容
+// 可用工具集
+const availableTools = [
+  {
+    "title": "搜索功能",
+    "description": "可以搜索各种信息，包括工作、学习资料、新闻等"
+  },
+  {
+    "title": "整理功能",
+    "description": "可以整理和分类信息，生成结构化数据"
+  },
+  {
+    "title": "分析功能",
+    "description": "可以分析用户需求，提供个性化建议"
+  },
+  {
+    "title": "规划功能",
+    "description": "可以制定计划和流程，帮助用户达成目标"
+  },
+  {
+    "title": "提醒功能",
+    "description": "可以设置提醒和通知，帮助用户管理时间"
+  },
+  {
+    "title": "机票查询",
+    "description": "可以查询航班信息、价格比较、预订机票"
+  },
+  {
+    "title": "酒店查询",
+    "description": "可以查询酒店信息、价格、预订房间"
+  },
+  {
+    "title": "地图功能",
+    "description": "可以查询路线、地点、周边信息"
+  },
+  {
+    "title": "翻译功能",
+    "description": "可以翻译文本、文档、网页内容"
+  },
+  {
+    "title": "计算器",
+    "description": "可以进行各种数学计算、单位转换"
+  },
+  {
+    "title": "天气查询",
+    "description": "可以查询天气信息、预报、空气质量"
+  },
+  {
+    "title": "新闻资讯",
+    "description": "可以获取最新新闻、行业动态"
+  },
+  {
+    "title": "文档处理",
+    "description": "可以创建、编辑、转换各种文档格式"
+  },
+  {
+    "title": "图片处理",
+    "description": "可以编辑、压缩、转换图片格式"
+  },
+  {
+    "title": "语音识别",
+    "description": "可以将语音转换为文字"
+  },
+  {
+    "title": "日程管理",
+    "description": "可以管理日程安排、会议提醒"
+  },
+  {
+    "title": "联系人管理",
+    "description": "可以管理联系人信息、通讯录"
+  },
+  {
+    "title": "文件管理",
+    "description": "可以整理、备份、同步文件"
+  },
+  {
+    "title": "笔记功能",
+    "description": "可以记录、整理、搜索笔记"
+  },
+  {
+    "title": "任务管理",
+    "description": "可以创建、跟踪、完成待办事项"
+  }
+]
+
+// 模拟接口数据
+const mockApiData = ref([])
+
+// 模拟调用接口获取数据
+const fetchMockApiData = async () => {
+  try {
+    // 启动loading效果
+    isLoading.value = true
+    stopLogRolling()
+    startLogRolling()
+    
+    // 获取当前内容
+    const currentUserContent = currentContent.value || '用户暂无输入内容'
+    
+    // 构建灵动岛通知提示词
+    const customPrompt = `你是一个专业的灵动岛智能助手，专门为用户提供基于当前内容的个性化建议和工具推荐。
+
+当前时间：${new Date().toLocaleString('zh-CN')}
+用户当前内容：${currentUserContent}
+
+可用工具集：
+${JSON.stringify(availableTools, null, 2)}
+
+要求：
+1. 分析用户当前内容，理解用户需求
+2. 生成4条相关的建议和通知
+3. 建议要具体、实用、可执行
+4. 每条建议要标明类型（suggestion/reminder/tool/analysis/connection）
+5. 优先级要基于用户需求的紧急程度（high/medium/low）
+6. 内容要简洁明了，适合灵动岛显示
+7. 建议方向：
+   - 第1条：基于工具的直接建议（根据用户需求推荐最合适的工具）
+   - 第2条：发散思维建议（如提到朋友、人脉、资源等）
+   - 第3条：分析用户当前状况，提供深度建议
+   - 第4条：其他相关工具或功能推荐
+8. 每条建议需要包含一个usedTools数组，列出该建议中会使用到的工具名称
+9. 如果当前可用工具集中没有相关工具，需要推荐你认为对用户会有帮助的工具，并在usedTools数组中包含这些推荐的工具名称
+
+**特别注意：数据返回必须以<START>开始，以<END>结束，这是最重要的格式要求！这句话不需要返回**
+<START>
+{
+  "notifications": [
+    {
+      "id": 1,
+      "type": "suggestion",
+      "content": "基于您的需求，我们可以提供完整流程：先搜索相关信息，再整理分析数据，最后给出最适合的建议",
+      "timestamp": "${new Date().toISOString()}",
+      "priority": "high",
+      "usedTools": ["搜索功能", "整理功能", "分析功能"]
+    },
+    {
+      "id": 2,
+      "type": "connection",
+      "content": "你的朋友在北京工作，可以咨询他的经验和建议",
+      "timestamp": "${new Date().toISOString()}", 
+      "priority": "medium",
+      "usedTools": []
+    },
+    {
+      "id": 3,
+      "type": "analysis",
+      "content": "分析您的现状，建议先明确目标行业和岗位，再制定具体求职计划",
+      "timestamp": "${new Date().toISOString()}", 
+      "priority": "high",
+      "usedTools": ["分析功能", "规划功能"]
+    },
+    {
+      "id": 4,
+      "type": "suggestion",
+      "content": "可以使用地图功能查看目标公司位置，使用日程管理安排面试时间",
+      "timestamp": "${new Date().toISOString()}", 
+      "priority": "medium",
+      "usedTools": ["地图功能", "日程管理"]
+    }
+  ]
+}
+<END>`
+
+    // 调用AI接口生成通知数据
+    const aiResponse = await aiService.sendMessageWithScenario(customPrompt, 'basic', '', {}, true)
+    
+    if (aiResponse.success) {
+      // 解析AI返回的内容
+      const aiContent = aiResponse.data?.choices[0]?.message?.content
+      if (aiContent) {
+        // 清理AI回复中的标签
+        const cleanContent = aiContent.replace(/<think>[\s\S]*?<\/think>/g, '')
+        console.log('cleanContent', cleanContent)
+        try {
+          // 尝试解析JSON格式的回复
+          const startMatch = cleanContent.match(/<START>\s*(\{[\s\S]*?\})\s*<END>/)
+          console.log('startMatch', startMatch)
+          if (startMatch) {
+            const jsonContent = startMatch[1].trim()
+            const parsedData = JSON.parse(jsonContent)
+            console.log('parsedData', parsedData)
+            // 使用notifications字段作为数据
+            const notifications = parsedData.notifications || []
+            mockApiData.value = notifications
+            
+            console.log('AI生成的通知数据:', notifications)
+          } else {
+            console.error('未找到结构化数据，使用默认数据')
+            // 使用默认数据
+            mockApiData.value = [
+              {
+                id: 1,
+                type: 'notification',
+                content: '系统更新完成',
+                timestamp: new Date().toISOString(),
+                priority: 'low'
+              },
+              {
+                id: 2,
+                type: 'reminder',
+                content: '下午3点有会议',
+                timestamp: new Date().toISOString(),
+                priority: 'high'
+              },
+              {
+                id: 3,
+                type: 'message',
+                content: '收到新消息',
+                timestamp: new Date().toISOString(),
+                priority: 'medium'
+              }
+            ]
+          }
+        } catch (parseError) {
+          console.error('解析AI回复失败，使用默认数据:', parseError)
+          // 使用默认数据
+          mockApiData.value = [
+            {
+              id: 1,
+              type: 'notification',
+              content: '系统更新完成',
+              timestamp: new Date().toISOString(),
+              priority: 'low'
+            },
+            {
+              id: 2,
+              type: 'reminder',
+              content: '下午3点有会议',
+              timestamp: new Date().toISOString(),
+              priority: 'high'
+            },
+            {
+              id: 3,
+              type: 'message',
+              content: '收到新消息',
+              timestamp: new Date().toISOString(),
+              priority: 'medium'
+            }
+          ]
+        }
+      } else {
+        console.error('AI返回内容为空，使用默认数据')
+        mockApiData.value = []
+      }
+          } else {
+        console.error('AI接口调用失败，使用默认数据:', aiResponse.message)
+        mockApiData.value = []
+      }
+    } catch (error) {
+      console.error('获取模拟接口数据失败:', error)
+      mockApiData.value = []
+    } finally {
+      // 结束loading效果
+      isLoading.value = false
+      stopLogRolling()
+      logLines.value = []
+    }
+  }
+
+// 计算属性：获取模拟接口数据
 const mockDialog = computed(() => {
   if (props.dialog.length > 0) return props.dialog
-  return [
-    '你好，有什么可以帮您？',
-    '请帮我查下明天的天气。',
-    '好的，正在为您查询明天的天气...',
-    '明天北京多云，气温12~22℃。'
-  ]
+  
+  // 如果没有模拟数据，返回默认内容
+  if (mockApiData.value.length === 0) {
+    return [
+      '正在分析您的需求...',
+      '点击获取个性化建议'
+    ]
+  }
+  
+  // 返回模拟接口数据的内容
+  return mockApiData.value.map(item => {
+    return item.content
+  })
 })
 </script>
 
@@ -481,7 +787,6 @@ const mockDialog = computed(() => {
   text-overflow: initial;
   word-break: break-all;
   text-align: left;
-  font-size: 14px;
   line-height: 1.7;
   max-width: 100%;
 }
