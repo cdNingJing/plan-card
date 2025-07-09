@@ -88,6 +88,14 @@ class AIDataStorage {
       if (result.success) {
         this.shortTermData = result.data
         console.log('短期记忆已保存到文件:', key, value)
+
+        // 保存成功后触发总结接口
+        try {
+          await this.triggerShortTermSummary()
+          console.log('长期数据总结已触发')
+        } catch (summaryError) {
+          console.error('触发长期数据总结失败:', summaryError)
+        }
         return {
           success: true,
           message: '短期记忆保存成功！',
@@ -477,20 +485,18 @@ class AIDataStorage {
         return { success: true, message: '没有数据需要总结' }
       }
 
-      // 构建数据文本用于AI总结
-      const dataText = Object.entries(dataEntries)
-        .map(([key, data]) => `${key}: ${data.value}`)
-        .join('\n')
+      // 调用AI接口生成总结，使用basic场景并传入自定义提示词
+      const customPrompt = `请根据以下长期数据生成一个结构化的总结。请仔细分析用户提供的信息，将相关内容整理到合适的分类中。
 
-      // 调用AI接口生成总结
-      const aiResponse = await aiService.sendMessage(
-        `请根据以下长期数据生成一个结构化的总结。请仔细分析用户提供的信息，将相关内容整理到合适的分类中。
+当前长期记忆数据：
+${JSON.stringify(dataEntries, null, 2)}
 
 要求：
 1. 根据用户实际提供的信息动态创建分类，不要使用固定模板
 2. 每个分类下的内容要具体明确，避免宽泛的描述
 3. 如果用户提到多个同类信息，应该分别列出
 4. 只包含用户实际提到的信息，不要添加推测内容
+5. **强制规定：只能总结用户当前data_entries中实际存在的数据，严禁编造、推测或添加不存在的信息**
 
 请严格按照以下JSON格式返回：
 
@@ -505,14 +511,9 @@ class AIDataStorage {
     // 等等...
   }
 }
-<END>
+<END>`
 
-长期数据内容：
-${dataText}`,
-        {
-          conversationHistory: [] // 不使用历史上下文，专注于总结任务
-        }
-      )
+      const aiResponse = await aiService.sendMessageWithScenario(customPrompt, 'basic', '', {}, true)
 
       if (aiResponse.success) {
         // 解析AI返回的总结
@@ -562,6 +563,147 @@ ${dataText}`,
     } catch (error) {
       console.error('触发长期数据总结失败:', error)
       return { success: false, message: `总结失败: ${error.message}` }
+    }
+  }
+
+  /**
+   * 触发短期记忆总结
+   * @returns {Object} 总结结果
+   */
+  async triggerShortTermSummary() {
+    try {
+      // 获取最新的短期记忆数据
+      const shortTermData = await this.getShortTermData()
+      const dataEntries = shortTermData.ai_short_term_memory.data_entries || {}
+      
+      if (Object.keys(dataEntries).length === 0) {
+        console.log('没有短期记忆需要总结')
+        return { success: true, message: '没有数据需要总结' }
+      }
+
+      // 调用AI接口生成总结，使用basic场景并传入自定义提示词
+      const customPrompt = `请根据以下短期记忆数据生成一个结构化的四象限总结。请仔细分析用户提供的信息，按照重要性和紧急性进行分类。
+
+当前短期记忆数据：
+${JSON.stringify(dataEntries, null, 2)}
+
+要求：
+1. 严格按照四象限分类：重要且紧急、重要不紧急、紧急不重要、不重要不紧急
+2. 每个象限下的内容要具体明确，避免宽泛的描述
+3. 重点关注短期计划、即时需求、时间安排等
+4. 只包含用户实际提到的信息，不要添加推测内容
+5. 为每个项目添加标记字段，标识其重要性和紧急性
+6. 基于data_entries中的实际数据进行分析和分类
+7. **强制规定：只能总结用户当前data_entries中实际存在的数据，严禁编造、推测或添加不存在的信息**
+
+请严格按照以下JSON格式返回：
+
+<START>
+{
+  "data_entries": 需要总结的data_entries 按照四象限分类 给每一个加上一个新的字段, 字段名为"category" 值为"重要且紧急"、"重要不紧急"、"紧急不重要"、"不重要不紧急",
+  "summary": {
+    "重要且紧急": {
+      "items": [
+        {
+          "content": "具体任务内容",
+          "priority": "high",
+          "urgency": "high",
+          "timestamp": "时间戳",
+          "category": "任务类型"
+        }
+      ]
+    },
+    "重要不紧急": {
+      "items": [
+        {
+          "content": "具体任务内容",
+          "priority": "high",
+          "urgency": "low",
+          "timestamp": "时间戳",
+          "category": "任务类型"
+        }
+      ]
+    },
+    "紧急不重要": {
+      "items": [
+        {
+          "content": "具体任务内容",
+          "priority": "low",
+          "urgency": "high",
+          "timestamp": "时间戳",
+          "category": "任务类型"
+        }
+      ]
+    },
+    "不重要不紧急": {
+      "items": [
+        {
+          "content": "具体任务内容",
+          "priority": "low",
+          "urgency": "low",
+          "timestamp": "时间戳",
+          "category": "任务类型"
+        }
+      ]
+    }
+  }
+}
+<END>`
+
+      const aiResponse = await aiService.sendMessageWithScenario(customPrompt, 'basic', '', {}, true)
+
+      if (aiResponse.success) {
+        // 解析AI返回的总结
+        const aiContent = aiResponse.data?.choices[0]?.message?.content
+        if (aiContent) {
+          // 清理AI回复中的标签
+          const cleanContent = aiContent.replace(/<think>[\s\S]*?<\/think>/g, '')
+          
+          // 尝试解析JSON格式的总结
+          let summary = null
+          try {
+            const startMatch = cleanContent.match(/<START>\s*(\{[\s\S]*?\})\s*<END>/)
+            console.log("111 startMatch", startMatch) 
+            if (startMatch) {
+              const jsonContent = startMatch[1].trim()
+              console.log("111 jsonContent", jsonContent)
+              const parsedData = JSON.parse(jsonContent)
+              console.log("111 parsedData", parsedData)
+              // 使用summary字段作为总结
+              summary = parsedData.summary || cleanContent
+            } else {
+              summary = cleanContent
+            }
+          } catch (parseError) {
+            console.error('解析AI总结失败，使用原始内容:', parseError)
+            summary = cleanContent
+          }
+
+          // 保存总结到后端
+          const saveResult = await this.updateShortTermSummary(summary)
+          if (saveResult.success) {
+            console.log('短期记忆总结已生成并保存:', summary)
+            
+            return { 
+              success: true, 
+              message: '短期记忆总结生成并保存成功！',
+              data: this.shortTermData
+            }
+          } else {
+            console.error('保存短期记忆总结失败:', saveResult.message)
+            return { success: false, message: saveResult.message }
+          }
+        } else {
+          console.error('AI返回内容为空')
+          return { success: false, message: 'AI返回内容为空' }
+        }
+      } else {
+        console.error('AI短期记忆总结生成失败:', aiResponse.message)
+        return { success: false, message: aiResponse.message }
+      }
+    } catch (error) {
+      console.error('触发短期记忆总结失败:', error)
+      return { success: false, message: `短期记忆总结失败: ${error.message}` }
     }
   }
 }

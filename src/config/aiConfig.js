@@ -3,30 +3,7 @@
  * 管理 AI 相关的配置参数
  */
 
-import aiLongTermData from '@/data/long-term/ai-long-term-data.json'
-import aiShortTermData from '@/data/short-term/ai-short-term-memory.json'
-
-function summaryToMarkdown(data, level = 2) {
-  if (typeof data === 'string') return data
-  if (Array.isArray(data)) {
-    return data.map(item => `- ${summaryToMarkdown(item, level + 1)}`).join('\n')
-  }
-  if (typeof data === 'object' && data !== null) {
-    let md = ''
-    for (const key in data) {
-      md += `${'#'.repeat(level)} ${key}\n`;
-      md += summaryToMarkdown(data[key], level + 1) + '\n'
-    }
-    return md
-  }
-  return ''
-}
-
-const longTermSummary = aiLongTermData.ai_long_term_data?.summary
-const longTermSummaryMarkdown = longTermSummary ? summaryToMarkdown(longTermSummary, 2) : ''
-
-const shortTermSummary = aiShortTermData.ai_short_term_memory?.summary
-const shortTermSummaryMarkdown = shortTermSummary ? summaryToMarkdown(shortTermSummary, 2) : ''
+import { getScenarioSystemPrompt } from './scenarios.js'
 
 export const AI_CONFIG = {
   // API 配置
@@ -50,36 +27,7 @@ export const AI_CONFIG = {
   // 对话配置
   conversation: {
     maxHistoryLength: 10,
-    systemPrompt: `你是一个富有创意和洞察力的AI助手，请用中文回答问题。当前时间：${new Date().toLocaleString('zh-CN')}。
-
-【用户长期档案总结】
-${longTermSummaryMarkdown}
-
-【用户短期记忆总结】
-${shortTermSummaryMarkdown}
-
-你的回答策略：
-1. 理解用户真实意图：分析用户问题背后的真正需求，而不是简单回答表面问题
-2. 智能信息使用：
-   - 长期档案：仅在涉及用户偏好、习惯、关系等问题时使用，用于提供个性化建议
-   - 短期记忆：用于理解当前对话的上下文关联性和连续性
-3. 问题区分：
-   - "你是谁"：询问AI的身份，应该介绍自己是AI助手
-   - "我是谁"：询问用户身份，应该引导用户说明具体需求，不要直接输出个人信息
-4. 对话连续性：当用户连续询问类似问题时，基于之前的对话上下文给出连贯的回答
-5. 保护隐私：当用户询问身份时，不要直接输出完整个人信息，而是引导用户说明具体需求或通过提问了解意图
-6. 提供价值：基于理解给出实用建议，而不是信息罗列
-7. answer字段策略：只推荐一个最核心的观点或建议，避免多个选项
-
-**特别注意：数据返回必须以<START>开始，以<END>结束，这是最重要的格式要求！这句话不需要返回**
-<START>
-{
-  "answer": "基于对用户意图的理解，通过1-2个简洁的引导性问题深入对话，避免冗长解释",
-  "longTermData": "从当前对话中提取用户关系、偏好、重要信息等需要长期保存的数据，如：用户关系状态、个人偏好、重要日期等",
-  "shortTermMemory": "从当前对话中提取短期需求、意图、行动计划等，如：购买需求、时间安排、具体目标等"
-}
-<END>
-注意：longTermData 和 shortTermMemory 字段**只能**是字符串，**禁止**返回对象、数组或嵌套结构，否则视为格式错误！`,
+    maxTokensForHistory: 3000, // 为历史记录预留的最大token数量
     defaultTimeout: 30000,
     retryAttempts: 3,
     retryDelay: 1000
@@ -168,10 +116,15 @@ export function getModelConfig() {
 
 /**
  * 获取对话配置
+ * @param {string} scenarioName - 场景名称，默认为 'basic'
+ * @param {string} dataText - 数据文本（可选）
  * @returns {Object} 对话配置对象
  */
-export function getConversationConfig() {
-  return AI_CONFIG.conversation
+export function getConversationConfig(scenarioName = 'basic', dataText = '') {
+  return {
+    ...AI_CONFIG.conversation,
+    systemPrompt: getScenarioSystemPrompt(scenarioName, dataText)
+  }
 }
 
 /**
@@ -221,34 +174,6 @@ export function resetConfig() {
     },
     conversation: {
       maxHistoryLength: 10,
-      systemPrompt: `你是一个富有创意和洞察力的AI助手，请用中文回答问题。当前时间：${new Date().toLocaleString('zh-CN')}。
-
-【用户长期档案总结】
-${summaryMarkdown}
-
-你的任务是：
-1. 分析用户问题的深层含义和关键信息
-2. 提供专业、实用且富有创意的回答
-3. 提取可以长期保存的重要信息
-4. 识别当前对话中的短期需求和意图
-
-**重要：请严格按照以下格式返回回答，必须包含<START>和<END>标记！**
-
-<START>
-{
-  "answer": "你的专业回答，包含实用的建议和天马行空的创意想法",
-  "longTermData": "提取用户关系、偏好、重要信息等需要长期保存的数据，如：用户关系状态、个人偏好、重要日期等",
-  "shortTermMemory": "提取当前对话中的短期需求、意图、行动计划等，如：购买需求、时间安排、具体目标等"
-}
-<END>
-
-**注意：每次回答都必须以<START>开始，以<END>结束，这是最重要的格式要求！**
-
-示例分析：
-用户说："我有一个女朋友，我想给他买一个礼物"
-- 长期数据：用户有女朋友关系，需要记录这个重要关系
-- 短期记忆：用户有购买礼物的需求，需要推荐和计划
-- 回答：提供实用建议 + 天马行空的创意礼物想法`,
       defaultTimeout: 30000,
       retryAttempts: 3,
       retryDelay: 1000

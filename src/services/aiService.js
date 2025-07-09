@@ -4,7 +4,8 @@
  */
 
 import aiApiService from '@/api/aiApi.js'
-import { AI_CONFIG, getConfig } from '@/config/aiConfig.js'
+import { AI_CONFIG, getConfig, getConversationConfig } from '@/config/aiConfig.js'
+import configManager from '@/config/configManager.js'
 
 class AIService {
   constructor() {
@@ -102,35 +103,138 @@ class AIService {
   }
 
   /**
+   * 简单场景调用 - 无需上下文，只需指定场景
+   * @param {string} message - 用户消息或系统提示词
+   * @param {string} scenario - 场景名称 ('basic', 'longTerm', 'shortTerm', 'dynamicIsland')
+   * @param {string|Object} dataTextOrOptions - 数据文本或选项参数
+   * @param {Object} options - 可选参数
+   * @param {boolean} isSystemPrompt - 是否为系统提示词，默认为false
+   * @returns {Promise} AI回复
+   */
+  async sendMessageWithScenario(message, scenario, dataTextOrOptions = '', options = {}, isSystemPrompt = false) {
+    if (this.isProcessing) {
+      return {
+        success: false,
+        message: '正在处理中，请稍候...'
+      }
+    }
+
+    this.isProcessing = true
+
+    try {
+      // 处理参数：如果第三个参数是对象，则它是options，否则是dataText
+      let dataText = ''
+      let finalOptions = options
+      
+      if (typeof dataTextOrOptions === 'string') {
+        dataText = dataTextOrOptions
+      } else if (typeof dataTextOrOptions === 'object') {
+        finalOptions = { ...dataTextOrOptions, ...options }
+      }
+
+      // 构建缓存键，包含场景信息
+      const cacheKey = this.generateCacheKey(message, { ...finalOptions, scenario })
+      
+      // 检查缓存
+      if (getConfig('cache.enabled') && this.cache.has(cacheKey)) {
+        const cachedResponse = this.cache.get(cacheKey)
+        if (Date.now() - cachedResponse.timestamp < getConfig('cache.cacheExpiration')) {
+          this.isProcessing = false
+          return {
+            success: true,
+            data: cachedResponse.data,
+            message: '从缓存获取回复',
+            cached: true
+          }
+        }
+      }
+
+      // 构建消息数组，指定场景和数据文本
+      const messages = this.buildMessages(message, { ...finalOptions, scenario, dataText, isSystemPrompt })
+
+      // 发送请求
+      const response = await aiApiService.chatCompletion(messages, {
+        max_tokens: getConfig('model.maxTokens'),
+        temperature: getConfig('model.temperature'),
+        top_p: getConfig('model.topP'),
+        frequency_penalty: getConfig('model.frequencyPenalty'),
+        presence_penalty: getConfig('model.presencePenalty'),
+        ...options
+      })
+
+      if (response.success) {
+        // 缓存响应
+        if (getConfig('cache.enabled')) {
+          this.cache.set(cacheKey, {
+            data: response.data,
+            timestamp: Date.now()
+          })
+        }
+
+        return {
+          success: true,
+          data: response.data,
+          message: 'AI回复成功',
+          content: response.data.choices[0].message.content,
+          scenario: scenario
+        }
+      } else {
+        return {
+          success: false,
+          message: getConfig('errorHandling.fallbackResponse'),
+          error: response.error
+        }
+      }
+    } catch (error) {
+      console.error('AI服务错误:', error)
+      return {
+        success: false,
+        message: getConfig('errorHandling.fallbackResponse'),
+        error: error.message
+      }
+    } finally {
+      this.isProcessing = false
+    }
+  }
+
+  /**
    * 构建消息数组
-   * @param {string} message - 用户消息
+   * @param {string} message - 用户消息或系统提示词
    * @param {Object} options - 选项
    * @returns {Array} 消息数组
    */
   buildMessages(message, options = {}) {
     const messages = []
 
-    // 添加系统提示
-    if (getConfig('conversation.systemPrompt')) {
+    // 检查是否为系统提示词模式
+    const isSystemPrompt = options.isSystemPrompt || false
+    
+    if (isSystemPrompt) {
+      // 直接使用传入的消息作为系统提示词
       messages.push({
         role: 'system',
-        content: getConfig('conversation.systemPrompt')
+        content: message
       })
-    }
-
-    // 优先使用传入的历史上下文，否则使用内部存储的历史
-    let historyToInclude = []
-    if (options.conversationHistory && Array.isArray(options.conversationHistory)) {
-      historyToInclude = options.conversationHistory
-      console.log('使用传入的历史上下文:', historyToInclude.length, '条消息')
     } else {
-      const maxHistory = getConfig('conversation.maxHistoryLength')
-      historyToInclude = this.conversationHistory.slice(-maxHistory * 2)
-      console.log('使用内部存储的历史:', historyToInclude.length, '条消息')
+      // 获取当前场景的systemPrompt，传递dataText参数
+      const currentScenario = options.scenario || configManager.getCurrentScenario()
+      const dataText = options.dataText || ''
+      const conversationConfig = getConversationConfig(currentScenario, dataText)
+      
+      // 添加系统提示
+      if (conversationConfig.systemPrompt) {
+        messages.push({
+          role: 'system',
+          content: conversationConfig.systemPrompt
+        })
+      }
     }
 
+    // 智能历史截断
+    const historyToInclude = this.getOptimizedHistory(options)
+    
     // 添加对话历史
-    messages.push(...historyToInclude)
+    // messages.push(...historyToInclude)
 
     // 添加当前消息
     messages.push({
@@ -140,6 +244,86 @@ class AIService {
 
     console.log('构建的消息数组:', messages.length, '条消息')
     return messages
+  }
+
+  /**
+   * 获取优化后的对话历史
+   * @param {Object} options - 选项
+   * @returns {Array} 优化后的历史记录
+   */
+  getOptimizedHistory(options = {}) {
+    let historyToInclude = []
+    
+    // 优先使用传入的历史上下文，否则使用内部存储的历史
+    if (options.conversationHistory && Array.isArray(options.conversationHistory)) {
+      historyToInclude = options.conversationHistory
+      console.log('使用传入的历史上下文:', historyToInclude.length, '条消息')
+    } else {
+      const maxHistory = getConfig('conversation.maxHistoryLength')
+      historyToInclude = this.conversationHistory.slice(-maxHistory * 2)
+      console.log('使用内部存储的历史:', historyToInclude.length, '条消息')
+    }
+
+    // 估算当前token数量
+    const estimatedTokens = this.estimateTokens(historyToInclude)
+    const maxTokens = getConfig('model.maxTokens')
+    const maxHistoryTokens = getConfig('conversation.maxTokensForHistory')
+    const reservedTokens = 1000 // 为systemPrompt和当前消息预留token
+    
+    console.log('估算token数量:', estimatedTokens, '最大token:', maxTokens)
+
+    // 如果token数量过多，进行智能截断
+    const availableTokens = Math.min(maxTokens - reservedTokens, maxHistoryTokens)
+    if (estimatedTokens > availableTokens) {
+      historyToInclude = this.truncateHistory(historyToInclude, availableTokens)
+      console.log('历史已截断，保留消息数:', historyToInclude.length)
+    }
+
+    return historyToInclude
+  }
+
+  /**
+   * 估算token数量（简单估算）
+   * @param {Array} messages - 消息数组
+   * @returns {number} 估算的token数量
+   */
+  estimateTokens(messages) {
+    let totalTokens = 0
+    for (const message of messages) {
+      // 简单估算：中文字符约1.5个token，英文字符约0.75个token
+      const content = message.content || ''
+      const chineseChars = (content.match(/[\u4e00-\u9fa5]/g) || []).length
+      const englishChars = content.length - chineseChars
+      totalTokens += Math.ceil(chineseChars * 1.5 + englishChars * 0.75)
+    }
+    return totalTokens
+  }
+
+  /**
+   * 智能截断历史记录
+   * @param {Array} history - 历史记录
+   * @param {number} maxTokens - 最大token数量
+   * @returns {Array} 截断后的历史记录
+   */
+  truncateHistory(history, maxTokens) {
+    // 优先保留最近的对话
+    const truncatedHistory = []
+    let currentTokens = 0
+    
+    // 从最新的消息开始，向前添加
+    for (let i = history.length - 1; i >= 0; i--) {
+      const message = history[i]
+      const messageTokens = this.estimateTokens([message])
+      
+      if (currentTokens + messageTokens <= maxTokens) {
+        truncatedHistory.unshift(message)
+        currentTokens += messageTokens
+      } else {
+        break
+      }
+    }
+    
+    return truncatedHistory
   }
 
   /**
@@ -168,6 +352,31 @@ class AIService {
     this.conversationHistory = []
     this.cache.clear()
     this.saveConversationToStorage()
+  }
+
+  /**
+   * 清理过长的对话历史
+   * @param {number} maxMessages - 最大消息数量
+   */
+  trimHistory(maxMessages = 20) {
+    if (this.conversationHistory.length > maxMessages) {
+      this.conversationHistory = this.conversationHistory.slice(-maxMessages)
+      console.log('对话历史已清理，保留消息数:', this.conversationHistory.length)
+    }
+  }
+
+  /**
+   * 获取历史统计信息
+   * @returns {Object} 历史统计信息
+   */
+  getHistoryStats() {
+    const estimatedTokens = this.estimateTokens(this.conversationHistory)
+    return {
+      messageCount: this.conversationHistory.length,
+      estimatedTokens: estimatedTokens,
+      maxTokens: getConfig('model.maxTokens'),
+      maxHistoryTokens: getConfig('conversation.maxTokensForHistory')
+    }
   }
 
   /**

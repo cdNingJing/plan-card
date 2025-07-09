@@ -108,7 +108,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 0 12px 0;
+  padding: 0 0 12px 0;
   border-bottom: 1px solid rgba(99, 102, 241, 0.1);
   margin-bottom: 8px;
   flex-shrink: 0;

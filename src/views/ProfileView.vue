@@ -1,5 +1,7 @@
 <template>
   <div class="profile-chat-root">
+    <!-- 灵动岛组件始终显示 -->
+    <DynamicIsland />
     <div class="profile-chat-frame" :class="{ 'overview-mode': isOverviewMode }">
       <!-- 概览模式 -->
       <div v-if="isOverviewMode" class="profile-overview-container"
@@ -99,8 +101,11 @@ import { useHistoryStore } from '@/stores/historyStore'
 import HistoryCard from '@/components/cards/HistoryCard.vue'
 import LongTermDataCard from '@/components/cards/LongTermDataCard.vue'
 import ShortTermDataCard from '@/components/cards/ShortTermDataCard.vue'
+import DynamicIsland from '@/components/DynamicIsland.vue'
 import aiService from '@/services/aiService.js'
 import aiDataStorage from '@/utils/aiDataStorage.js'
+
+
 
 const historyStore = useHistoryStore()
 const { messages, currentCardIndex: storeCurrentCardIndex } = storeToRefs(historyStore)
@@ -128,22 +133,23 @@ const currentCard = computed(() => cards.value[currentCardIndex.value])
 // 固定输入框 placeholder
 const fixedPlaceholder = ref('输入您的问题...')
 
-// 后台数据加载函数
-const loadBackgroundData = async () => {
-  try {
-    // 加载长期数据
-    const longTermData = await aiDataStorage.getLongTermData()
-    const longTermDataCount = longTermData.ai_long_term_data.data_count || 0
-    console.log('后台长期数据 data_count:', longTermDataCount)
-    
-    // 加载短期数据
-    const shortTermData = await aiDataStorage.getShortTermData()
-    const shortTermDataCount = shortTermData.ai_short_term_memory.data_count || 0
-    console.log('后台短期记忆 data_count:', shortTermDataCount)
-  } catch (error) {
-    console.error('后台数据加载失败:', error)
-  }
-}
+// 灵动岛状态管理
+const showDynamicIsland = ref(false)
+const islandState = ref('collapsed')
+const islandProgress = ref(0)
+const islandStatusText = ref('处理中...')
+const islandDescription = ref('AI 理解中：分析意图')
+const islandResultType = ref('info')
+const islandTitleText = ref('处理完成')
+const islandConflictMessage = ref('')
+const islandConflictSuggestions = ref([])
+const islandResultMessage = ref('')
+const islandNextStepText = ref('下一步')
+
+// 灵动岛进度定时器
+let progressTimer = null
+
+
 
 // 组件挂载时加载历史消息和卡片位置
 onMounted(() => {
@@ -159,23 +165,18 @@ onMounted(() => {
   
   // 初始滚动到底部
   scrollToBottom();
-  
-  // 立即加载一次后台数据
-  loadBackgroundData();
-  
-  // 设置定时器，每30秒在后台加载一次数据
-  const backgroundTimer = setInterval(loadBackgroundData, 30000);
-  
-  // 组件卸载时清理定时器
-  onUnmounted(() => {
-    clearInterval(backgroundTimer);
-  });
 });
 
 // 组件卸载时保存消息和卡片位置
 onUnmounted(() => {
   historyStore.saveMessages()
   historyStore.saveCurrentCardIndex()
+  
+  // 清理灵动岛定时器
+  if (progressTimer) {
+    clearInterval(progressTimer)
+    progressTimer = null
+  }
 })
 
 const scrollToBottom = () => {
@@ -226,29 +227,14 @@ const handleSubmit = async () => {
     addMessage(value, 'user')
     inputValue.value = ''
     
-    // 显示加载状态
-    addMessage('正在思考中...', 'bot')
+    // 启动灵动岛流程
+    startDynamicIslandFlow()
     
     try {
-      // 构建历史消息上下文
-      const historyContext = historyStore.messages
-        .filter(msg => msg.type === 'user' || msg.type === 'bot')
-        .map(msg => ({
-          role: msg.type === 'user' ? 'user' : 'assistant',
-          content: msg.content
-        }))
-      
-      console.log('构建的历史上下文:', historyContext)
-
-      // 调用AI服务，传递历史上下文
-      const response = await aiService.sendMessage(value, {
-        conversationHistory: historyContext
-      })
+      // 调用AI服务，使用简单场景调用方法
+      const response = await aiService.sendMessageWithScenario(value, 'basic')
       
       if (response.success) {
-        // 移除加载消息
-        historyStore.messages.pop()
-        
         // 处理AI回复
         const aiContent = response?.data?.choices[0]?.message?.content
 
@@ -282,8 +268,6 @@ const handleSubmit = async () => {
                   const result = await aiDataStorage.saveLongTermData(key, parsedData.longTermData)
                   if (result.success) {
                     console.log('长期数据保存成功:', result.message)
-                    // 保存成功后立即加载后台数据
-                    loadBackgroundData();
                   } else {
                     console.error('长期数据保存失败:', result.message)
                   }
@@ -300,8 +284,12 @@ const handleSubmit = async () => {
                   const result = await aiDataStorage.saveShortTermData(key, parsedData.shortTermMemory)
                   if (result.success) {
                     console.log('短期记忆保存成功:', result.message)
-                    // 保存成功后立即加载后台数据
-                    loadBackgroundData();
+                    // 保存成功后调用短期记忆摘要整理
+                    try {
+                      console.log('短期记忆总结已触发')
+                    } catch (summaryError) {
+                      console.error('触发短期记忆总结失败:', summaryError)
+                    }
                   } else {
                     console.error('短期记忆保存失败:', result.message)
                   }
@@ -325,17 +313,36 @@ const handleSubmit = async () => {
         }
         
         console.log('AI回复成功:', response.data)
+        
+        // 完成灵动岛流程 - 成功状态
+        completeDynamicIslandFlow('success', {
+          message: 'AI 已成功处理您的请求',
+          nextStepText: '查看结果'
+        })
+        
       } else {
-        // 移除加载消息
-        historyStore.messages.pop()
+        // 完成灵动岛流程 - 错误状态
+        completeDynamicIslandFlow('conflict', {
+          message: '抱歉，我现在无法回答您的问题，请稍后再试。',
+          suggestions: [
+            { id: 1, text: '重试' },
+            { id: 2, text: '稍后处理' }
+          ]
+        })
         
         // 添加错误消息
         addMessage('抱歉，我现在无法回答您的问题，请稍后再试。', 'bot')
         console.error('AI回复失败:', response.error)
       }
     } catch (error) {
-      // 移除加载消息
-      historyStore.messages.pop()
+      // 完成灵动岛流程 - 网络错误状态
+      completeDynamicIslandFlow('conflict', {
+        message: '抱歉，发生了网络错误，请检查网络连接。',
+        suggestions: [
+          { id: 1, text: '重试' },
+          { id: 2, text: '稍后处理' }
+        ]
+      })
       
       // 添加错误消息
       addMessage('抱歉，发生了网络错误，请检查网络连接。', 'bot')
@@ -441,6 +448,116 @@ function onOverviewTouchEnd() {
 cards.value[0].label = '聊天记录';
 cards.value[1].label = '长期记忆';
 cards.value[2].label = '短期记忆';
+
+// 灵动岛相关方法
+const startDynamicIslandFlow = () => {
+  // 重置状态
+  islandProgress.value = 0
+  islandState.value = 'collapsed'
+  islandStatusText.value = '处理中...'
+  islandDescription.value = 'AI 理解中：分析意图'
+  islandResultType.value = 'info'
+  
+  // 显示灵动岛
+  showDynamicIsland.value = true
+  
+  // 启动进度模拟
+  startProgressSimulation()
+}
+
+const startProgressSimulation = () => {
+  // 清除之前的定时器
+  if (progressTimer) {
+    clearInterval(progressTimer)
+  }
+  
+  // 第一阶段：折叠态到半展开态
+  setTimeout(() => {
+    islandState.value = 'expanded'
+    islandDescription.value = 'AI 理解中：分析意图'
+  }, 500)
+  
+  // 模拟进度增长
+  progressTimer = setInterval(() => {
+    if (islandProgress.value < 90) {
+      islandProgress.value += Math.random() * 15 + 5 // 5-20的随机增长
+    }
+  }, 300)
+}
+
+const completeDynamicIslandFlow = (resultType, data = {}) => {
+  // 清除进度定时器
+  if (progressTimer) {
+    clearInterval(progressTimer)
+    progressTimer = null
+  }
+  
+  // 完成进度
+  islandProgress.value = 100
+  
+  // 切换到全展开态
+  setTimeout(() => {
+    islandState.value = 'full'
+    islandResultType.value = resultType
+    
+    if (resultType === 'conflict') {
+      islandTitleText.value = '需要确认'
+      islandConflictMessage.value = data.message || '检测到潜在冲突，请确认操作'
+      islandConflictSuggestions.value = data.suggestions || [
+        { id: 1, text: '确认继续' },
+        { id: 2, text: '取消操作' }
+      ]
+    } else {
+      islandTitleText.value = '处理完成'
+      islandResultMessage.value = data.message || 'AI 已成功处理您的请求'
+      islandNextStepText.value = data.nextStepText || '下一步'
+    }
+  }, 500)
+}
+
+const hideDynamicIsland = () => {
+  showDynamicIsland.value = false
+  islandProgress.value = 0
+  if (progressTimer) {
+    clearInterval(progressTimer)
+    progressTimer = null
+  }
+}
+
+const handleIslandSuggestion = (suggestion) => {
+  console.log('用户选择了建议:', suggestion)
+  hideDynamicIsland()
+  
+  // 根据建议执行相应操作
+  if (suggestion.text === '确认继续') {
+    // 继续执行操作
+    console.log('用户确认继续操作')
+  } else if (suggestion.text === '取消操作') {
+    // 取消操作
+    console.log('用户取消操作')
+  } else if (suggestion.text === '重试') {
+    // 重试操作
+    console.log('用户选择重试')
+    // 这里可以重新执行之前的操作
+    setTimeout(() => {
+      startDynamicIslandFlow()
+    }, 500)
+  } else if (suggestion.text === '稍后处理') {
+    // 稍后处理
+    console.log('用户选择稍后处理')
+  }
+}
+
+const handleIslandNextStep = () => {
+  console.log('用户点击下一步')
+  hideDynamicIsland()
+  // 这里可以添加下一步的具体逻辑
+}
+
+const handleIslandDismiss = () => {
+  console.log('用户选择稍后处理')
+  hideDynamicIsland()
+}
 
 // 页面加载时启动侧边卡片定时器
 startSideCardTimer()
