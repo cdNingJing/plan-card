@@ -58,83 +58,28 @@ export const infoDenseConfig = {
 // 可用工具集（全局默认值）
 export const AVAILABLE_TOOLS = [
   {
-    "title": "搜索功能",
-    "description": "可以搜索各种信息，包括工作、学习资料、新闻等"
+    "title": "提供无过敏菜单",
+    "description": "帮你规避食物过敏",
+    "component": "AllergyFreeMenuCard"
   },
   {
-    "title": "整理功能",
-    "description": "可以整理和分类信息，生成结构化数据"
+    "title": "去除蔬菜菜单",
+    "description": "让挑食的孩子吃得开心",
+    "component": "NoVegetableMenuCard"
   },
   {
-    "title": "分析功能",
-    "description": "可以分析用户需求，提供个性化建议"
+    "title": "派对主题推荐",
+    "description": "选一个孩子喜欢的风格",
+    "component": "PartyThemeCard"
   },
   {
-    "title": "规划功能",
-    "description": "可以制定计划和流程，帮助用户达成目标"
+    "title": "派对时间建议",
+    "description": "选一个大家都有空的时间",
+    "component": "PartyTimeCard"
   },
   {
-    "title": "提醒功能",
-    "description": "可以设置提醒和通知，帮助用户管理时间"
-  },
-  {
-    "title": "机票查询",
-    "description": "可以查询航班信息、价格比较、预订机票"
-  },
-  {
-    "title": "酒店查询",
-    "description": "可以查询酒店信息、价格、预订房间"
-  },
-  {
-    "title": "地图功能",
-    "description": "可以查询路线、地点、周边信息"
-  },
-  {
-    "title": "翻译功能",
-    "description": "可以翻译文本、文档、网页内容"
-  },
-  {
-    "title": "计算器",
-    "description": "可以进行各种数学计算、单位转换"
-  },
-  {
-    "title": "天气查询",
-    "description": "可以查询天气信息、预报、空气质量"
-  },
-  {
-    "title": "新闻资讯",
-    "description": "可以获取最新新闻、行业动态"
-  },
-  {
-    "title": "文档处理",
-    "description": "可以创建、编辑、转换各种文档格式"
-  },
-  {
-    "title": "图片处理",
-    "description": "可以编辑、压缩、转换图片格式"
-  },
-  {
-    "title": "语音识别",
-    "description": "可以将语音转换为文字"
-  },
-  {
-    "title": "日程管理",
-    "description": "可以管理日程安排、会议提醒"
-  },
-  {
-    "title": "联系人管理",
-    "description": "可以管理联系人信息、通讯录"
-  },
-  {
-    "title": "文件管理",
-    "description": "可以整理、备份、同步文件"
-  },
-  {
-    "title": "笔记功能",
-    "description": "可以记录、整理、搜索笔记"
-  },
-  {
-    "title": "任务管理",
-    "description": "可以创建、跟踪、完成待办事项"
+    "title": "采购清单生成",
+    "description": "告诉你需要准备什么东西",
+    "component": "ShoppingListCard"
   }
 ] 

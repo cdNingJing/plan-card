@@ -6,6 +6,7 @@
         <div class="documentation-header">
           <button class="search-btn" @click="startSearch">模拟检索全部文档</button>
           <button class="test-btn" @click="startPartialScan">测试扫描部分文档</button>
+          <button class="auto-test-btn" @click="startAutoTest">自动测试对话</button>
         </div>
         <DocumentationPanel />
       </div>
@@ -13,6 +14,12 @@
       <div class="profile-chat-frame">
         <DynamicIsland v-if="inputValue" />
         <div class="profile-chat-history-card-wrapper">
+          <!-- DynamicIslandCard 作为底层显示 -->
+          <div class="dynamic-island-card-container" v-if="showDynamicIslandCard">
+            <DynamicIslandCard :savedData="dynamicIslandData" />
+          </div>
+          
+          <!-- 历史对话卡片作为上层显示 -->
           <div
             class="profile-chat-history-card"
             :class="`history-${historyCardState}`"
@@ -20,7 +27,6 @@
           >
             <div class="profile-chat-history">
               <HistoryCard :messages="messages" :onToggleFull="toggleHistoryCardFull" :isFull="historyCardState === 'full'" />
-              <DynamicIslandCard v-if="showDynamicIslandCard" :savedData="dynamicIslandData" />
             </div>
           </div>
         </div>
@@ -62,6 +68,20 @@ const chatMessagesRef = ref(null)
 // 新增：历史卡片显示状态
 const historyCardState = ref('collapsed') // 'collapsed' | 'half' | 'full'
 
+// 灵动岛相关变量
+let progressTimer = null
+const showDynamicIsland = ref(false)
+const islandProgress = ref(0)
+const islandState = ref('collapsed')
+const islandStatusText = ref('处理中...')
+const islandDescription = ref('AI 理解中：分析意图')
+const islandResultType = ref('info')
+const islandTitleText = ref('')
+const islandConflictMessage = ref('')
+const islandConflictSuggestions = ref([])
+const islandResultMessage = ref('')
+const islandNextStepText = ref('')
+
 const onInputFocus = () => {
   if (historyCardState.value === 'collapsed') {
     historyCardState.value = 'half'
@@ -81,7 +101,7 @@ const dynamicIslandData = ref({
   timestamp: new Date().toISOString(),
   suggestions: []
 })
-const showDynamicIslandCard = ref(false)
+const showDynamicIslandCard = ref(true)
 
 const fixedPlaceholder = ref('输入您的问题...')
 
@@ -181,6 +201,22 @@ const addMessage = (content, type = 'user') => {
     type
   })
   scrollToBottom()
+  
+  // 监听扫描完成消息，自动显示灵动岛卡片
+  if (type === 'bot' && content.includes('📋 文档扫描已完成！')) {
+    setTimeout(() => {
+      showDynamicIslandCard.value = true
+      dynamicIslandData.value = {
+        timestamp: new Date().toISOString(),
+        suggestions: [
+          { id: 1, text: '查看详细报告' },
+          { id: 2, text: '导出分析结果' },
+          { id: 3, text: '继续扫描更多文档' }
+        ]
+      }
+      console.log('🎯 检测到扫描完成消息，自动显示灵动岛卡片')
+    }, 500)
+  }
 }
 
 const handleSubmit = async () => {
@@ -446,11 +482,77 @@ const handleIslandDismiss = () => {
 // 文档扫描相关方法
 const startSearch = () => {
   documentScanStore.startScan()
+  
+  // 模拟全量扫描完成后发送固定消息
+  setTimeout(() => {
+    const scanCompleteMessage = "📋 文档扫描已完成！\n\n已成功扫描全部文档，发现以下关键信息：\n\n• 项目配置文件完整\n• 组件结构清晰\n• 数据流设计合理\n• 文档覆盖全面\n\n💡 建议：您可以查看灵动岛卡片获取更详细的分析结果。"
+    addMessage(scanCompleteMessage, 'bot')
+  }, 5000) // 5秒后模拟全量扫描完成
 }
 
 const startPartialScan = () => {
   // 使用store中的部分扫描方法，扫描前3个文档
   documentScanStore.startPartialScan([1, 2, 3])
+  
+  // 模拟扫描完成后发送固定消息
+  setTimeout(() => {
+    const scanCompleteMessage = "📋 文档扫描已完成！\n\n已成功扫描 3 个文档，发现以下关键信息：\n\n• 项目配置文件完整\n• 组件结构清晰\n• 数据流设计合理\n\n💡 建议：您可以查看灵动岛卡片获取更详细的分析结果。"
+    addMessage(scanCompleteMessage, 'bot')
+  }, 3000) // 3秒后模拟扫描完成
+}
+
+// 自动测试对话方法
+const startAutoTest = async () => {
+  // 1. 默认选中输入框
+  await nextTick()
+  if (inputRef.value) {
+    inputRef.value.focus()
+  }
+  
+  // 2. 填写默认数据
+  const testMessage = "请帮我分析一下最近的文档内容，并给出总结"
+  inputValue.value = testMessage
+  
+  // 3. 触发部分文件扫描
+  setTimeout(() => {
+    documentScanStore.startPartialScan([1, 2, 3])
+  }, 500)
+  
+  // 4. 模拟提交对话
+  setTimeout(async () => {
+    // 添加用户消息
+    addMessage(testMessage, 'user')
+    inputValue.value = ''
+    
+    // 启动灵动岛流程
+    startDynamicIslandFlow()
+    
+    // 模拟AI处理延迟
+    setTimeout(() => {
+      // 添加扫描完成后的固定回复
+      const scanCompleteMessage = "📋 文档扫描已完成！\n\n已成功扫描 3 个文档，发现以下关键信息：\n\n• 项目配置文件完整\n• 组件结构清晰\n• 数据流设计合理\n\n💡 建议：您可以查看灵动岛卡片获取更详细的分析结果。"
+      addMessage(scanCompleteMessage, 'bot')
+      
+      // 完成灵动岛流程
+      completeDynamicIslandFlow('success', {
+        message: '文档分析完成',
+        nextStepText: '查看详情'
+      })
+      
+      // 显示灵动岛卡片
+      setTimeout(() => {
+        showDynamicIslandCard.value = true
+        dynamicIslandData.value = {
+          timestamp: new Date().toISOString(),
+          suggestions: [
+            { id: 1, text: '查看详细报告' },
+            { id: 2, text: '导出分析结果' },
+            { id: 3, text: '继续扫描更多文档' }
+          ]
+        }
+      }, 1000)
+    }, 2000)
+  }, 1000)
 }
 
 
@@ -490,7 +592,7 @@ const startPartialScan = () => {
   flex-wrap: wrap;
 }
 
-.search-btn, .test-btn {
+.search-btn, .test-btn, .auto-test-btn {
   padding: 4px 18px;
   border-radius: 18px;
   border: none;
@@ -524,6 +626,17 @@ const startPartialScan = () => {
   background: linear-gradient(90deg, #fde68a 0%, #fcd34d 100%);
 }
 
+.auto-test-btn {
+  background: linear-gradient(90deg, #d1fae5 0%, #a7f3d0 100%);
+  color: #059669;
+  box-shadow: 0 2px 12px 0 rgba(5,150,105,0.08);
+}
+
+.auto-test-btn:hover {
+  box-shadow: 0 4px 18px 0 rgba(5,150,105,0.15);
+  background: linear-gradient(90deg, #a7f3d0 0%, #6ee7b7 100%);
+}
+
 .profile-chat-frame {
   flex: 0 0 35%;
   height: 100%;
@@ -555,6 +668,20 @@ const startPartialScan = () => {
   align-items: flex-end;
 }
 
+.dynamic-island-card-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 20px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.dynamic-island-card-container > * {
+  pointer-events: auto;
+}
+
 
 
 .profile-chat-history-card {
@@ -567,7 +694,8 @@ const startPartialScan = () => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  z-index: 2;
+  z-index: 10;
+  position: relative;
   transition: height 0.3s, max-height 0.3s, min-height 0.3s;
   height: 0;
   max-height: 0;
