@@ -26,8 +26,8 @@
     
     <!-- 可滚动的内容区域 -->
     <div class="history-content" ref="historyContainerRef">
-      <div v-for="message in messages" :key="message.id" :class="['history-bubble', message.type]">
-        <span class="bubble-content">{{ message.content }}</span>
+      <div v-for="message in messages" :key="message?.id || Math.random()" :class="['history-bubble', message?.type]">
+        <span class="bubble-content">{{ message?.content || '' }}</span>
       </div>
     </div>
   </div>
@@ -37,7 +37,12 @@
 import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useHistoryStore } from '@/stores/historyStore'
 
-const props = defineProps({ messages: Array })
+const props = defineProps({ 
+  messages: { 
+    type: Array, 
+    default: () => [] 
+  } 
+})
 const historyStore = useHistoryStore()
 
 const historyContainerRef = ref(null)

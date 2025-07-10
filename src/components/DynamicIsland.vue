@@ -43,6 +43,7 @@ import { computed, ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { X } from 'lucide-vue-next'
 import aiDataStorage from '@/utils/aiDataStorage.js'
 import aiService from '@/services/aiService.js'
+import { AVAILABLE_TOOLS } from '@/config/infoDenseConfig.js'
 
 // 内容数组（扩充为10条以上）
 const STREAM_TEXTS = [
@@ -257,20 +258,20 @@ const animateSwap = async (newMsg) => {
 }
 
 const handleBubbleClick = async (msg) => {
+  console.log('🔵 用户点击了对话气泡:', msg)
   animateSwap(msg)
   setTimeout(async () => {
     contentTransition.value = 'idle'
-    isLoading.value = true
-    stopLogRolling()
-    startLogRolling()
     
-    // 模拟重新调用接口获取最新数据
+    console.log('🔄 开始调用接口获取最新数据...')
+    // 调用接口获取最新数据，loading效果在接口内部处理
     await fetchMockApiData()
     
+    console.log('💾 开始保存数据到全局存储...')
+    // 保存数据到全局存储
+    saveDynamicIslandData()
+    
     setTimeout(() => {
-      isLoading.value = false
-      stopLogRolling()
-      logLines.value = []
       contentTransition.value = 'rotate-in'
       setTimeout(() => {
         contentTransition.value = 'idle'
@@ -279,11 +280,48 @@ const handleBubbleClick = async (msg) => {
   }, 800)
 }
 
+// 保存灵动岛数据到全局存储
+const saveDynamicIslandData = () => {
+  try {
+    console.log('📊 当前mockApiData数据:', mockApiData.value)
+    
+    const savedData = {
+      timestamp: new Date().toISOString(),
+      suggestions: mockApiData.value.map(item => ({
+        type: item.type,
+        content: item.content,
+        priority: item.priority,
+        usedTools: item.usedTools || []
+      }))
+    }
+    
+    console.log('📝 准备保存的数据结构:', savedData)
+    
+    // 保存到localStorage
+    localStorage.setItem('dynamic_island_saved_data', JSON.stringify(savedData))
+    console.log('💾 数据已保存到localStorage')
+    
+    // 保存到sessionStorage作为备份
+    sessionStorage.setItem('dynamic_island_saved_data', JSON.stringify(savedData))
+    console.log('💾 数据已保存到sessionStorage')
+    
+    // 触发自定义事件，通知其他组件
+    window.dispatchEvent(new CustomEvent('dynamicIslandDataSaved', {
+      detail: savedData
+    }))
+    
+    console.log('📡 已触发dynamicIslandDataSaved事件')
+    console.log('✅ 灵动岛数据保存完成:', savedData)
+  } catch (error) {
+    console.error('❌ 保存灵动岛数据失败:', error)
+  }
+}
+
 // 处理内容颜色显示的方法
 const processContentWithColors = (item) => {
   let processedContent = item.content
   
-  availableTools.forEach(tool => {
+  AVAILABLE_TOOLS.forEach(tool => {
     const regex = new RegExp(tool.title, 'g')
     // 检查该工具是否在usedTools数组中
     const isUsed = item.usedTools && item.usedTools.includes(tool.title)
@@ -307,90 +345,6 @@ onBeforeUnmount(() => {
   stopLogRolling()
 })
 
-// 可用工具集
-const availableTools = [
-  {
-    "title": "搜索功能",
-    "description": "可以搜索各种信息，包括工作、学习资料、新闻等"
-  },
-  {
-    "title": "整理功能",
-    "description": "可以整理和分类信息，生成结构化数据"
-  },
-  {
-    "title": "分析功能",
-    "description": "可以分析用户需求，提供个性化建议"
-  },
-  {
-    "title": "规划功能",
-    "description": "可以制定计划和流程，帮助用户达成目标"
-  },
-  {
-    "title": "提醒功能",
-    "description": "可以设置提醒和通知，帮助用户管理时间"
-  },
-  {
-    "title": "机票查询",
-    "description": "可以查询航班信息、价格比较、预订机票"
-  },
-  {
-    "title": "酒店查询",
-    "description": "可以查询酒店信息、价格、预订房间"
-  },
-  {
-    "title": "地图功能",
-    "description": "可以查询路线、地点、周边信息"
-  },
-  {
-    "title": "翻译功能",
-    "description": "可以翻译文本、文档、网页内容"
-  },
-  {
-    "title": "计算器",
-    "description": "可以进行各种数学计算、单位转换"
-  },
-  {
-    "title": "天气查询",
-    "description": "可以查询天气信息、预报、空气质量"
-  },
-  {
-    "title": "新闻资讯",
-    "description": "可以获取最新新闻、行业动态"
-  },
-  {
-    "title": "文档处理",
-    "description": "可以创建、编辑、转换各种文档格式"
-  },
-  {
-    "title": "图片处理",
-    "description": "可以编辑、压缩、转换图片格式"
-  },
-  {
-    "title": "语音识别",
-    "description": "可以将语音转换为文字"
-  },
-  {
-    "title": "日程管理",
-    "description": "可以管理日程安排、会议提醒"
-  },
-  {
-    "title": "联系人管理",
-    "description": "可以管理联系人信息、通讯录"
-  },
-  {
-    "title": "文件管理",
-    "description": "可以整理、备份、同步文件"
-  },
-  {
-    "title": "笔记功能",
-    "description": "可以记录、整理、搜索笔记"
-  },
-  {
-    "title": "任务管理",
-    "description": "可以创建、跟踪、完成待办事项"
-  }
-]
-
 // 模拟接口数据
 const mockApiData = ref([])
 
@@ -412,7 +366,7 @@ const fetchMockApiData = async () => {
 用户当前内容：${currentUserContent}
 
 可用工具集：
-${JSON.stringify(availableTools, null, 2)}
+${JSON.stringify(AVAILABLE_TOOLS, null, 2)}
 
 要求：
 1. 分析用户当前内容，理解用户需求

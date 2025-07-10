@@ -102,6 +102,7 @@ import HistoryCard from '@/components/cards/HistoryCard.vue'
 import LongTermDataCard from '@/components/cards/LongTermDataCard.vue'
 import ShortTermDataCard from '@/components/cards/ShortTermDataCard.vue'
 import DynamicIsland from '@/components/DynamicIsland.vue'
+import DynamicIslandCard from '@/components/cards/DynamicIslandCard.vue'
 import aiService from '@/services/aiService.js'
 import aiDataStorage from '@/utils/aiDataStorage.js'
 
@@ -113,11 +114,66 @@ const { messages, currentCardIndex: storeCurrentCardIndex } = storeToRefs(histor
 const inputValue = ref('')
 const chatMessagesRef = ref(null)
 
-const cards = ref([
-  { id: 1, component: markRaw(HistoryCard), props: { messages }, gradient: 'linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%)', inputShadowFocus: '0 4px 18px 0 rgba(60, 60, 120, 0.18), 0 2px 0 0 #6366f1' },
-  { id: 2, component: markRaw(LongTermDataCard), props: {}, gradient: 'linear-gradient(135deg, #d1fae5 0%, #10b981 100%)', inputBg: 'linear-gradient(135deg, #d1fae5 0%, #10b981 100%)', inputPlaceholder: '长期记忆卡片…', inputShadow: '0 2px 12px 0 rgba(16, 185, 129, 0.10), 0 1.5px 0 0 #10b981', inputShadowFocus: '0 4px 18px 0 rgba(16, 185, 129, 0.18), 0 2px 0 0 #059669' },
-  { id: 3, component: markRaw(ShortTermDataCard), props: {}, gradient: 'linear-gradient(135deg, #fef3c7 0%, #f59e0b 100%)', inputBg: 'linear-gradient(135deg, #fef3c7 0%, #f59e0b 100%)', inputPlaceholder: '短期记忆卡片…', inputShadow: '0 2px 12px 0 rgba(245, 158, 11, 0.10), 0 1.5px 0 0 #f59e0b', inputShadowFocus: '0 4px 18px 0 rgba(245, 158, 11, 0.18), 0 2px 0 0 #d97706' },
-])
+// 灵动岛卡片数据
+const dynamicIslandData = ref({
+  timestamp: new Date().toISOString(),
+  suggestions: []
+})
+
+// 从localStorage加载灵动岛数据
+const loadDynamicIslandData = () => {
+  try {
+    // 优先从localStorage加载，如果没有则从sessionStorage加载
+    let savedData = localStorage.getItem('dynamic_island_saved_data')
+    if (!savedData) {
+      savedData = sessionStorage.getItem('dynamic_island_saved_data')
+    }
+    
+    if (savedData) {
+      const parsedData = JSON.parse(savedData)
+      dynamicIslandData.value = parsedData
+      showDynamicIslandCard.value = true
+      console.log('📱 从浏览器存储加载灵动岛数据:', parsedData)
+      
+      // 如果有数据，自动切换到灵动岛卡片
+      setTimeout(() => {
+        console.log('🎯 检测到灵动岛数据，自动切换到灵动岛卡片')
+        historyStore.setCurrentCardIndex(3)
+      }, 500)
+    } else {
+      console.log('📱 未找到灵动岛数据，保持默认状态')
+    }
+  } catch (error) {
+    console.error('❌ 加载灵动岛数据失败:', error)
+  }
+}
+
+// 灵动岛卡片显示状态
+const showDynamicIslandCard = ref(false)
+
+const cards = computed(() => {
+  const baseCards = [
+    { id: 1, component: markRaw(HistoryCard), props: { messages: messages.value }, gradient: 'linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%)', inputShadowFocus: '0 4px 18px 0 rgba(60, 60, 120, 0.18), 0 2px 0 0 #6366f1' },
+    { id: 2, component: markRaw(LongTermDataCard), props: {}, gradient: 'linear-gradient(135deg, #d1fae5 0%, #10b981 100%)', inputBg: 'linear-gradient(135deg, #d1fae5 0%, #10b981 100%)', inputPlaceholder: '长期记忆卡片…', inputShadow: '0 2px 12px 0 rgba(16, 185, 129, 0.10), 0 1.5px 0 0 #10b981', inputShadowFocus: '0 4px 18px 0 rgba(16, 185, 129, 0.18), 0 2px 0 0 #059669' },
+    { id: 3, component: markRaw(ShortTermDataCard), props: {}, gradient: 'linear-gradient(135deg, #fef3c7 0%, #f59e0b 100%)', inputBg: 'linear-gradient(135deg, #fef3c7 0%, #f59e0b 100%)', inputPlaceholder: '短期记忆卡片…', inputShadow: '0 2px 12px 0 rgba(245, 158, 11, 0.10), 0 1.5px 0 0 #f59e0b', inputShadowFocus: '0 4px 18px 0 rgba(245, 158, 11, 0.18), 0 2px 0 0 #d97706' },
+  ]
+  
+  // 只有当showDynamicIslandCard为true时才添加灵动岛卡片
+  if (showDynamicIslandCard.value) {
+    baseCards.push({
+      id: 4, 
+      component: markRaw(DynamicIslandCard), 
+      props: { savedData: dynamicIslandData }, 
+      gradient: 'linear-gradient(135deg, #ffe29f 0%, #ffa99f 100%)', 
+      inputBg: 'linear-gradient(135deg, #ffe29f 0%, #ffa99f 100%)', 
+      inputPlaceholder: '灵动岛建议…', 
+      inputShadow: '0 2px 12px 0 rgba(255, 174, 127, 0.10), 0 1.5px 0 0 #ffe29f', 
+      inputShadowFocus: '0 4px 18px 0 rgba(255, 174, 127, 0.18), 0 2px 0 0 #ffa99f'
+    })
+  }
+  
+  return baseCards
+})
 
 // 使用 store 中的卡片索引
 const currentCardIndex = computed({
@@ -165,6 +221,25 @@ onMounted(() => {
   
   // 初始滚动到底部
   scrollToBottom();
+  
+  // 加载灵动岛数据
+  loadDynamicIslandData()
+  
+  // 监听灵动岛数据保存事件
+  console.log('🎯 ProfileView组件已挂载，开始监听dynamicIslandDataSaved事件')
+  
+  window.addEventListener('dynamicIslandDataSaved', (event) => {
+    console.log('📨 ProfileView收到灵动岛数据保存事件:', event.detail)
+    dynamicIslandData.value = event.detail
+    showDynamicIslandCard.value = true
+    console.log('🔄 灵动岛数据已更新，显示灵动岛卡片:', dynamicIslandData.value)
+    
+    // 自动切换到灵动岛卡片（第4张卡片，索引为3）
+    setTimeout(() => {
+      console.log('🎯 自动切换到灵动岛卡片')
+      historyStore.setCurrentCardIndex(3)
+    }, 100)
+  })
 });
 
 // 组件卸载时保存消息和卡片位置
@@ -444,10 +519,14 @@ function onOverviewTouchEnd() {
   overviewDeltaY = 0
 }
 
-// 卡片label
-cards.value[0].label = '聊天记录';
-cards.value[1].label = '长期记忆';
-cards.value[2].label = '短期记忆';
+// 卡片label - 动态设置
+const setCardLabels = () => {
+  const baseLabels = ['聊天记录', '长期记忆', '短期记忆']
+  if (showDynamicIslandCard.value) {
+    baseLabels.push('灵动岛建议')
+  }
+  return baseLabels
+}
 
 // 灵动岛相关方法
 const startDynamicIslandFlow = () => {
