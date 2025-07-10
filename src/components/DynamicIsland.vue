@@ -1,9 +1,9 @@
 <template>
   <div class="dynamic-island-outer">
     <!-- 删除按钮 -->
-    <div v-if="showContentArea" class="delete-button" @click="handleDelete">
+    <!-- <div v-if="showContentArea" class="delete-button" @click="handleDelete">
       <X class="delete-icon" />
-    </div>
+    </div> -->
     <!-- 顶部灵动岛主区域 -->
     <div
       class="dynamic-island-main"

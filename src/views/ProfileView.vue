@@ -1,6 +1,5 @@
 <template>
   <div class="profile-chat-root">
-
     <div class="profile-layout-container">
       <!-- 文档区域 - 70% -->
       <div class="documentation-section">
@@ -11,108 +10,41 @@
         <DocumentationPanel />
       </div>
       <!-- 聊天区域 - 30% -->
-      <div class="profile-chat-frame" :class="{ 'overview-mode': isOverviewMode }">
-      <!-- 灵动岛组件始终显示 -->
-      <DynamicIsland />
-      <!-- 概览模式 -->
-      <div v-if="isOverviewMode" class="profile-overview-container"
-        @touchstart="onOverviewTouchStart"
-        @touchmove="onOverviewTouchMove"
-        @touchend="onOverviewTouchEnd"
-        @mousedown="onOverviewTouchStart"
-        @mousemove="onOverviewTouchMove"
-        @mouseup="onOverviewTouchEnd"
-      >
-        <div class="profile-overview-header">
-          <h3>{{ cards[currentCardIndex]?.label || '所有卡片' }}</h3>
-          <p>向下滑动返回，左右滑动浏览</p>
-        </div>
-        <div class="profile-overview-cards-scrollbox">
-          <div class="profile-overview-cards-horizontal no-scrollbar">
-            <div
-              v-for="(card, idx) in cards"
-              :key="card.id"
-              class="profile-overview-card-horizontal"
-              @click="selectCard(idx)"
-              :style="overviewCardUniformStyle"
-            >
-              <div class="overview-card-aspect">
-                <div class="overview-card-preview-horizontal" :style="{ background: card.gradient }">
-                  <div class="overview-card-scale">
-                    <component :is="card.component" v-bind="card.props" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- 正常模式 -->
-      <template v-else>
-        <!-- 卡片轮播 -->
+      <div class="profile-chat-frame">
+        <DynamicIsland v-if="inputValue" />
         <div class="profile-chat-history-card-wrapper">
-          <div v-if="showSideCards" class="profile-sidecard-left">
-            <div class="sidecard-icon">
-              <span class="arrow arrow1">‹</span>
-              <span class="arrow arrow2">‹</span>
-              <span class="arrow arrow3">‹</span>
-            </div>
-          </div>
-          <div v-if="showSideCards" class="profile-sidecard-right">
-            <div class="sidecard-icon">
-              <span class="arrow arrow1">›</span>
-              <span class="arrow arrow2">›</span>
-              <span class="arrow arrow3">›</span>
-            </div>
-          </div>
           <div
-            v-if="currentCard"
             class="profile-chat-history-card"
-            @touchstart="onTouchStart"
-            @touchmove="onTouchMove"
-            @touchend="onTouchEnd"
-            @mousedown="onTouchStart"
-            @mousemove="onTouchMove"
-            @mouseup="onTouchEnd"
+            :class="`history-${historyCardState}`"
+            ref="historyCardRef"
           >
-            <div class="profile-chat-history" ref="chatMessagesRef" :style="{ background: currentCard.gradient }">
-              <component :is="currentCard.component" v-bind="currentCard.props" />
+            <div class="profile-chat-history">
+              <HistoryCard :messages="messages" :onToggleFull="toggleHistoryCardFull" :isFull="historyCardState === 'full'" />
+              <DynamicIslandCard v-if="showDynamicIslandCard" :savedData="dynamicIslandData" />
             </div>
           </div>
         </div>
-        <!-- 卡片指示器 -->
-        <div class="profile-card-indicator">
-          <span
-            v-for="(card, idx) in cards"
-            :key="card.id"
-            :class="['indicator-dot', { active: idx === currentCardIndex }]"
-          ></span>
-        </div>
-        <!-- 输入框 -->
-        <div class="profile-chat-inputbar" v-if="currentCard">
+        <div class="profile-chat-inputbar">
           <input
             v-model="inputValue"
             class="profile-chat-input"
             type="text"
             :placeholder="fixedPlaceholder"
-            :style="{ background: currentCard.inputBg }"
             @keydown.enter="handleSubmit"
+            @focus="onInputFocus"
+            ref="inputRef"
           />
         </div>
-      </template>
-    </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, nextTick, computed, onMounted, onUnmounted, markRaw } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useHistoryStore } from '@/stores/historyStore'
 import HistoryCard from '@/components/cards/HistoryCard.vue'
-import LongTermDataCard from '@/components/cards/LongTermDataCard.vue'
-import ShortTermDataCard from '@/components/cards/ShortTermDataCard.vue'
 import DynamicIsland from '@/components/DynamicIsland.vue'
 import DynamicIslandCard from '@/components/cards/DynamicIslandCard.vue'
 import DocumentationPanel from '@/components/DocumentationPanel.vue'
@@ -120,109 +52,66 @@ import aiService from '@/services/aiService.js'
 import aiDataStorage from '@/utils/aiDataStorage.js'
 import { useDocumentScanStore } from '@/stores/documentScanStore.js'
 
-
-
 const historyStore = useHistoryStore()
 const documentScanStore = useDocumentScanStore()
-const { messages, currentCardIndex: storeCurrentCardIndex } = storeToRefs(historyStore)
+const { messages } = storeToRefs(historyStore)
 
 const inputValue = ref('')
 const chatMessagesRef = ref(null)
+
+// 新增：历史卡片显示状态
+const historyCardState = ref('collapsed') // 'collapsed' | 'half' | 'full'
+
+const onInputFocus = () => {
+  if (historyCardState.value === 'collapsed') {
+    historyCardState.value = 'half'
+  }
+}
+const onInputBlur = () => {
+  if (historyCardState.value === 'half') {
+    historyCardState.value = 'collapsed'
+  }
+}
+const toggleHistoryCardFull = () => {
+  historyCardState.value = historyCardState.value === 'full' ? 'half' : 'full'
+}
 
 // 灵动岛卡片数据
 const dynamicIslandData = ref({
   timestamp: new Date().toISOString(),
   suggestions: []
 })
+const showDynamicIslandCard = ref(false)
 
-// 从localStorage加载灵动岛数据
+const fixedPlaceholder = ref('输入您的问题...')
+
 const loadDynamicIslandData = () => {
   try {
-    // 优先从localStorage加载，如果没有则从sessionStorage加载
     let savedData = localStorage.getItem('dynamic_island_saved_data')
-    if (!savedData) {
-      savedData = sessionStorage.getItem('dynamic_island_saved_data')
-    }
-    
     if (savedData) {
-      const parsedData = JSON.parse(savedData)
-      dynamicIslandData.value = parsedData
+      dynamicIslandData.value = JSON.parse(savedData)
       showDynamicIslandCard.value = true
-      console.log('📱 从浏览器存储加载灵动岛数据:', parsedData)
-      
-      // 如果有数据，自动切换到灵动岛卡片
-      setTimeout(() => {
-        console.log('🎯 检测到灵动岛数据，自动切换到灵动岛卡片')
-        historyStore.setCurrentCardIndex(3)
-      }, 500)
-    } else {
-      console.log('📱 未找到灵动岛数据，保持默认状态')
     }
-  } catch (error) {
-    console.error('❌ 加载灵动岛数据失败:', error)
+  } catch (e) {
+    // 忽略错误
   }
 }
 
-// 灵动岛卡片显示状态
-const showDynamicIslandCard = ref(false)
+const historyCardRef = ref(null)
+const inputRef = ref(null)
 
-const cards = computed(() => {
-  const baseCards = [
-    { id: 1, component: markRaw(HistoryCard), props: { messages: messages.value }, gradient: 'linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%)', inputShadowFocus: '0 4px 18px 0 rgba(60, 60, 120, 0.18), 0 2px 0 0 #6366f1' },
-    { id: 2, component: markRaw(LongTermDataCard), props: {}, gradient: 'linear-gradient(135deg, #d1fae5 0%, #10b981 100%)', inputBg: 'linear-gradient(135deg, #d1fae5 0%, #10b981 100%)', inputPlaceholder: '长期记忆卡片…', inputShadow: '0 2px 12px 0 rgba(16, 185, 129, 0.10), 0 1.5px 0 0 #10b981', inputShadowFocus: '0 4px 18px 0 rgba(16, 185, 129, 0.18), 0 2px 0 0 #059669' },
-    { id: 3, component: markRaw(ShortTermDataCard), props: {}, gradient: 'linear-gradient(135deg, #fef3c7 0%, #f59e0b 100%)', inputBg: 'linear-gradient(135deg, #fef3c7 0%, #f59e0b 100%)', inputPlaceholder: '短期记忆卡片…', inputShadow: '0 2px 12px 0 rgba(245, 158, 11, 0.10), 0 1.5px 0 0 #f59e0b', inputShadowFocus: '0 4px 18px 0 rgba(245, 158, 11, 0.18), 0 2px 0 0 #d97706' },
-  ]
-  
-  // 只有当showDynamicIslandCard为true时才添加灵动岛卡片
-  if (showDynamicIslandCard.value) {
-    baseCards.push({
-      id: 4, 
-      component: markRaw(DynamicIslandCard), 
-      props: { savedData: dynamicIslandData }, 
-      gradient: 'linear-gradient(135deg, #ffe29f 0%, #ffa99f 100%)', 
-      inputBg: 'linear-gradient(135deg, #ffe29f 0%, #ffa99f 100%)', 
-      inputPlaceholder: '灵动岛建议…', 
-      inputShadow: '0 2px 12px 0 rgba(255, 174, 127, 0.10), 0 1.5px 0 0 #ffe29f', 
-      inputShadowFocus: '0 4px 18px 0 rgba(255, 174, 127, 0.18), 0 2px 0 0 #ffa99f'
-    })
+const handleGlobalClick = (e) => {
+  if (
+    historyCardRef.value?.contains(e.target) ||
+    inputRef.value?.contains(e.target)
+  ) {
+    return
   }
-  
-  return baseCards
-})
+  if (historyCardState.value === 'half') {
+    historyCardState.value = 'collapsed'
+  }
+}
 
-// 使用 store 中的卡片索引
-const currentCardIndex = computed({
-  get: () => storeCurrentCardIndex.value,
-  set: (value) => historyStore.setCurrentCardIndex(value)
-})
-
-const isInputFocus = ref(false)
-const isOverviewMode = ref(false)
-const showSideCards = ref(false)
-const currentCard = computed(() => cards.value[currentCardIndex.value])
-
-// 固定输入框 placeholder
-const fixedPlaceholder = ref('输入您的问题...')
-
-// 灵动岛状态管理
-const showDynamicIsland = ref(false)
-const islandState = ref('collapsed')
-const islandProgress = ref(0)
-const islandStatusText = ref('处理中...')
-const islandDescription = ref('AI 理解中：分析意图')
-const islandResultType = ref('info')
-const islandTitleText = ref('处理完成')
-const islandConflictMessage = ref('')
-const islandConflictSuggestions = ref([])
-const islandResultMessage = ref('')
-const islandNextStepText = ref('下一步')
-
-// 灵动岛进度定时器
-let progressTimer = null
-
-
-
-// 组件挂载时加载历史消息和卡片位置
 onMounted(() => {
   // 只在本地没有历史数据时发送欢迎消息
   const hasHistory = !!localStorage.getItem('chat_history');
@@ -233,10 +122,11 @@ onMounted(() => {
       type: 'bot'
     });
   }
-  
-  // 初始滚动到底部
-  scrollToBottom();
-  
+  nextTick(() => {
+    if (chatMessagesRef.value) {
+      chatMessagesRef.value.scrollTop = chatMessagesRef.value.scrollHeight
+    }
+  })
   // 加载灵动岛数据
   loadDynamicIslandData()
   
@@ -259,9 +149,9 @@ onMounted(() => {
       historyStore.setCurrentCardIndex(3)
     }, 100)
   })
+  document.addEventListener('mousedown', handleGlobalClick)
 });
 
-// 组件卸载时保存消息和卡片位置
 onUnmounted(() => {
   historyStore.saveMessages()
   historyStore.saveCurrentCardIndex()
@@ -271,6 +161,7 @@ onUnmounted(() => {
     clearInterval(progressTimer)
     progressTimer = null
   }
+  document.removeEventListener('mousedown', handleGlobalClick)
 })
 
 const scrollToBottom = () => {
@@ -281,29 +172,7 @@ const scrollToBottom = () => {
   })
 }
 
-// 控制侧边卡片显示
-let sideCardTimer = null
 
-const startSideCardTimer = () => {
-  if (sideCardTimer) {
-    clearTimeout(sideCardTimer)
-  }
-  
-  // 只在历史聊天界面（第一张卡片）且不是概览模式时启动定时器
-  if (currentCardIndex.value === 0 && !isOverviewMode.value) {
-    sideCardTimer = setTimeout(() => {
-      showSideCards.value = true
-    }, 5000) // 5秒后显示
-  }
-}
-
-const hideSideCards = () => {
-  showSideCards.value = false
-  if (sideCardTimer) {
-    clearTimeout(sideCardTimer)
-    sideCardTimer = null
-  }
-}
 
 const addMessage = (content, type = 'user') => {
   historyStore.addMessage({
@@ -444,99 +313,16 @@ const handleSubmit = async () => {
     }
     
     // 保持在当前卡片，不自动跳转到历史记录页面
-    hideSideCards() // 提交后隐藏侧边卡片
   }
   // 打印全局历史消息
   console.log('历史消息：', historyStore.messages)
 }
 
-// 滑动切换卡片
-let startX = 0
-let startY = 0
-let deltaX = 0
-let deltaY = 0
-let isSwiping = false
 
-function onTouchStart(e) {
-  isSwiping = true
-  startX = e.touches ? e.touches[0].clientX : e.clientX
-  startY = e.touches ? e.touches[0].clientY : e.clientY
-}
-function onTouchMove(e) {
-  if (!isSwiping) return
-  const x = e.touches ? e.touches[0].clientX : e.clientX
-  const y = e.touches ? e.touches[0].clientY : e.clientY
-  deltaX = x - startX
-  deltaY = y - startY
-}
-function onTouchEnd() {
-  if (!isSwiping) return
-  
-  // 检查是否为向上滑动（显示概览模式）
-  if (deltaY < -80 && Math.abs(deltaY) > Math.abs(deltaX)) {
-    isOverviewMode.value = true
-  }
-  // 检查是否为向下滑动（退出概览模式）
-  else if (deltaY > 80 && Math.abs(deltaY) > Math.abs(deltaX)) {
-    isOverviewMode.value = false
-  }
-  // 水平滑动切换卡片
-  else if (deltaX > 60) {
-    // 向左滑动，显示上一张卡片
-    if (currentCardIndex.value > 0) {
-      historyStore.setCurrentCardIndex(currentCardIndex.value - 1)
-    } else {
-      // 如果是第一张卡片，跳转到最后一张
-      historyStore.setCurrentCardIndex(cards.value.length - 1)
-    }
-    hideSideCards() // 切换卡片时隐藏侧边卡片
-  } else if (deltaX < -60) {
-    // 向右滑动，显示下一张卡片
-    if (currentCardIndex.value < cards.value.length - 1) {
-      historyStore.setCurrentCardIndex(currentCardIndex.value + 1)
-    } else {
-      // 如果是最后一张卡片，跳转到第一张
-      historyStore.setCurrentCardIndex(0)
-    }
-    hideSideCards() // 切换卡片时隐藏侧边卡片
-  }
-  isSwiping = false
-  deltaX = 0
-  deltaY = 0
-}
 
-// 选择卡片
-const selectCard = (index) => {
-  historyStore.setCurrentCardIndex(index)
-  isOverviewMode.value = false
-  hideSideCards() // 选择卡片时隐藏侧边卡片
-}
 
-// 概览模式下的手势收起
-let overviewStartY = 0
-let overviewDeltaY = 0
-let overviewSwiping = false
-function onOverviewTouchStart(e) {
-  overviewSwiping = true
-  overviewStartY = e.touches ? e.touches[0].clientY : e.clientY
-}
-function onOverviewTouchMove(e) {
-  if (!overviewSwiping) return
-  const y = e.touches ? e.touches[0].clientY : e.clientY
-  overviewDeltaY = y - overviewStartY
-}
-function onOverviewTouchEnd() {
-  if (!overviewSwiping) return
-  if (overviewDeltaY > 60) {
-    isOverviewMode.value = false
-    // 退出概览模式时，如果是第一张卡片，启动侧边卡片定时器
-    if (currentCardIndex.value === 0) {
-      startSideCardTimer()
-    }
-  }
-  overviewSwiping = false
-  overviewDeltaY = 0
-}
+
+
 
 // 卡片label - 动态设置
 const setCardLabels = () => {
@@ -667,22 +453,7 @@ const startPartialScan = () => {
   documentScanStore.startPartialScan([1, 2, 3])
 }
 
-// 页面加载时启动侧边卡片定时器
-startSideCardTimer()
-// 等比例缩小样式
-const overviewCardUniformStyle = {
-  width: '160px', // 以主卡片393px宽，600px高为例，缩略图宽160px
-  aspectRatio: '393/600',
-  borderRadius: '20px',
-  overflow: 'hidden',
-  background: '#fff',
-  boxShadow: '0 2px 8px 0 rgba(60,60,120,0.08)',
-  transition: 'all 0.22s cubic-bezier(.4,2,.6,1)',
-  flex: '0 0 auto',
-  display: 'flex',
-  alignItems: 'stretch',
-  justifyContent: 'center',
-};
+
 </script>
 
 <style scoped>
@@ -771,9 +542,7 @@ const overviewCardUniformStyle = {
   position: relative;
 }
 
-.profile-chat-frame.overview-mode {
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-}
+
 
 .profile-chat-history-card-wrapper {
   position: relative;
@@ -782,160 +551,11 @@ const overviewCardUniformStyle = {
   flex: 1;
   display: flex;
   align-items: stretch;
-  max-height: calc(100% - 120px);
+  max-height: calc(100% - 80px);
+  align-items: flex-end;
 }
 
-.profile-sidecard-left {
-  position: absolute;
-  top: 50%;
-  left: 10px;
-  transform: translateY(-50%);
-  height: 32px;
-  border-radius: 50%;
-  z-index: 12;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
-.profile-sidecard-right {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  z-index: 12;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.sidecard-icon {
-  font-size: 1.25rem;
-  font-weight: bold;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  opacity: 0.8;
-  display: flex;
-  gap: 2px;
-}
-
-.profile-sidecard-left .sidecard-icon {
-  animation: slideLeft 2s infinite;
-}
-
-.profile-sidecard-right .sidecard-icon {
-  animation: slideRight 2s infinite;
-}
-
-.arrow {
-  color: #6366f1;
-  transition: all 0.3s ease;
-}
-
-.arrow1 {
-  animation: lightEffect 2s infinite;
-}
-
-.arrow2 {
-  animation: lightEffect 2s infinite 0.3s;
-}
-
-.arrow3 {
-  animation: lightEffect 2s infinite 0.6s;
-}
-
-/* 右侧箭头从左到右的光效 */
-.profile-sidecard-right .arrow1 {
-  animation: lightEffectRight 2s infinite;
-}
-
-.profile-sidecard-right .arrow2 {
-  animation: lightEffectRight 2s infinite 0.3s;
-}
-
-.profile-sidecard-right .arrow3 {
-  animation: lightEffectRight 2s infinite 0.6s;
-}
-
-/* 左侧箭头从右到左的光效 */
-.profile-sidecard-left .arrow1 {
-  animation: lightEffect 2s infinite 0.6s;
-}
-
-.profile-sidecard-left .arrow2 {
-  animation: lightEffect 2s infinite 0.3s;
-}
-
-.profile-sidecard-left .arrow3 {
-  animation: lightEffect 2s infinite 0s;
-}
-
-/* 右侧箭头从左到右的光效 */
-.profile-sidecard-right .arrow1 {
-  animation: lightEffectRight 2s infinite 0s;
-}
-
-.profile-sidecard-right .arrow2 {
-  animation: lightEffectRight 2s infinite 0.3s;
-}
-
-.profile-sidecard-right .arrow3 {
-  animation: lightEffectRight 2s infinite 0.6s;
-}
-
-@keyframes lightEffect {
-  0%, 100% {
-    color: #6366f1;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  }
-  50% {
-    color: #ffffff;
-    text-shadow: 0 0 8px #6366f1, 0 0 12px #6366f1;
-  }
-}
-
-@keyframes lightEffectRight {
-  0%, 100% {
-    color: #6366f1;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  }
-  50% {
-    color: #ffffff;
-    text-shadow: 0 0 8px #6366f1, 0 0 12px #6366f1;
-  }
-}
-
-@keyframes slideLeft {
-  0% {
-    transform: translateX(0);
-    opacity: 0.8;
-  }
-  50% {
-    transform: translateX(-8px);
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(0);
-    opacity: 0.8;
-  }
-}
-
-@keyframes slideRight {
-  0% {
-    transform: translateX(0);
-    opacity: 0.8;
-  }
-  50% {
-    transform: translateX(8px);
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(0);
-    opacity: 0.8;
-  }
-}
 
 .profile-chat-history-card {
   margin: 18px 18px 0 18px;
@@ -948,7 +568,28 @@ const overviewCardUniformStyle = {
   flex-direction: column;
   overflow: hidden;
   z-index: 2;
-
+  transition: height 0.3s, max-height 0.3s, min-height 0.3s;
+  height: 0;
+  max-height: 0;
+  min-height: 0;
+}
+.profile-chat-history-card.history-collapsed {
+  height: 0;
+  max-height: 0;
+  min-height: 0;
+  padding: 0;
+}
+.profile-chat-history-card.history-half {
+  height: 50%;
+  max-height: 50%;
+  min-height: 120px;
+  padding: 0;
+}
+.profile-chat-history-card.history-full {
+  height: calc(100% - 20px);
+  max-height: calc(100% - 20px);
+  min-height: calc(100% - 20px);
+  padding: 0;
 }
 
 .profile-chat-history {
@@ -960,6 +601,26 @@ const overviewCardUniformStyle = {
   flex-direction: column;
   gap: 14px;
   border-radius: 28px;
+}
+
+.profile-chat-history.history-collapsed {
+  max-height: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+  transition: max-height 0.3s, min-height 0.3s, padding 0.3s;
+}
+.profile-chat-history.history-half {
+  max-height: 140px;
+  min-height: 60px;
+  overflow-y: auto;
+  transition: max-height 0.3s, min-height 0.3s, padding 0.3s;
+}
+.profile-chat-history.history-full {
+  max-height: 500px;
+  min-height: 120px;
+  overflow-y: auto;
+  transition: max-height 0.3s, min-height 0.3s, padding 0.3s;
 }
 
 .profile-chat-inputbar {
@@ -1008,108 +669,22 @@ const overviewCardUniformStyle = {
   cursor: not-allowed;
 }
 
-.profile-card-indicator {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  margin: 10px 0 0 0;
-  height: 18px;
-}
-.indicator-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #e0e7ff;
-  transition: background 0.2s, width 0.2s;
-}
-.indicator-dot.active {
-  width: 10px;
-  height: 10px;
-  background: linear-gradient(90deg, #6366f1 0%, #60a5fa 100%);
-}
-
-/* 概览模式样式 */
-.profile-overview-container {
-  width: 100%;
-  height: 100%;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.profile-overview-header {
-  text-align: center;
-  padding: 20px 0;
-}
-
-.profile-overview-header h3 {
+.history-toggle-btn {
   margin: 0 0 8px 0;
-  font-size: 1.25rem;
+  padding: 2px 14px;
+  border-radius: 12px;
+  border: none;
+  background: #e0e7ff;
+  color: #6366f1;
+  font-size: 13px;
   font-weight: 600;
-  color: #1e293b;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.history-toggle-btn:hover {
+  background: #c7d2fe;
 }
 
-.profile-overview-header p {
-  margin: 0;
-  font-size: 0.625rem;
-  color: #64748b;
-}
-
-/* 横向滚动外层盒子 */
-.profile-overview-cards-scrollbox {
-  width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-.profile-overview-cards-horizontal {
-  display: flex;
-  flex-direction: row;
-  gap: 24px;
-  width: fit-content;
-  padding: 50px 40px 50px 40px;
-  scroll-snap-type: x mandatory;
-  justify-content: center;
-  align-items: flex-start;
-}
-.profile-overview-cards-scrollbox {
-  scrollbar-width: none;
-}
-.profile-overview-cards-scrollbox::-webkit-scrollbar {
-  display: none;
-}
-
-.profile-overview-card-horizontal {
-  /* 宽高比由内联style控制 */
-  position: relative;
-}
-
-.overview-card-aspect {
-  width: 100%;
-  aspect-ratio: 393/600;
-  position: relative;
-  background: transparent;
-}
-
-.overview-card-preview-horizontal {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  background: transparent;
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
-}
-
-.overview-card-scale {
-  width: 100%;
-  height: 100%;
-  transform: scale(0.41); /* 160/393 ≈ 0.41 */
-  transform-origin: center;
-}
 
 @media (max-width: 1200px) {
   .profile-layout-container {

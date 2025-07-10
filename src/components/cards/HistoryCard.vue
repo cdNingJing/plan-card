@@ -5,13 +5,18 @@
       <div class="header-title">
         <span class="title-text">聊天记录</span>
       </div>
-      <button 
-        @click="clearHistory" 
-        class="clear-btn"
-        title="清空所有聊天记录"
-      >
-        <span class="clear-text">清空</span>
-      </button>
+      <div class="header-actions">
+        <button class="toggle-btn" @click="onToggleFull">
+          {{ isFull ? '收起' : '全屏' }}
+        </button>
+        <button 
+          @click="clearHistory" 
+          class="clear-btn"
+          title="清空所有聊天记录"
+        >
+          <span class="clear-text">清空</span>
+        </button>
+      </div>
     </div>
     
     <!-- 自动发送开关 -->
@@ -41,7 +46,15 @@ const props = defineProps({
   messages: { 
     type: Array, 
     default: () => [] 
-  } 
+  },
+  onToggleFull: {
+    type: Function,
+    default: null
+  },
+  isFull: {
+    type: Boolean,
+    default: false
+  }
 })
 const historyStore = useHistoryStore()
 
@@ -169,6 +182,35 @@ onMounted(() => {
 
 .clear-text {
   font-size: 0.5625rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #e0e7ff 0%, #f3f4f6 100%);
+  border: 1px solid #bfcfff;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 0.625rem;
+  color: #6366f1;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+.toggle-btn:hover {
+  background: linear-gradient(135deg, #c7d2fe 0%, #a5b4fc 100%);
+  border-color: #6366f1;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px 0 rgba(99, 102, 241, 0.10);
+}
+.toggle-btn:active {
+  transform: translateY(0);
 }
 
 /* 可滚动的内容区域 */
