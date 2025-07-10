@@ -1,8 +1,19 @@
 <template>
   <div class="profile-chat-root">
-    <!-- 灵动岛组件始终显示 -->
-    <DynamicIsland />
-    <div class="profile-chat-frame" :class="{ 'overview-mode': isOverviewMode }">
+
+    <div class="profile-layout-container">
+      <!-- 文档区域 - 70% -->
+      <div class="documentation-section">
+        <div class="documentation-header">
+          <button class="search-btn" @click="startSearch">模拟检索全部文档</button>
+          <button class="test-btn" @click="startPartialScan">测试扫描部分文档</button>
+        </div>
+        <DocumentationPanel />
+      </div>
+      <!-- 聊天区域 - 30% -->
+      <div class="profile-chat-frame" :class="{ 'overview-mode': isOverviewMode }">
+      <!-- 灵动岛组件始终显示 -->
+      <DynamicIsland />
       <!-- 概览模式 -->
       <div v-if="isOverviewMode" class="profile-overview-container"
         @touchstart="onOverviewTouchStart"
@@ -91,6 +102,7 @@
         </div>
       </template>
     </div>
+    </div>
   </div>
 </template>
 
@@ -103,12 +115,15 @@ import LongTermDataCard from '@/components/cards/LongTermDataCard.vue'
 import ShortTermDataCard from '@/components/cards/ShortTermDataCard.vue'
 import DynamicIsland from '@/components/DynamicIsland.vue'
 import DynamicIslandCard from '@/components/cards/DynamicIslandCard.vue'
+import DocumentationPanel from '@/components/DocumentationPanel.vue'
 import aiService from '@/services/aiService.js'
 import aiDataStorage from '@/utils/aiDataStorage.js'
+import { useDocumentScanStore } from '@/stores/documentScanStore.js'
 
 
 
 const historyStore = useHistoryStore()
+const documentScanStore = useDocumentScanStore()
 const { messages, currentCardIndex: storeCurrentCardIndex } = storeToRefs(historyStore)
 
 const inputValue = ref('')
@@ -224,6 +239,10 @@ onMounted(() => {
   
   // 加载灵动岛数据
   loadDynamicIslandData()
+  
+  // 初始化文档扫描store
+  documentScanStore.initializeDocuments()
+  documentScanStore.watchForChanges()
   
   // 监听灵动岛数据保存事件
   console.log('🎯 ProfileView组件已挂载，开始监听dynamicIslandDataSaved事件')
@@ -638,6 +657,16 @@ const handleIslandDismiss = () => {
   hideDynamicIsland()
 }
 
+// 文档扫描相关方法
+const startSearch = () => {
+  documentScanStore.startScan()
+}
+
+const startPartialScan = () => {
+  // 使用store中的部分扫描方法，扫描前3个文档
+  documentScanStore.startPartialScan([1, 2, 3])
+}
+
 // 页面加载时启动侧边卡片定时器
 startSideCardTimer()
 // 等比例缩小样式
@@ -666,10 +695,71 @@ const overviewCardUniformStyle = {
   justify-content: center;
 }
 
-.profile-chat-frame {
-  width: 393px;
+.profile-layout-container {
+  width: 100%;
   height: 100vh;
-  max-height: 100vh;
+  display: flex;
+  align-items: stretch;
+  gap: 20px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.documentation-section {
+  flex: 0 0 65%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.documentation-header {
+  padding: 20px 30px 10px 30px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.search-btn, .test-btn {
+  padding: 4px 18px;
+  border-radius: 18px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  backdrop-filter: blur(8px);
+  transition: box-shadow 0.2s, background 0.2s;
+  cursor: pointer;
+}
+
+.search-btn {
+  background: linear-gradient(90deg, #e0e7ff 0%, #f3f4f6 100%);
+  color: #6366f1;
+  box-shadow: 0 2px 12px 0 rgba(99,102,241,0.08);
+}
+
+.search-btn:hover {
+  box-shadow: 0 4px 18px 0 rgba(99,102,241,0.15);
+  background: linear-gradient(90deg, #d1d5db 0%, #e5e7eb 100%);
+}
+
+.test-btn {
+  background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%);
+  color: #f59e0b;
+  box-shadow: 0 2px 12px 0 rgba(245,158,11,0.08);
+}
+
+.test-btn:hover {
+  box-shadow: 0 4px 18px 0 rgba(245,158,11,0.15);
+  background: linear-gradient(90deg, #fde68a 0%, #fcd34d 100%);
+}
+
+.profile-chat-frame {
+  flex: 0 0 35%;
+  height: 100%;
+  max-width: 400px;
+}
+
+.profile-chat-frame {
   border-radius: 36px;
   background: #fff;
   box-shadow: 0 8px 32px 0 rgba(60, 60, 120, 0.12);
@@ -678,6 +768,7 @@ const overviewCardUniformStyle = {
   overflow: hidden;
   border: 1.5px solid #e5e7eb;
   transition: all 0.3s ease;
+  position: relative;
 }
 
 .profile-chat-frame.overview-mode {
@@ -1020,7 +1111,38 @@ const overviewCardUniformStyle = {
   transform-origin: center;
 }
 
+@media (max-width: 1200px) {
+  .profile-layout-container {
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+  }
+  
+  .documentation-section {
+    flex: 0 0 65%;
+  }
+  
+  .profile-chat-frame {
+    flex: 0 0 35%;
+    max-width: none;
+  }
+}
+
 @media (max-width: 600px) {
+  .profile-layout-container {
+    padding: 8px;
+    gap: 12px;
+  }
+  
+  .documentation-section {
+    flex: 0 0 50%;
+  }
+  
+  .profile-chat-frame {
+    flex: 0 0 50%;
+    border-radius: 20px;
+  }
+  
   .profile-chat-root, .profile-chat-frame {
     width: 100vw !important;
     height: 100dvh !important;

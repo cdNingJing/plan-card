@@ -1,0 +1,11 @@
+{
+  "name": "林安",
+  "age": 32,
+  "personality": {
+    "introvert_extrovert": "introvert",
+    "traits": ["敏感", "理性", "控制欲强", "有创造力"]
+  },
+  "values": ["自由", "深度", "少即是多", "不迎合"],
+  "fears": ["无意义感", "重复的人生", "失控"],
+  "healing_methods": ["写作", "旅行", "独处", "聊天"]
+}

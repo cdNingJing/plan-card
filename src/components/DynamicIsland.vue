@@ -7,6 +7,7 @@
     <!-- 顶部灵动岛主区域 -->
     <div
       class="dynamic-island-main"
+      v-if="false"
       :class="{ loading: isLoading }"
       :style="mainStyle"
       @click="toggleExpand"
@@ -258,7 +259,7 @@ const animateSwap = async (newMsg) => {
 }
 
 const handleBubbleClick = async (msg) => {
-  console.log('🔵 用户点击了对话气泡:', msg)
+  console.log('用户点击了对话气泡:', msg)
   animateSwap(msg)
   setTimeout(async () => {
     contentTransition.value = 'idle'
@@ -540,8 +541,8 @@ const mockDialog = computed(() => {
 
 <style scoped>
 .dynamic-island-outer {
-  position: fixed;
-  top: 18px;
+  position: absolute;
+  bottom: 82px;
   left: 0;
   width: 100%;
   transform: none;
@@ -569,8 +570,8 @@ const mockDialog = computed(() => {
 }
 
 .delete-button {
-  position: fixed;
-  top: 8px;
+  position: absolute;
+  top: -20px;
   right: 20px;
   width: 24px;
   height: 24px;
