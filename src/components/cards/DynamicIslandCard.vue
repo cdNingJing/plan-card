@@ -205,7 +205,7 @@ onMounted(() => {
   background: #f7f8fa;
   border-radius: 24px;
   padding: 16px 0 20px 0;
-  margin: 24px;
+  margin: 18px;
   border: none;
   transition: all 0.3s cubic-bezier(.4,0,.2,1);
   opacity: 0;

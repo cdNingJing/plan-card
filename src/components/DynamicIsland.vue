@@ -7,7 +7,7 @@
     <!-- 顶部灵动岛主区域 -->
     <div
       class="dynamic-island-main"
-      v-if="false"
+      v-if="isLoading"
       :class="{ loading: isLoading }"
       :style="mainStyle"
       @click="toggleExpand"
@@ -66,11 +66,12 @@ const STREAM_TEXTS = [
 ]
 
 const props = defineProps({
-  dialog: { type: Array, default: () => [] }
+  dialog: { type: Array, default: () => [] },
+  isLoading: { type: Boolean, default: false }
 })
 
-// isLoading 状态由内部管理，初始为 false
-const isLoading = ref(false)
+// isLoading 状态由外部控制
+const isLoading = ref(props.isLoading)
 
 const isWide = ref(false)
 const showContentArea = ref(true)

@@ -13,7 +13,13 @@ class DocumentService {
       { id: 6, name: '梦想生活的清单.md', type: 'markdown', category: 'document', typeLabel: 'MD', description: '理想生活规划和清单', content: '梦想生活的清单 - 居住、工作、身心、关系的理想状态' },
       { id: 7, name: '我理解的自己.json', type: 'json', category: 'document', typeLabel: 'JSON', description: '个人性格和价值观分析', content: '个人性格特征、价值观、恐惧和治愈方法的JSON数据' },
       { id: 8, name: '分开的第100天.txt', type: 'text', category: 'document', typeLabel: 'TXT', description: '情感记录和反思', content: '分开第100天的情感记录和反思' },
-      { id: 9, name: '年终职场总结2025.pdf', type: 'pdf', category: 'document', typeLabel: 'PDF', description: '2025年职场工作总结', content: '2025年职场工作总结和反思' }
+      { id: 9, name: '年终职场总结2025.pdf', type: 'pdf', category: 'document', typeLabel: 'PDF', description: '2025年职场工作总结', content: '2025年职场工作总结和反思' },
+      { id: 10, name: '产品概览.md', type: 'markdown', category: 'document', typeLabel: 'MD', description: '派对策划助手产品功能概览', content: '派对策划助手产品定位、核心功能、设计理念和技术架构的完整概览文档' },
+      { id: 11, name: '卡片设计规范.md', type: 'markdown', category: 'document', typeLabel: 'MD', description: 'UI组件设计规范和样式指南', content: '卡片组件设计规范、交互状态、样式系统和设计原则的详细文档' },
+      { id: 12, name: '聚会人员统计.txt', type: 'text', category: 'document', typeLabel: 'TXT', description: '派对参与人员名单和统计', content: '聚会人员统计：\n\n成人：\n- 小明爸爸、妈妈\n- 小红爸爸、妈妈\n- 小李爸爸、妈妈\n\n小朋友：\n- 小明（8岁）\n- 小红（6岁）\n- 小李（7岁）\n- 小王（5岁）\n\n总计：10人（6个成人，4个小朋友）' },
+      { id: 13, name: '喜好菜品清单.txt', type: 'text', category: 'document', typeLabel: 'TXT', description: '每个小朋友喜欢吃的菜品', content: '小朋友喜好菜品：\n\n小明（8岁）：\n- 番茄炒蛋\n- 红烧肉\n- 糖醋里脊\n- 蛋炒饭\n\n小红（6岁）：\n- 炸鸡翅\n- 薯条\n- 汉堡包\n- 披萨\n\n小李（7岁）：\n- 清蒸鱼\n- 白米饭\n- 蒸蛋羹\n- 水果沙拉\n\n小王（5岁）：\n- 面条\n- 小笼包\n- 炸鸡块\n- 冰淇淋' },
+      { id: 14, name: '忌口清单.txt', type: 'text', category: 'document', typeLabel: 'TXT', description: '每个人的食物忌口情况', content: '忌口清单：\n\n小明：\n- 对花生过敏\n- 不吃辣\n- 不吃香菜\n\n小红：\n- 对海鲜过敏\n- 不吃胡萝卜\n- 不吃青椒\n\n小李：\n- 对牛奶过敏\n- 不吃茄子\n- 不吃苦瓜\n\n小明爸爸：\n- 对酒精过敏\n- 不吃生冷食物\n\n小红妈妈：\n- 不吃辛辣食物\n- 不吃油炸食品' },
+      { id: 15, name: '小朋友游戏喜好.txt', type: 'text', category: 'document', typeLabel: 'TXT', description: '每个小朋友喜欢玩的游戏', content: '小朋友游戏喜好：\n\n小明（8岁）：\n- 超级英雄角色扮演\n- 乐高积木\n- 电子游戏\n- 足球\n\n小红（6岁）：\n- 公主装扮\n- 画画\n- 跳舞\n- 捉迷藏\n\n小李（7岁）：\n- 动物模仿游戏\n- 拼图\n- 手工制作\n- 跳绳\n\n小王（5岁）：\n- 泡泡机\n- 气球游戏\n- 简单拼图\n- 音乐游戏' }
     ]
   }
 

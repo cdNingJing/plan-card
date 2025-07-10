@@ -3,16 +3,16 @@
     <div class="profile-layout-container">
       <!-- 文档区域 - 70% -->
       <div class="documentation-section">
-        <div class="documentation-header">
+        <!-- <div class="documentation-header">
           <button class="search-btn" @click="startSearch">模拟检索全部文档</button>
           <button class="test-btn" @click="startPartialScan">测试扫描部分文档</button>
           <button class="auto-test-btn" @click="startAutoTest">自动测试对话</button>
-        </div>
+        </div> -->
         <DocumentationPanel />
       </div>
       <!-- 聊天区域 - 30% -->
       <div class="profile-chat-frame">
-        <DynamicIsland v-if="inputValue" />
+        <!-- <DynamicIsland v-if="inputValue" /> -->
         <div class="profile-chat-history-card-wrapper">
           <!-- DynamicIslandCard 作为底层显示 -->
           <div class="dynamic-island-card-container" v-if="showDynamicIslandCard">
@@ -101,7 +101,7 @@ const dynamicIslandData = ref({
   timestamp: new Date().toISOString(),
   suggestions: []
 })
-const showDynamicIslandCard = ref(true)
+const showDynamicIslandCard = ref(false)
 
 const fixedPlaceholder = ref('输入您的问题...')
 
@@ -110,7 +110,7 @@ const loadDynamicIslandData = () => {
     let savedData = localStorage.getItem('dynamic_island_saved_data')
     if (savedData) {
       dynamicIslandData.value = JSON.parse(savedData)
-      showDynamicIslandCard.value = true
+      // showDynamicIslandCard.value = true
     }
   } catch (e) {
     // 忽略错误
@@ -201,22 +201,6 @@ const addMessage = (content, type = 'user') => {
     type
   })
   scrollToBottom()
-  
-  // 监听扫描完成消息，自动显示灵动岛卡片
-  if (type === 'bot' && content.includes('📋 文档扫描已完成！')) {
-    setTimeout(() => {
-      showDynamicIslandCard.value = true
-      dynamicIslandData.value = {
-        timestamp: new Date().toISOString(),
-        suggestions: [
-          { id: 1, text: '查看详细报告' },
-          { id: 2, text: '导出分析结果' },
-          { id: 3, text: '继续扫描更多文档' }
-        ]
-      }
-      console.log('🎯 检测到扫描完成消息，自动显示灵动岛卡片')
-    }, 500)
-  }
 }
 
 const handleSubmit = async () => {
@@ -225,6 +209,36 @@ const handleSubmit = async () => {
     // 添加用户消息
     addMessage(value, 'user')
     inputValue.value = ''
+    
+    // 拦截特定消息
+    // 测试
+    if (true) {
+      // 扫描聚会人员统计.txt文档
+      documentScanStore.startPartialScan([12]) // 扫描第4个文件（聚会人员统计.txt）
+      
+      // 扫描完成后返回消息
+      setTimeout(() => {
+        addMessage('参会人员已确认，正在分析更多数据。', 'bot')
+        // 扫描聚会人员统计.txt文档
+        documentScanStore.startPartialScan([13, 14, 15])
+          setTimeout(() => {
+           addMessage('深度分析已完成！正在生成卡片。', 'bot')
+           
+            setTimeout(() => {
+              showDynamicIslandCard.value = true
+              // 隐藏历史卡片
+              historyCardState.value = 'collapsed'
+              // 移除输入框选中效果
+              if (inputRef.value) {
+                inputRef.value.blur()
+              }
+            }, 1000)
+           
+         }, 3000)
+      }, 3000)
+      
+      return;
+    }
     
     // 启动灵动岛流程
     startDynamicIslandFlow()
@@ -485,7 +499,7 @@ const startSearch = () => {
   
   // 模拟全量扫描完成后发送固定消息
   setTimeout(() => {
-    const scanCompleteMessage = "📋 文档扫描已完成！\n\n已成功扫描全部文档，发现以下关键信息：\n\n• 项目配置文件完整\n• 组件结构清晰\n• 数据流设计合理\n• 文档覆盖全面\n\n💡 建议：您可以查看灵动岛卡片获取更详细的分析结果。"
+    const scanCompleteMessage = "文档扫描已完成！\n\n已成功扫描全部文档，发现以下关键信息：\n\n• 项目配置文件完整\n• 组件结构清晰\n• 数据流设计合理\n• 文档覆盖全面\n\n建议：您可以查看灵动岛卡片获取更详细的分析结果。"
     addMessage(scanCompleteMessage, 'bot')
   }, 5000) // 5秒后模拟全量扫描完成
 }
@@ -496,7 +510,7 @@ const startPartialScan = () => {
   
   // 模拟扫描完成后发送固定消息
   setTimeout(() => {
-    const scanCompleteMessage = "📋 文档扫描已完成！\n\n已成功扫描 3 个文档，发现以下关键信息：\n\n• 项目配置文件完整\n• 组件结构清晰\n• 数据流设计合理\n\n💡 建议：您可以查看灵动岛卡片获取更详细的分析结果。"
+    const scanCompleteMessage = "文档扫描已完成！\n\n已成功扫描 3 个文档，发现以下关键信息：\n\n• 项目配置文件完整\n• 组件结构清晰\n• 数据流设计合理\n\n建议：您可以查看灵动岛卡片获取更详细的分析结果。"
     addMessage(scanCompleteMessage, 'bot')
   }, 3000) // 3秒后模拟扫描完成
 }
@@ -509,50 +523,11 @@ const startAutoTest = async () => {
     inputRef.value.focus()
   }
   
-  // 2. 填写默认数据
-  const testMessage = "请帮我分析一下最近的文档内容，并给出总结"
+  // 2. 填写默认数据 - 准备聚会
+  const testMessage = "准备一个聚会"
   inputValue.value = testMessage
-  
-  // 3. 触发部分文件扫描
-  setTimeout(() => {
-    documentScanStore.startPartialScan([1, 2, 3])
-  }, 500)
-  
-  // 4. 模拟提交对话
-  setTimeout(async () => {
-    // 添加用户消息
-    addMessage(testMessage, 'user')
-    inputValue.value = ''
-    
-    // 启动灵动岛流程
-    startDynamicIslandFlow()
-    
-    // 模拟AI处理延迟
-    setTimeout(() => {
-      // 添加扫描完成后的固定回复
-      const scanCompleteMessage = "📋 文档扫描已完成！\n\n已成功扫描 3 个文档，发现以下关键信息：\n\n• 项目配置文件完整\n• 组件结构清晰\n• 数据流设计合理\n\n💡 建议：您可以查看灵动岛卡片获取更详细的分析结果。"
-      addMessage(scanCompleteMessage, 'bot')
-      
-      // 完成灵动岛流程
-      completeDynamicIslandFlow('success', {
-        message: '文档分析完成',
-        nextStepText: '查看详情'
-      })
-      
-      // 显示灵动岛卡片
-      setTimeout(() => {
-        showDynamicIslandCard.value = true
-        dynamicIslandData.value = {
-          timestamp: new Date().toISOString(),
-          suggestions: [
-            { id: 1, text: '查看详细报告' },
-            { id: 2, text: '导出分析结果' },
-            { id: 3, text: '继续扫描更多文档' }
-          ]
-        }
-      }, 1000)
-    }, 2000)
-  }, 1000)
+
+  handleSubmit()
 }
 
 
@@ -579,7 +554,7 @@ const startAutoTest = async () => {
 }
 
 .documentation-section {
-  flex: 0 0 65%;
+  flex: 0 0 73%;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -664,7 +639,7 @@ const startAutoTest = async () => {
   flex: 1;
   display: flex;
   align-items: stretch;
-  max-height: calc(100% - 80px);
+  max-height: calc(100% - 90px);
   align-items: flex-end;
 }
 
@@ -822,7 +797,7 @@ const startAutoTest = async () => {
   }
   
   .documentation-section {
-    flex: 0 0 65%;
+    flex: 0 0 73%;
   }
   
   .profile-chat-frame {
