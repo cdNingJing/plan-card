@@ -238,9 +238,9 @@ class AIService {
     const historyToInclude = this.getOptimizedHistory(options)
     
     // 添加对话历史（如果存在）
-    if (historyToInclude.length > 0) {
-      messages.push(...historyToInclude)
-    }
+    // if (historyToInclude.length > 0) {
+    //   messages.push(...historyToInclude)
+    // }
 
     // 添加当前消息
     messages.push({

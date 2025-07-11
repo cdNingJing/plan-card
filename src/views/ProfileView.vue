@@ -3,15 +3,51 @@
     <div class="profile-layout-container">
       <!-- 文档区域 - 70% -->
       <div class="documentation-section">
-        <div class="documentation-header">
+        <div style="text-align:center;margin:10px 0 0 0;">
+          <button class="ios-btn search-btn" @click="testIsland">测试灵动岛</button>
+        </div>
+        <!-- <div class="documentation-header">
           <button class="search-btn" @click="startSearch">模拟检索全部文档</button>
           <button class="search-btn" @click="testPartyComponent1">为孩子举办生日派对</button>
           <button class="search-btn" @click="testRestaurantComponent">为妈妈的生日在19点预订公司附近的餐厅</button>
-        </div>
+        </div> -->
         <DocumentationPanel />
       </div>
       <!-- 聊天区域 - 30% -->
-      <div class="profile-chat-frame">
+      <div class="profile-chat-frame" style="position:relative;">
+        <!-- 新灵动岛模块 -->
+        <transition name="island-zoom-fade">
+          <div v-if="showIsland" class="profile-dynamic-island dark island-row-mode">
+            <span class="island-title dark island-doc-title" :title="currentDoc.name">{{ currentDoc.name }}</span>
+            <div class="island-circle-progress small">
+              <svg viewBox="0 0 40 40" class="circle-svg small">
+                <circle
+                  class="circle-bg"
+                  cx="20"
+                  cy="20"
+                  r="16"
+                  fill="none"
+                  stroke-width="4"
+                />
+                <circle
+                  class="circle-fg"
+                  :class="{ 'no-transition': !circleTransition }"
+                  cx="20"
+                  cy="20"
+                  r="16"
+                  fill="none"
+                  stroke-width="4"
+                  :stroke-dasharray="100"
+                  :stroke-dashoffset="100 - (animatedPercent || 0)"
+                />
+                <text x="20" y="23" text-anchor="middle" class="circle-text small">{{ animatedPercent || 0 }}%</text>
+              </svg>
+            </div>
+          </div>
+        </transition>
+        <!-- 这里不再放灵动岛 -->
+        <!-- <DynamicIsland :visible="showIsland" :docName="islandDocName" :percent="islandPercent" /> -->
+
         <!-- <DynamicIsland v-if="inputValue" /> -->
         <div class="profile-chat-history-card-wrapper">
           <!-- DynamicIslandCard 作为底层显示 -->
@@ -47,7 +83,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted, onUnmounted } from 'vue'
+import { computed, ref, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useHistoryStore } from '@/stores/historyStore'
 import HistoryCard from '@/components/cards/HistoryCard.vue'
@@ -84,6 +120,154 @@ const islandConflictMessage = ref('')
 const islandConflictSuggestions = ref([])
 const islandResultMessage = ref('')
 const islandNextStepText = ref('')
+
+// 灵动岛相关状态 - 优化为支持多个文档
+const showIsland = ref(false)
+const islandDocuments = ref([]) // 存储多个文档信息
+const currentDocumentIndex = ref(0) // 当前处理的文档索引
+const islandPercent = ref(0)
+let islandTimer = null
+
+// 计算当前文档的短名称
+const currentDocumentName = computed(() => {
+  if (islandDocuments.value.length === 0) return ''
+  const currentDoc = islandDocuments.value[currentDocumentIndex.value]
+  if (!currentDoc) return ''
+  return currentDoc.name.length > 12 ? currentDoc.name.slice(0, 10) + '...' : currentDoc.name
+})
+
+// 计算总进度
+const totalProgress = computed(() => {
+  if (islandDocuments.value.length === 0) return 0
+  const totalSteps = islandDocuments.value.length
+  const completedSteps = currentDocumentIndex.value
+  const currentStepProgress = islandPercent.value / 100
+  return Math.round(((completedSteps + currentStepProgress) / totalSteps) * 100)
+})
+
+// 灵动岛显示状态
+const islandDisplayState = computed(() => {
+  if (islandDocuments.value.length === 0) return 'hidden'
+  if (islandDocuments.value.length === 1) return 'single'
+  return 'multiple'
+})
+
+// 计算当前文档的详细信息
+const currentDoc = computed(() => islandDocuments.value[currentDocumentIndex.value] || { name: '', progress: 0 });
+
+// 百分比动画显示
+const animatedPercent = ref(0)
+const circleTransition = ref(true);
+
+async function animatePercentSmart(duration = 2500) {
+  // 1. 禁用transition，归零
+  circleTransition.value = false;
+  animatedPercent.value = 0;
+  await nextTick();
+  // 强制reflow，确保SVG渲染为0
+  const el = document.querySelector('.circle-fg');
+  if (el) el.getBoundingClientRect();
+  // 2. 启用transition，开始动画
+  circleTransition.value = true;
+  await nextTick();
+  // 3. 动画递增
+  let startTime = null;
+  function step(ts) {
+    if (!startTime) startTime = ts;
+    const elapsed = ts - startTime;
+    let percent;
+    if (elapsed < 600) {
+      percent = (elapsed / 600) * 30;
+    } else if (elapsed < 2000) {
+      percent = 30 + ((elapsed - 600) / 1400) * 50;
+    } else if (elapsed < 2500) {
+      percent = 80 + ((elapsed - 2000) / 500) * 20;
+    } else {
+      percent = 100;
+    }
+    animatedPercent.value = Math.round(percent);
+    if (percent < 100) {
+      requestAnimationFrame(step);
+    } else {
+      animatedPercent.value = 100;
+      setTimeout(() => {
+        currentDocumentIndex.value++;
+        if (currentDocumentIndex.value >= islandDocuments.value.length) {
+          showIsland.value = false;
+          islandDocuments.value = [];
+        } else {
+          animatePercentSmart(2500);
+        }
+      }, 800);
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+const processNextDocument = () => {
+  if (currentDocumentIndex.value >= islandDocuments.value.length) {
+    showIsland.value = false;
+    islandDocuments.value = [];
+    return;
+  }
+  animatePercentSmart(2500);
+}
+
+// 百分比动画监听（只在进度未满时同步动画）
+watch(() => currentDoc.value.progress, (newVal) => {
+  if (typeof newVal !== 'number' || newVal === 100) return;
+  let start = animatedPercent.value
+  let end = newVal
+  let duration = 400 // ms
+  let startTime = null
+  function animatePercent(ts) {
+    if (!startTime) startTime = ts
+    const progress = Math.min((ts - startTime) / duration, 1)
+    animatedPercent.value = Math.round(start + (end - start) * progress)
+    if (progress < 1) {
+      requestAnimationFrame(animatePercent)
+    } else {
+      animatedPercent.value = end
+    }
+  }
+  requestAnimationFrame(animatePercent)
+}, { immediate: true })
+
+// 测试灵动岛 - 支持多个文档
+const testIsland = () => {
+  // 模拟多个文档处理
+  const testDocuments = [
+    { id: 1, name: '妈妈.md', progress: 0 },
+    { id: 2, name: '喜好菜品清单.txt', progress: 0 },
+    { id: 3, name: '忌口清单.txt', progress: 0 },
+    { id: 4, name: '聚会人员统计.txt', progress: 0 }
+  ]
+  
+  startDocumentProcessing(testDocuments)
+}
+
+// 开始文档处理流程
+const startDocumentProcessing = (documents) => {
+  islandDocuments.value = documents.map(doc => ({ ...doc, progress: 0 }))
+  currentDocumentIndex.value = 0
+  islandPercent.value = 0
+  showIsland.value = true
+  
+  // 开始处理第一个文档
+  processNextDocument()
+}
+
+// 停止文档处理
+const stopDocumentProcessing = () => {
+  if (islandTimer) {
+    clearInterval(islandTimer)
+    islandTimer = null
+  }
+  showIsland.value = false
+  islandDocuments.value = []
+  currentDocumentIndex.value = 0
+  islandPercent.value = 0
+}
 
 const onInputFocus = () => {
   if (historyCardState.value === 'collapsed') {
@@ -190,6 +374,10 @@ onUnmounted(() => {
   if (progressTimer) {
     clearInterval(progressTimer)
     progressTimer = null
+  }
+  if (islandTimer) {
+    clearInterval(islandTimer)
+    islandTimer = null
   }
   document.removeEventListener('mousedown', handleGlobalClick)
 })
@@ -544,13 +732,37 @@ const handleIslandDismiss = () => {
 
 // 文档扫描相关方法
 const startSearch = () => {
-  documentScanStore.startScan()
-  
-  // 模拟全量扫描完成后发送固定消息
-  setTimeout(() => {
-    const scanCompleteMessage = "文档扫描已完成！\n\n已成功扫描全部文档，发现以下关键信息：\n\n• 项目配置文件完整\n• 组件结构清晰\n• 数据流设计合理\n• 文档覆盖全面\n\n建议：您可以查看灵动岛卡片获取更详细的分析结果。"
-    addMessage(scanCompleteMessage, 'bot')
-  }, 5000) // 5秒后模拟全量扫描完成
+  // 获取所有文档信息
+  const documents = documentScanStore.documents
+  if (documents && documents.length > 0) {
+    // 转换为灵动岛格式
+    const islandDocs = documents.map((doc, index) => ({
+      id: index + 1,
+      name: doc.name || `文档${index + 1}`,
+      progress: 0
+    }))
+    
+    // 启动灵动岛处理流程
+    startDocumentProcessing(islandDocs)
+    
+    // 开始实际的文档扫描
+    documentScanStore.startScan()
+    
+    // 模拟扫描完成后发送消息
+    setTimeout(() => {
+      const scanCompleteMessage = "文档扫描已完成！\n\n已成功扫描全部文档，发现以下关键信息：\n\n• 项目配置文件完整\n• 组件结构清晰\n• 数据流设计合理\n• 文档覆盖全面\n\n建议：您可以查看灵动岛卡片获取更详细的分析结果。"
+      addMessage(scanCompleteMessage, 'bot')
+    }, 5000)
+  } else {
+    // 如果没有文档，使用默认测试数据
+    const testDocuments = [
+      { id: 1, name: '妈妈.md', progress: 0 },
+      { id: 2, name: '喜好菜品清单.txt', progress: 0 },
+      { id: 3, name: '忌口清单.txt', progress: 0 },
+      { id: 4, name: '聚会人员统计.txt', progress: 0 }
+    ]
+    startDocumentProcessing(testDocuments)
+  }
 }
 
 // 聚会测试组件方法
@@ -948,6 +1160,322 @@ const testRestaurantComponent = () => {
   background: #c7d2fe;
 }
 
+.profile-dynamic-island {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 120px;
+  max-width: 200px;
+  height: 32px;
+  background: rgba(255,255,255,0.95);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px 0 rgba(24,24,28,0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 0 14px;
+  border: 1.5px solid #23232a;
+  transition: box-shadow 0.2s, background 0.2s;
+  pointer-events: none;
+}
+.profile-dynamic-island.dark {
+  background: rgba(24,24,28,0.96);
+  border: 1.5px solid #23232a;
+  box-shadow: 0 2px 12px 0 rgba(24,24,28,0.22);
+}
+.island-title {
+  font-size: 12px;
+  color: #6366f1;
+  font-weight: 600;
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.island-title.dark {
+  color: #bfcfff;
+}
+.island-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 10px;
+}
+.progress-bar-bg {
+  width: 38px;
+  height: 5px;
+  background: #e0e7ff;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-bar-bg.dark {
+  background: #23232a;
+}
+.progress-bar-fg {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+  border-radius: 3px;
+  transition: width 0.4s cubic-bezier(.4,0,.6,1);
+}
+.progress-bar-fg.dark {
+  background: linear-gradient(90deg, #bfcfff 0%, #6366f1 100%);
+}
+.progress-text {
+  font-size: 11px;
+  color: #6366f1;
+  font-weight: 500;
+  min-width: 22px;
+  text-align: right;
+}
+.progress-text.dark {
+  color: #bfcfff;
+}
+.island-fade-enter-active, .island-fade-leave-active {
+  transition: opacity 0.25s;
+}
+.island-fade-enter-from, .island-fade-leave-to {
+  opacity: 0;
+}
+.island-zoom-fade-enter-active, .island-zoom-fade-leave-active {
+  transition: opacity 0.22s, transform 0.22s;
+}
+.island-zoom-fade-enter-from, .island-zoom-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.7);
+}
+
+/* 多文档灵动岛样式 */
+.profile-dynamic-island.multiple {
+  min-width: 160px;
+  max-width: 280px;
+  height: 40px;
+  padding: 0 16px;
+}
+
+.island-single-mode {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.island-multiple-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  gap: 4px;
+}
+
+.island-docs-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+}
+
+.island-doc-counter {
+  font-size: 10px;
+  color: #6366f1;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.island-doc-counter.dark {
+  color: #bfcfff;
+}
+
+.island-docs-indicator {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 2px;
+}
+
+.doc-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.doc-indicator.completed {
+  background: #10b981;
+  transform: scale(1.2);
+}
+
+.doc-indicator.current {
+  background: #6366f1;
+  transform: scale(1.4);
+  box-shadow: 0 0 6px rgba(99, 102, 241, 0.4);
+}
+
+.doc-indicator.pending {
+  background: rgba(99, 102, 241, 0.2);
+  transform: scale(0.8);
+}
+
+/* 文档名称切换动画 */
+.document-name-fade-enter-active,
+.document-name-fade-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.document-name-fade-enter-from {
+  opacity: 0;
+  transform: translateX(10px);
+}
+
+.document-name-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+/* 灵动岛状态切换动画 */
+.profile-dynamic-island.single {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.profile-dynamic-island.multiple {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+/* 进度条动画优化 */
+.progress-bar-fg {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+  border-radius: 3px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.6, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-bar-fg::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.progress-bar-fg.dark {
+  background: linear-gradient(90deg, #bfcfff 0%, #6366f1 100%);
+}
+
+.progress-bar-fg.dark::after {
+  background: linear-gradient(90deg, transparent, rgba(191, 207, 255, 0.2), transparent);
+}
+
+.island-circle-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+  max-width: 180px;
+  padding: 10px 0;
+}
+
+.island-circle-progress {
+  width: 54px;
+  height: 54px;
+  margin-bottom: 4px;
+  position: relative;
+}
+
+.circle-svg {
+  width: 54px;
+  height: 54px;
+  display: block;
+}
+
+.circle-bg {
+  stroke: #23232a;
+  opacity: 0.18;
+}
+
+.circle-fg {
+  stroke: #bfcfff;
+  transition: stroke-dashoffset 0.5s cubic-bezier(.4,0,.6,1);
+  stroke-linecap: round;
+}
+.circle-fg.no-transition {
+  transition: none !important;
+}
+
+.circle-text {
+  font-size: 13px;
+  fill: #bfcfff;
+  font-weight: bold;
+  dominant-baseline: middle;
+}
+
+.island-doc-label {
+  margin-top: 2px;
+  text-align: center;
+  max-width: 110px;
+  font-size: 13px;
+  color: #bfcfff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.island-row-mode {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 60px;
+  max-width: 110px;
+  width: 100%;
+  padding: 4px 4px 4px 10px;
+  box-sizing: border-box;
+}
+
+.island-doc-title {
+  font-size: 11px;
+  color: #bfcfff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.island-circle-progress.small {
+  width: 22px;
+  height: 22px;
+  margin-bottom: 0;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+.circle-svg.small {
+  width: 20px;
+  height: 20px;
+}
+
+.circle-text.small {
+  font-size: 9px;
+}
 
 @media (max-width: 1200px) {
   

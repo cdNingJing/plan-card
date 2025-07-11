@@ -7,15 +7,7 @@ class DocumentService {
       // 真实文档数据
       { id: 1, name: '副业计划启动器.md', type: 'markdown', category: 'document', typeLabel: 'MD', description: '城市轻旅手册项目启动计划', content: '副业启动计划书 - 版本 1.0，项目名称：城市轻旅手册（本地生活内容服务）' },
       { id: 2, name: '像素日常记录001.txt', type: 'text', category: 'document', typeLabel: 'TXT', description: '日常生活片段记录', content: '超市收银员头发有点像我初中同桌。奇怪，居然记得那个发旋。' },
-      { id: 3, name: '我的2028年生活模拟.pdf', type: 'pdf', category: 'document', typeLabel: 'PDF', description: '未来生活规划模拟文档', content: '2028年生活模拟计划书' },
-      { id: 4, name: '人生回音室.pdf', type: 'pdf', category: 'document', typeLabel: 'PDF', description: '人生反思和思考记录', content: '人生回音室 - 深度思考记录' },
       { id: 5, name: '碎片化生活语录.txt', type: 'text', category: 'document', typeLabel: 'TXT', description: '生活感悟和语录收集', content: '碎片化的生活感悟和语录' },
-      { id: 6, name: '梦想生活的清单.md', type: 'markdown', category: 'document', typeLabel: 'MD', description: '理想生活规划和清单', content: '梦想生活的清单 - 居住、工作、身心、关系的理想状态' },
-      { id: 7, name: '我理解的自己.json', type: 'json', category: 'document', typeLabel: 'JSON', description: '个人性格和价值观分析', content: '个人性格特征、价值观、恐惧和治愈方法的JSON数据' },
-      { id: 8, name: '分开的第100天.txt', type: 'text', category: 'document', typeLabel: 'TXT', description: '情感记录和反思', content: '分开第100天的情感记录和反思' },
-      { id: 9, name: '年终职场总结2025.pdf', type: 'pdf', category: 'document', typeLabel: 'PDF', description: '2025年职场工作总结', content: '2025年职场工作总结和反思' },
-      { id: 10, name: '产品概览.md', type: 'markdown', category: 'document', typeLabel: 'MD', description: '派对策划助手产品功能概览', content: '派对策划助手产品定位、核心功能、设计理念和技术架构的完整概览文档' },
-      { id: 11, name: '卡片设计规范.md', type: 'markdown', category: 'document', typeLabel: 'MD', description: 'UI组件设计规范和样式指南', content: '卡片组件设计规范、交互状态、样式系统和设计原则的详细文档' },
       { id: 12, name: '聚会人员统计.txt', type: 'text', category: 'document', typeLabel: 'TXT', description: '派对参与人员名单和统计', content: '聚会人员统计：\n\n成人：\n- 小明爸爸、妈妈\n- 小红爸爸、妈妈\n- 小李爸爸、妈妈\n\n小朋友：\n- 小明（8岁）\n- 小红（6岁）\n- 小李（7岁）\n- 小王（5岁）\n\n总计：10人（6个成人，4个小朋友）' },
       { id: 13, name: '喜好菜品清单.txt', type: 'text', category: 'document', typeLabel: 'TXT', description: '每个小朋友喜欢吃的菜品', content: '小朋友喜好菜品：\n\n小明（8岁）：\n- 番茄炒蛋\n- 红烧肉\n- 糖醋里脊\n- 蛋炒饭\n\n小红（6岁）：\n- 炸鸡翅\n- 薯条\n- 汉堡包\n- 披萨\n\n小李（7岁）：\n- 清蒸鱼\n- 白米饭\n- 蒸蛋羹\n- 水果沙拉\n\n小王（5岁）：\n- 面条\n- 小笼包\n- 炸鸡块\n- 冰淇淋' },
       { id: 14, name: '忌口清单.txt', type: 'text', category: 'document', typeLabel: 'TXT', description: '每个人的食物忌口情况', content: '忌口清单：\n\n小明：\n- 对花生过敏\n- 不吃辣\n- 不吃香菜\n\n小红：\n- 对海鲜过敏\n- 不吃胡萝卜\n- 不吃青椒\n\n小李：\n- 对牛奶过敏\n- 不吃茄子\n- 不吃苦瓜\n\n小明爸爸：\n- 对酒精过敏\n- 不吃生冷食物\n\n小红妈妈：\n- 不吃辛辣食物\n- 不吃油炸食品' },
@@ -60,10 +52,20 @@ class DocumentService {
   }
 
   // 更新文档
-  updateDocument(id, updates) {
+  async updateDocument(id, updates) {
     const index = this.documents.findIndex(doc => doc.id === id)
     if (index !== -1) {
       this.documents[index] = { ...this.documents[index], ...updates }
+      
+      // 保存到文件系统
+      try {
+        await this.saveDocumentToFile(this.documents[index])
+        console.log('💾 文档已保存到文件系统:', this.documents[index].name)
+      } catch (error) {
+        console.error('❌ 保存到文件系统失败:', error)
+        // 即使文件保存失败，也返回更新后的文档
+      }
+      
       return this.documents[index]
     }
     return null
@@ -77,6 +79,41 @@ class DocumentService {
       return deleted
     }
     return null
+  }
+
+  // 保存文档到文件系统
+  async saveDocumentToFile(document) {
+    try {
+      // 这里可以添加实际的文件系统写入逻辑
+      // 例如：使用 Node.js 的 fs 模块或浏览器的 File System Access API
+      
+      // 模拟文件保存
+      console.log(`📝 保存文档到文件: ${document.name}`)
+      console.log(`📄 文档内容: ${document.content.substring(0, 100)}...`)
+      
+      // 模拟异步保存
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // 触发文件变动事件
+      this.triggerFileChangeEvent(document.name)
+      
+      return true
+    } catch (error) {
+      console.error('❌ 保存文档到文件失败:', error)
+      throw error
+    }
+  }
+
+  // 触发文件变动事件
+  triggerFileChangeEvent(filename) {
+    // 触发文件变动事件，通知其他组件
+    window.dispatchEvent(new CustomEvent('documentFileChanged', {
+      detail: {
+        filename,
+        timestamp: new Date().toISOString(),
+        action: 'saved'
+      }
+    }))
   }
 
   // 搜索文档
