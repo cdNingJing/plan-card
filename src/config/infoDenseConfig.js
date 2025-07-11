@@ -81,5 +81,15 @@ export const AVAILABLE_TOOLS = [
     "title": "采购清单生成",
     "description": "告诉你需要准备什么东西",
     "component": "ShoppingListCard"
+  },
+  {
+    "title": "餐厅列表",
+    "description": "根据偏好自动匹配餐厅",
+    "component": "RestaurantMatchCard"
+  },
+  {
+    "title": "填写餐厅预订信息",
+    "description": "一键确认完成预订",
+    "component": "RestaurantBookingCard"
   }
 ] 

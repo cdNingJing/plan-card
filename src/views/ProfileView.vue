@@ -3,11 +3,11 @@
     <div class="profile-layout-container">
       <!-- 文档区域 - 70% -->
       <div class="documentation-section">
-        <!-- <div class="documentation-header">
+        <div class="documentation-header">
           <button class="search-btn" @click="startSearch">模拟检索全部文档</button>
-          <button class="test-btn" @click="startPartialScan">测试扫描部分文档</button>
-          <button class="auto-test-btn" @click="startAutoTest">自动测试对话</button>
-        </div> -->
+          <button class="search-btn" @click="testPartyComponent1">为孩子举办生日派对</button>
+          <button class="search-btn" @click="testRestaurantComponent">为妈妈的生日在19点预订公司附近的餐厅</button>
+        </div>
         <DocumentationPanel />
       </div>
       <!-- 聊天区域 - 30% -->
@@ -16,7 +16,7 @@
         <div class="profile-chat-history-card-wrapper">
           <!-- DynamicIslandCard 作为底层显示 -->
           <div class="dynamic-island-card-container" v-if="showDynamicIslandCard">
-            <DynamicIslandCard :savedData="dynamicIslandData" />
+            <DynamicIslandCard :savedData="dynamicIslandData" :activeComponentNames="activeComponentNames" />
           </div>
           
           <!-- 历史对话卡片作为上层显示 -->
@@ -57,9 +57,11 @@ import DocumentationPanel from '@/components/DocumentationPanel.vue'
 import aiService from '@/services/aiService.js'
 import aiDataStorage from '@/utils/aiDataStorage.js'
 import { useDocumentScanStore } from '@/stores/documentScanStore.js'
+import { useRestaurantStore } from '@/stores/restaurantStore'
 
 const historyStore = useHistoryStore()
 const documentScanStore = useDocumentScanStore()
+const restaurantStore = useRestaurantStore()
 const { messages } = storeToRefs(historyStore)
 
 const inputValue = ref('')
@@ -102,6 +104,13 @@ const dynamicIslandData = ref({
   suggestions: []
 })
 const showDynamicIslandCard = ref(false)
+const activeComponentNames = ref([
+  'AllergyFreeMenuCard',
+  'NoVegetableMenuCard', 
+  'PartyThemeCard',
+  'PartyTimeCard',
+  'ShoppingListCard'
+])
 
 const fixedPlaceholder = ref('输入您的问题...')
 
@@ -205,43 +214,16 @@ const addMessage = (content, type = 'user') => {
 
 const handleSubmit = async () => {
   const value = inputValue.value.trim()
+  console.log('value', value)
+  // 暂停交互
+  return;
   if (value) {
     // 添加用户消息
     addMessage(value, 'user')
     inputValue.value = ''
     
-    // 拦截特定消息
-    // 测试
-    if (true) {
-      // 扫描聚会人员统计.txt文档
-      documentScanStore.startPartialScan([12]) // 扫描第4个文件（聚会人员统计.txt）
-      
-      // 扫描完成后返回消息
-      setTimeout(() => {
-        addMessage('参会人员已确认，正在分析更多数据。', 'bot')
-        // 扫描聚会人员统计.txt文档
-        documentScanStore.startPartialScan([13, 14, 15])
-          setTimeout(() => {
-           addMessage('深度分析已完成！正在生成卡片。', 'bot')
-           
-            setTimeout(() => {
-              showDynamicIslandCard.value = true
-              // 隐藏历史卡片
-              historyCardState.value = 'collapsed'
-              // 移除输入框选中效果
-              if (inputRef.value) {
-                inputRef.value.blur()
-              }
-            }, 1000)
-           
-         }, 3000)
-      }, 3000)
-      
-      return;
-    }
-    
     // 启动灵动岛流程
-    startDynamicIslandFlow()
+    // startDynamicIslandFlow()
     
     try {
       // 调用AI服务，使用简单场景调用方法
@@ -504,30 +486,118 @@ const startSearch = () => {
   }, 5000) // 5秒后模拟全量扫描完成
 }
 
-const startPartialScan = () => {
-  // 使用store中的部分扫描方法，扫描前3个文档
-  documentScanStore.startPartialScan([1, 2, 3])
+// 聚会测试组件方法
+const testPartyComponent1 = () => {
+  // 选中输入框
+  nextTick(() => {
+    if (inputRef.value) {
+      inputRef.value.focus()
+    }
+  })
+  // 先进行对话
+  const userMessage = "为孩子举办生日派对"
+  addMessage(userMessage, 'user')
+  // 添加用户消息
+  inputValue.value = ''
+
+  // 扫描聚会人员统计.txt文档
+  documentScanStore.startPartialScan([12]) // 扫描第4个文件（聚会人员统计.txt）
   
-  // 模拟扫描完成后发送固定消息
+  // 扫描完成后返回消息
   setTimeout(() => {
-    const scanCompleteMessage = "文档扫描已完成！\n\n已成功扫描 3 个文档，发现以下关键信息：\n\n• 项目配置文件完整\n• 组件结构清晰\n• 数据流设计合理\n\n建议：您可以查看灵动岛卡片获取更详细的分析结果。"
-    addMessage(scanCompleteMessage, 'bot')
-  }, 3000) // 3秒后模拟扫描完成
+    addMessage('参会人员已确认，正在分析更多数据。', 'bot')
+    // 扫描聚会人员统计.txt文档
+    documentScanStore.startPartialScan([13, 14, 15])
+      setTimeout(() => {
+        addMessage('深度分析已完成！正在生成卡片。', 'bot')
+        
+        setTimeout(() => {
+          // 显示聚会相关的组件1
+          activeComponentNames.value = [
+            'PartyThemeCard',
+            'PartyTimeCard',
+            'ShoppingListCard',
+            'AllergyFreeMenuCard',
+            'NoVegetableMenuCard'
+          ]
+          showDynamicIslandCard.value = true
+          dynamicIslandData.value = {
+            timestamp: new Date().toISOString(),
+            suggestions: [
+              { id: 1, text: '查看聚会名单' },
+              { id: 2, text: '导出人员统计' },
+              { id: 3, text: '继续扫描更多文档' }
+            ]
+          }
+          // 隐藏历史卡片
+          historyCardState.value = 'collapsed'
+          // 移除输入框选中效果
+          if (inputRef.value) {
+            inputRef.value.blur()
+          }
+        }, 1000)
+        
+      }, 3000)
+  }, 3000)
+
+  
 }
 
-// 自动测试对话方法
-const startAutoTest = async () => {
-  // 1. 默认选中输入框
-  await nextTick()
-  if (inputRef.value) {
-    inputRef.value.focus()
-  }
-  
-  // 2. 填写默认数据 - 准备聚会
-  const testMessage = "准备一个聚会"
-  inputValue.value = testMessage
+const testRestaurantComponent = () => {
+  // 选中输入框
+  nextTick(() => {
+    if (inputRef.value) {
+      inputRef.value.focus()
+    }
+  })
+  // 先进行对话
+  const userMessage = "为妈妈的生日在19点预订公司附近的餐厅"
+  addMessage(userMessage, 'user')
+  // 添加用户消息
+  inputValue.value = ''
 
-  handleSubmit()
+  // 扫描聚会人员统计.txt文档
+  documentScanStore.startPartialScan([6]) // 扫描第4个文件（聚会人员统计.txt）
+  
+  // 扫描完成后返回消息
+  setTimeout(() => {
+    addMessage('妈妈信息已确认，正在分析更多数据。', 'bot')
+    // 扫描聚会人员统计.txt文档
+    documentScanStore.startPartialScan([5, 3])
+      setTimeout(() => {
+        addMessage('深度分析已完成！正在生成卡片。', 'bot')
+        
+        setTimeout(() => {
+          // 显示预订餐厅相关的组件
+          activeComponentNames.value = [
+            'RestaurantMatchCard',
+            'RestaurantBookingCard'
+          ]
+          showDynamicIslandCard.value = true
+          dynamicIslandData.value = {
+            timestamp: new Date().toISOString(),
+            suggestions: [
+              { id: 1, text: '查看餐厅推荐' },
+              { id: 2, text: '导出预订信息' },
+              { id: 3, text: '生成用餐方案' }
+            ]
+          }
+          // 隐藏历史卡片
+          historyCardState.value = 'collapsed'
+          // 移除输入框选中效果
+          if (inputRef.value) {
+            inputRef.value.blur()
+          }
+          
+          // 完成灵动岛流程
+          completeDynamicIslandFlow('success', {
+            message: '餐厅匹配完成',
+            nextStepText: '查看推荐'
+          })
+        }, 1000)
+        
+      }, 3000)
+  }, 3000)
 }
 
 
@@ -545,6 +615,7 @@ const startAutoTest = async () => {
 
 .profile-layout-container {
   width: 100%;
+  min-width: 1200px;
   height: 100vh;
   display: flex;
   align-items: stretch;
@@ -610,6 +681,28 @@ const startAutoTest = async () => {
 .auto-test-btn:hover {
   box-shadow: 0 4px 18px 0 rgba(5,150,105,0.15);
   background: linear-gradient(90deg, #a7f3d0 0%, #6ee7b7 100%);
+}
+
+.party-test-btn {
+  background: linear-gradient(90deg, #fce7f3 0%, #fbcfe8 100%);
+  color: #ec4899;
+  box-shadow: 0 2px 12px 0 rgba(236,72,153,0.08);
+}
+
+.party-test-btn:hover {
+  box-shadow: 0 4px 18px 0 rgba(236,72,153,0.15);
+  background: linear-gradient(90deg, #fbcfe8 0%, #f9a8d4 100%);
+}
+
+.restaurant-test-btn {
+  background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%);
+  color: #f59e0b;
+  box-shadow: 0 2px 12px 0 rgba(245,158,11,0.08);
+}
+
+.restaurant-test-btn:hover {
+  box-shadow: 0 4px 18px 0 rgba(245,158,11,0.15);
+  background: linear-gradient(90deg, #fde68a 0%, #fcd34d 100%);
 }
 
 .profile-chat-frame {
@@ -790,11 +883,6 @@ const startAutoTest = async () => {
 
 
 @media (max-width: 1200px) {
-  .profile-layout-container {
-    flex-direction: column;
-    gap: 16px;
-    padding: 16px;
-  }
   
   .documentation-section {
     flex: 0 0 73%;
@@ -807,11 +895,7 @@ const startAutoTest = async () => {
 }
 
 @media (max-width: 600px) {
-  .profile-layout-container {
-    padding: 8px;
-    gap: 12px;
-  }
-  
+
   .documentation-section {
     flex: 0 0 50%;
   }

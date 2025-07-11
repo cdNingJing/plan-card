@@ -83,10 +83,6 @@ const shoppingCategories = [
   color: #666;
 }
 
-.card-content {
-  margin-top: 16px;
-}
-
 .list-section h4 {
   margin: 0 0 16px 0;
   font-size: 1rem;

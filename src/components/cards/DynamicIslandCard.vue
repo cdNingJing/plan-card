@@ -2,8 +2,8 @@
   <div class="dynamic-island-card" v-if="showCard">
     <div class="components-container">
       <div class="section-header">
-        <span class="section-title">派对策划助手</span>
-        <span class="section-desc">为您的孩子派对提供全方位的策划支持</span>
+        <span class="section-title">{{ sectionTitle }}</span>
+        <span class="section-desc">{{ sectionDescription }}</span>
       </div>
       
       <div class="components-grid">
@@ -83,6 +83,8 @@ import NoVegetableMenuCard from './NoVegetableMenuCard.vue'
 import PartyThemeCard from './PartyThemeCard.vue'
 import PartyTimeCard from './PartyTimeCard.vue'
 import ShoppingListCard from './ShoppingListCard.vue'
+import RestaurantMatchCard from './RestaurantMatchCard.vue'
+import RestaurantBookingCard from './RestaurantBookingCard.vue'
 
 const showCard = ref(false)
 const cardStates = ref({})
@@ -93,7 +95,9 @@ const componentMap = {
   'NoVegetableMenuCard': NoVegetableMenuCard,
   'PartyThemeCard': PartyThemeCard,
   'PartyTimeCard': PartyTimeCard,
-  'ShoppingListCard': ShoppingListCard
+  'ShoppingListCard': ShoppingListCard,
+  'RestaurantMatchCard': RestaurantMatchCard,
+  'RestaurantBookingCard': RestaurantBookingCard
 }
 
 // 图标映射
@@ -102,7 +106,9 @@ const iconMap = {
   'NoVegetableMenuCard': Leaf,
   'PartyThemeCard': Sparkles,
   'PartyTimeCard': CalendarClock,
-  'ShoppingListCard': ListChecks
+  'ShoppingListCard': ListChecks,
+  'RestaurantMatchCard': UtensilsCrossed,
+  'RestaurantBookingCard': CalendarClock
 }
 
 // 控制显示哪些组件的数组（可以通过props传入）
@@ -114,7 +120,9 @@ const props = defineProps({
       'NoVegetableMenuCard', 
       'PartyThemeCard',
       'PartyTimeCard',
-      'ShoppingListCard'
+      'ShoppingListCard',
+      'RestaurantMatchCard',
+      'RestaurantBookingCard'
     ]
   }
 })
@@ -124,6 +132,41 @@ const activeComponents = computed(() => {
   return AVAILABLE_TOOLS.filter(tool => 
     props.activeComponentNames.includes(tool.component)
   )
+})
+
+// 根据场景动态设置标题和描述
+const sectionTitle = computed(() => {
+  const components = props.activeComponentNames
+  
+  // 判断是否为餐厅场景
+  if (components.includes('RestaurantMatchCard') || components.includes('RestaurantBookingCard')) {
+    return '餐厅预订助手'
+  }
+  
+  // 判断是否为聚会场景
+  if (components.includes('PartyThemeCard') || components.includes('PartyTimeCard')) {
+    return '派对策划助手'
+  }
+  
+  // 默认场景
+  return '智能助手'
+})
+
+const sectionDescription = computed(() => {
+  const components = props.activeComponentNames
+  
+  // 判断是否为餐厅场景
+  if (components.includes('RestaurantMatchCard') || components.includes('RestaurantBookingCard')) {
+    return '为您推荐合适的餐厅并协助完成预订'
+  }
+  
+  // 判断是否为聚会场景
+  if (components.includes('PartyThemeCard') || components.includes('PartyTimeCard')) {
+    return '为您的孩子派对提供全方位的策划支持'
+  }
+  
+  // 默认场景
+  return '为您提供智能化的服务支持'
 })
 
 // 全屏相关计算属性
@@ -291,11 +334,13 @@ onMounted(() => {
   opacity: 0.18;
   pointer-events: none;
 }
-.type-AllergyFreeMenuCard::before { background: linear-gradient(120deg,#b4cafe 0%,#e0e7ff 100%); }
-.type-NoVegetableMenuCard::before { background: linear-gradient(120deg,#b9fbc0 0%,#d1fae5 100%); }
-.type-PartyThemeCard::before { background: linear-gradient(120deg,#e0c3fc 0%,#f3e8ff 100%); }
-.type-PartyTimeCard::before { background: linear-gradient(120deg,#a1c4fd 0%,#e0f2fe 100%); }
-.type-ShoppingListCard::before { background: linear-gradient(120deg,#f9e79f 0%,#fef9c3 100%); }
+  .type-AllergyFreeMenuCard::before { background: linear-gradient(120deg,#b4cafe 0%,#e0e7ff 100%); }
+  .type-NoVegetableMenuCard::before { background: linear-gradient(120deg,#b9fbc0 0%,#d1fae5 100%); }
+  .type-PartyThemeCard::before { background: linear-gradient(120deg,#e0c3fc 0%,#f3e8ff 100%); }
+  .type-PartyTimeCard::before { background: linear-gradient(120deg,#a1c4fd 0%,#e0f2fe 100%); }
+  .type-ShoppingListCard::before { background: linear-gradient(120deg,#f9e79f 0%,#fef9c3 100%); }
+  .type-RestaurantMatchCard::before { background: linear-gradient(120deg,#f9e79f 0%,#fef9c3 100%); }
+  .type-RestaurantBookingCard::before { background: linear-gradient(120deg,#f9e79f 0%,#fef9c3 100%); }
 .component-wrapper .component-header, .component-wrapper .component-content { position: relative; z-index: 1; }
 
 .component-wrapper:hover {

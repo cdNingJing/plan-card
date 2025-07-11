@@ -72,10 +72,6 @@ const times = [
   color: #666;
 }
 
-.card-content {
-  margin-top: 16px;
-}
-
 .time-section h4 {
   margin: 0 0 12px 0;
   font-size: 1rem;
