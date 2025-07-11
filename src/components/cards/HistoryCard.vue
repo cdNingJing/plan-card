@@ -31,15 +31,15 @@
     
     <!-- 可滚动的内容区域 -->
     <div class="history-content" ref="historyContainerRef">
-      <div v-for="message in messages" :key="message?.id || Math.random()" :class="['history-bubble', message?.type]">
-        <span class="bubble-content">{{ message?.content || '' }}</span>
+      <div v-for="(message, index) in displayMessages" :key="message?.id || Math.random()" :class="['history-bubble', message?.type]">
+        <span class="bubble-content" v-html="getHighlightedContent(message, index)"></span>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch, computed } from 'vue'
 import { useHistoryStore } from '@/stores/historyStore'
 
 const props = defineProps({ 
@@ -60,12 +60,48 @@ const historyStore = useHistoryStore()
 
 const historyContainerRef = ref(null)
 
+// 计算显示的消息，优先使用props.messages，如果没有则使用store中的消息
+const displayMessages = computed(() => {
+  return props.messages && props.messages.length > 0 ? props.messages : historyStore.messages
+})
 
-
-
-
-
-
+// 获取高亮内容的方法
+const getHighlightedContent = (message, index) => {
+  let content = message?.content || ''
+  
+  console.log('🔍 getHighlightedContent被调用:', { 
+    messageType: message?.type, 
+    index, 
+    totalMessages: displayMessages.value.length,
+    isLatestBot: message?.type === 'bot' && index === displayMessages.value.length - 1 
+  })
+  
+  // 只对最新的bot消息应用高亮效果
+  if (message?.type === 'bot' && index === displayMessages.value.length - 1) {
+    const extractedInfo = historyStore.getExtractedInfo()
+    console.log('📋 extractedInfo:', extractedInfo)
+    
+    if (extractedInfo && Array.isArray(extractedInfo) && extractedInfo.length > 0) {
+      console.log('🎯 开始高亮处理，原始内容:', content)
+      
+      // 为每个提取的信息添加高亮标记
+      extractedInfo.forEach(info => {
+        const escapedInfo = info.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const regex = new RegExp(`(${escapedInfo})`, 'gi')
+        console.log(`🔍 搜索关键词: "${info}", 正则: ${regex}`)
+        
+        const matches = content.match(regex)
+        console.log(`📌 找到匹配:`, matches)
+        
+        content = content.replace(regex, '<span class="highlight-info">$1</span>')
+      })
+      
+      console.log('✨ 高亮处理后的内容:', content)
+    }
+  }
+  
+  return content
+}
 
 // 清空历史对话
 const clearHistory = () => {
@@ -84,7 +120,7 @@ const scrollToBottom = () => {
 }
 
 // 监听消息变化，自动滚动到底部
-watch(() => props.messages, () => {
+watch([() => props.messages, () => displayMessages.value], () => {
   scrollToBottom()
 }, { deep: true })
 
@@ -262,4 +298,10 @@ onMounted(() => {
   display: block;
   /* white-space: pre-wrap; */
 }
+
+  /* 高亮信息样式 */
+  :deep(.highlight-info) {
+    color: #1e40af;
+    font-weight: 600;
+  }
 </style> 

@@ -7,6 +7,7 @@
 import aiLongTermData from '@/data/long-term/ai-long-term-data.json'
 import aiShortTermMemory from '@/data/short-term/ai-short-term-memory.json'
 import aiService from '@/services/aiService.js'
+import { parseAIResponse } from '@/utils/aiResponseParser.js'
 
 class AIDataStorage {
   constructor() {
@@ -519,25 +520,16 @@ ${JSON.stringify(dataEntries, null, 2)}
         // 解析AI返回的总结
         const aiContent = aiResponse.data?.choices[0]?.message?.content
         if (aiContent) {
-          // 清理AI回复中的标签
-          const cleanContent = aiContent.replace(/<think>[\s\S]*?<\/think>/g, '')
+          // 使用公共方法解析AI响应
+          const parsedData = parseAIResponse(aiContent)
           
-                     // 尝试解析JSON格式的总结
-           let summary = null
-           try {
-             const startMatch = cleanContent.match(/<START>\s*(\{[\s\S]*?\})\s*<END>/)
-             if (startMatch) {
-               const jsonContent = startMatch[1].trim()
-               const parsedData = JSON.parse(jsonContent)
-               // 使用summary字段作为总结
-               summary = parsedData.summary || cleanContent
-             } else {
-               summary = cleanContent
-             }
-           } catch (parseError) {
-             console.error('解析AI总结失败，使用原始内容:', parseError)
-             summary = cleanContent
-           }
+          // 尝试解析JSON格式的总结
+          let summary = null
+          if (parsedData && parsedData.summary) {
+            summary = parsedData.summary
+          } else {
+            summary = parsedData ? parsedData.answer : aiContent
+          }
 
           // 保存总结到后端
           const saveResult = await this.updateSummary(summary)
@@ -656,27 +648,15 @@ ${JSON.stringify(dataEntries, null, 2)}
         // 解析AI返回的总结
         const aiContent = aiResponse.data?.choices[0]?.message?.content
         if (aiContent) {
-          // 清理AI回复中的标签
-          const cleanContent = aiContent.replace(/<think>[\s\S]*?<\/think>/g, '')
+          // 使用公共方法解析AI响应
+          const parsedData = parseAIResponse(aiContent)
           
           // 尝试解析JSON格式的总结
           let summary = null
-          try {
-            const startMatch = cleanContent.match(/<START>\s*(\{[\s\S]*?\})\s*<END>/)
-            console.log("111 startMatch", startMatch) 
-            if (startMatch) {
-              const jsonContent = startMatch[1].trim()
-              console.log("111 jsonContent", jsonContent)
-              const parsedData = JSON.parse(jsonContent)
-              console.log("111 parsedData", parsedData)
-              // 使用summary字段作为总结
-              summary = parsedData.summary || cleanContent
-            } else {
-              summary = cleanContent
-            }
-          } catch (parseError) {
-            console.error('解析AI总结失败，使用原始内容:', parseError)
-            summary = cleanContent
+          if (parsedData && parsedData.summary) {
+            summary = parsedData.summary
+          } else {
+            summary = parsedData ? parsedData.answer : aiContent
           }
 
           // 保存总结到后端

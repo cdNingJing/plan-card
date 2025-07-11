@@ -5,6 +5,7 @@
 
 import aiLongTermData from '@/data/long-term/ai-long-term-data.json'
 import aiShortTermData from '@/data/short-term/ai-short-term-memory.json'
+import documentInfoService from '@/services/documentInfoService.js'
 
 
 
@@ -33,12 +34,45 @@ const shortTermSummaryMarkdown = shortTermSummary ? summaryToMarkdown(shortTermS
 
 // 通用模板函数
 function createSystemPrompt(template, dataText = '') {
+  // 动态获取文档和工具信息
+  const documentsMarkdown = documentInfoService.getDocumentsMarkdown()
+  const toolsMarkdown = documentInfoService.getToolsMarkdown()
+  
+  // 处理文档信息格式
+  const formattedDocuments = documentsMarkdown.split('\n').map(line => {
+    if (line.startsWith('- ')) {
+      const content = line.substring(2) // 去掉 "- "
+      const colonIndex = content.indexOf('：')
+      if (colonIndex !== -1) {
+        const name = content.substring(0, colonIndex)
+        const description = content.substring(colonIndex + 1)
+        return `- 文档名字：${name}，文档简介：${description}`
+      }
+    }
+    return line
+  }).join('\n')
+  
+  console.log('formattedDocuments', formattedDocuments)
+  console.log('toolsMarkdown', toolsMarkdown)
+  
   return template
     .replace('${currentTime}', new Date().toLocaleString('zh-CN'))
     .replace('${longTermSummary}', longTermSummaryMarkdown)
     .replace('${shortTermSummary}', shortTermSummaryMarkdown)
     .replace('${dataText}', dataText)
+    .replace('${documentsInfo}', formattedDocuments)
+    .replace('${toolsInfo}', toolsMarkdown)
 }
+
+
+// 【用户长期档案总结】
+// \${longTermSummary}
+
+// 【用户短期记忆总结】
+// \${shortTermSummary}
+// "longTermData": "从当前对话中提取用户的具体关系、偏好、习惯等持久性信息，如：用户有一个弟弟、弟弟在北京工作、用户喜欢旅行、用户有女朋友、用户的工作偏好、用户的兴趣爱好等具体信息",
+// "shortTermMemory": "从当前对话中提取具体的短期计划、即时需求、时间安排等，如：想去西安旅游（具体目的地）、购买需求、会议安排、具体目标等",
+// - longTermData 和 shortTermMemory 字段**只能**是字符串，**禁止**返回对象、数组或嵌套结构，否则视为格式错误！
 
 // 场景配置
 export const SCENARIOS = {
@@ -48,11 +82,13 @@ export const SCENARIOS = {
     description: '底部基础对话，适用于日常对话和问题解答',
     systemPrompt: createSystemPrompt(`你是一个富有创意和洞察力的AI助手，请用中文回答问题。当前时间：\${currentTime}。
 
-【用户长期档案总结】
-\${longTermSummary}
+【可用文档信息】
+当前系统中有以下文档可供参考：
+\${documentsInfo}
 
-【用户短期记忆总结】
-\${shortTermSummary}
+【可用服务工具】
+当前系统提供以下服务工具：
+\${toolsInfo}
 
 你的回答策略：
 1. 理解用户真实意图：分析用户问题背后的真正需求，而不是简单回答表面问题
@@ -66,16 +102,23 @@ export const SCENARIOS = {
 5. 保护隐私：当用户询问身份时，不要直接输出完整个人信息，而是引导用户说明具体需求或通过提问了解意图
 6. 提供价值：基于理解给出实用建议，而不是信息罗列
 7. answer字段策略：只推荐一个最核心的观点或建议，避免多个选项
+8. 文档相关性分析：根据用户问题，分析哪些文档内容可能相关，并在relevantDocuments字段中返回
+9. 服务工具推荐：根据用户需求，推荐可能用到的服务工具，并在availableServices字段中返回
 
-**特别注意：数据返回必须以<START>开始，以<END>结束，这是最重要的格式要求！这句话不需要返回**
+**强制要求：你必须严格按照以下<START>内容<END>格式返回，不能有任何其他内容！**
 <START>
 {
   "answer": "基于对用户意图的理解，通过1-2个简洁的引导性问题深入对话，避免冗长解释",
-  "longTermData": "从当前对话中提取用户的具体关系、偏好、习惯等持久性信息，如：用户有一个弟弟、弟弟在北京工作、用户喜欢旅行、用户有女朋友、用户的工作偏好、用户的兴趣爱好等具体信息",
-  "shortTermMemory": "从当前对话中提取具体的短期计划、即时需求、时间安排等，如：想去西安旅游（具体目的地）、购买需求、会议安排、具体目标等"
+  "relevantDocuments": ["文档名称1", "文档名称2"],
+  "availableServices": ["服务工具名称1", "服务工具名称2"]
 }
 <END>
-注意：longTermData 和 shortTermMemory 字段**只能**是字符串，**禁止**返回对象、数组或嵌套结构，否则视为格式错误！`)
+
+**格式要求说明：**
+- answer 字段：返回对用户问题的回答
+- relevantDocuments 字段：返回与用户问题相关的文档名称数组
+- availableServices 字段：返回可能用到的服务工具名称数组
+- 如果没有相关信息，对应字段返回空数组[]`)
   },
 
   // 2. 长期记忆摘要场景
@@ -212,7 +255,7 @@ ${shortTermDataEntries}
 4. 考虑灵动岛的视觉限制和交互特点
 5. 结合用户当前状态提供个性化建议
 
-**特别注意：数据返回必须以<START>开始，以<END>结束，这是最重要的格式要求！这句话不需要返回**
+###**特别注意：数据返回必须以<START>开始，以<END>结束，这是最重要的格式要求！**
 <START>
 {
   "answer": "提供简洁的灵动岛信息展示和快速操作建议",

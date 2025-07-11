@@ -6,6 +6,7 @@
 import aiApiService from '@/api/aiApi.js'
 import { AI_CONFIG, getConfig, getConversationConfig } from '@/config/aiConfig.js'
 import configManager from '@/config/configManager.js'
+import { parseAIResponse } from '@/utils/aiResponseParser.js'
 
 class AIService {
   constructor() {
@@ -124,7 +125,7 @@ class AIService {
     try {
       // 处理参数：如果第三个参数是对象，则它是options，否则是dataText
       let dataText = ''
-      let finalOptions = options
+      let finalOptions = { ...options }
       
       if (typeof dataTextOrOptions === 'string') {
         dataText = dataTextOrOptions
@@ -152,6 +153,9 @@ class AIService {
       // 构建消息数组，指定场景和数据文本
       const messages = this.buildMessages(message, { ...finalOptions, scenario, dataText, isSystemPrompt })
 
+      // 提取标准 OpenAI 参数，排除自定义参数
+      const { conversationHistory, scenario: scenarioParam, dataText: dataTextParam, isSystemPrompt: isSystemPromptParam, ...openAIOptions } = finalOptions
+
       // 发送请求
       const response = await aiApiService.chatCompletion(messages, {
         max_tokens: getConfig('model.maxTokens'),
@@ -159,7 +163,7 @@ class AIService {
         top_p: getConfig('model.topP'),
         frequency_penalty: getConfig('model.frequencyPenalty'),
         presence_penalty: getConfig('model.presencePenalty'),
-        ...options
+        ...openAIOptions
       })
 
       if (response.success) {
@@ -233,8 +237,10 @@ class AIService {
     // 智能历史截断
     const historyToInclude = this.getOptimizedHistory(options)
     
-    // 添加对话历史
-    // messages.push(...historyToInclude)
+    // 添加对话历史（如果存在）
+    if (historyToInclude.length > 0) {
+      messages.push(...historyToInclude)
+    }
 
     // 添加当前消息
     messages.push({
@@ -263,6 +269,11 @@ class AIService {
       historyToInclude = this.conversationHistory.slice(-maxHistory * 2)
       console.log('使用内部存储的历史:', historyToInclude.length, '条消息')
     }
+    
+    // 过滤掉空消息
+    historyToInclude = historyToInclude.filter(msg => 
+      msg && msg.content && msg.content.trim().length > 0
+    )
 
     // 估算当前token数量
     const estimatedTokens = this.estimateTokens(historyToInclude)
@@ -430,6 +441,152 @@ class AIService {
       // 实现从本地存储加载对话的逻辑
     } catch (error) {
       console.error('加载对话历史失败:', error)
+    }
+  }
+
+  /**
+   * 文档相关查询 - 专门处理文档内容的AI查询
+   * @param {string} userQuestion - 用户问题
+   * @param {Array} documentNames - 相关文档名称数组
+   * @returns {Promise} AI回复
+   */
+  async queryWithDocuments(userQuestion, documentNames) {
+    if (this.isProcessing) {
+      return {
+        success: false,
+        message: '正在处理中，请稍候...'
+      }
+    }
+
+    this.isProcessing = true
+
+    try {
+      // 先调用文档扫描
+      const documentScanStore = await import('@/stores/documentScanStore.js')
+      const { useDocumentScanStore } = documentScanStore
+      const scanStore = useDocumentScanStore()
+      
+      // 根据文档名称映射到文档ID
+      const documentService = await import('@/services/documentService.js')
+      const documents = documentService.default.getAllDocuments()
+      
+      // 将文档名称转换为文档ID
+      const documentIds = documentNames.map(name => {
+        const doc = documents.find(d => d.name === name)
+        console.log(`📄 文档名称: ${name} -> ID: ${doc ? doc.id : '未找到'}`)
+        return doc ? doc.id : null
+      }).filter(id => id !== null)
+      
+      console.log('📋 最终要扫描的文档ID:', documentIds)
+      
+      // 调用文档扫描
+      if (documentIds.length > 0) {
+        console.log('🔍 开始扫描相关文档:', documentIds)
+        scanStore.startPartialScan(documentIds)
+      }
+      
+      // 等待一小段时间让扫描完成
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // 构建文档内容文本
+      let documentsContent = ''
+      for (const docName of documentNames) {
+        const doc = documents.find(d => d.name === docName)
+        if (doc) {
+          documentsContent += `\n\n文档：${doc.name}\n描述：${doc.description}\n内容：${doc.content}\n`
+        }
+      }
+
+      // 构建系统提示词
+      const systemPrompt = `你是一个专业的文档分析助手。请根据提供的文档内容回答用户的问题。
+
+用户问题：${userQuestion}
+
+相关文档内容：
+${documentsContent}
+
+要求：
+1. 仔细分析文档内容，找到与用户问题相关的信息
+2. 基于文档中的具体信息回答用户问题
+3. 如果文档中有相关信息，请直接使用文档中的信息
+4. 回答要准确、具体、有用
+5. 如果文档中没有相关信息，请说明并建议用户提供更多信息
+6. 在extractedInfo字段中先总结文档中与用户问题直接相关的关键信息要点
+7. 在answer字段中引用extractedInfo中的信息，形成完整的回答
+###**特别注意：数据返回必须以<START>开始，以<END>结束，这是最重要的格式要求！**
+
+<START>{
+  "extractedInfo": ["与用户问题直接相关的关键信息1", "关键信息2", "关键信息3"],
+  "answer": "基于extractedInfo中的信息，形成完整的回答内容，引用并解释这些关键信息"
+}<END>
+
+**格式要求说明：**
+- extractedInfo 字段：先总结文档中与用户问题直接相关的关键信息要点数组，只提取能回答用户问题的信息
+- answer 字段：基于extractedInfo中的信息，形成完整的回答，引用并解释这些关键信息
+- 如果没有相关信息，对应字段返回空数组[]
+请用中文回答，保持友好和专业的语调。`
+
+      // 构建消息数组
+      const messages = [
+        {
+          role: 'system',
+          content: systemPrompt
+        },
+        {
+          role: 'user',
+          content: userQuestion
+        }
+      ]
+
+      // 发送请求
+      const response = await aiApiService.chatCompletion(messages, {
+        max_tokens: getConfig('model.maxTokens'),
+        temperature: getConfig('model.temperature'),
+        top_p: getConfig('model.topP'),
+        frequency_penalty: getConfig('model.frequencyPenalty'),
+        presence_penalty: getConfig('model.presencePenalty')
+      })
+
+      if (response.success) {
+        // 解析AI回复
+        const aiContent = response.data.choices[0].message.content
+        
+        // 使用公共方法解析AI响应
+        const parsedData = parseAIResponse(aiContent)
+        
+        if (parsedData && parsedData.answer) {
+          return {
+            success: true,
+            data: response.data,
+            message: '文档查询成功',
+            content: parsedData.answer,
+            parsedData: parsedData
+          }
+        } else {
+          // 如果解析失败，返回原始内容
+          return {
+            success: true,
+            data: response.data,
+            message: '文档查询成功',
+            content: parsedData ? parsedData.answer : aiContent
+          }
+        }
+      } else {
+        return {
+          success: false,
+          message: getConfig('errorHandling.fallbackResponse'),
+          error: response.error
+        }
+      }
+    } catch (error) {
+      console.error('文档查询错误:', error)
+      return {
+        success: false,
+        message: getConfig('errorHandling.fallbackResponse'),
+        error: error.message
+      }
+    } finally {
+      this.isProcessing = false
     }
   }
 

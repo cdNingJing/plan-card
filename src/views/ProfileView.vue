@@ -56,6 +56,7 @@ import DynamicIslandCard from '@/components/cards/DynamicIslandCard.vue'
 import DocumentationPanel from '@/components/DocumentationPanel.vue'
 import aiService from '@/services/aiService.js'
 import aiDataStorage from '@/utils/aiDataStorage.js'
+import { parseAIResponse } from '@/utils/aiResponseParser.js'
 import { useDocumentScanStore } from '@/stores/documentScanStore.js'
 import { useRestaurantStore } from '@/stores/restaurantStore'
 
@@ -215,8 +216,6 @@ const addMessage = (content, type = 'user') => {
 const handleSubmit = async () => {
   const value = inputValue.value.trim()
   console.log('value', value)
-  // 暂停交互
-  return;
   if (value) {
     // 添加用户消息
     addMessage(value, 'user')
@@ -226,86 +225,154 @@ const handleSubmit = async () => {
     // startDynamicIslandFlow()
     
     try {
-      // 调用AI服务，使用简单场景调用方法
-      const response = await aiService.sendMessageWithScenario(value, 'basic')
+      // 构建历史对话上下文
+      const conversationHistory = historyStore.messages.map(msg => ({
+        role: msg.type === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      }))
+      
+      // 调用AI服务，使用简单场景调用方法，传递历史对话上下文
+      const response = await aiService.sendMessageWithScenario(value, 'basic', '', {
+        conversationHistory: conversationHistory
+      })
       
       if (response.success) {
         // 处理AI回复
         const aiContent = response?.data?.choices[0]?.message?.content
 
-        // 先删除<think></think>标签中的内容
-        const cleanContent = aiContent.replace(/<think>[\s\S]*?<\/think>/g, '')
-        let parsedData = null
-        console.log('cleanContent', cleanContent)
-        try {
-          // 使用更精确的正则表达式匹配JSON内容
-          const startMatch = cleanContent.match(/<START>\s*(\{[\s\S]*?\})\s*<END>/)
-          console.log('startMatch', startMatch)
+        // 使用公共方法解析AI响应
+        const parsedData = parseAIResponse(aiContent)
 
-          if (startMatch) {
-            const jsonContent = startMatch[1].trim()
-            try {
-              parsedData = JSON.parse(jsonContent)
-              
-              // 使用answer字段作为回答显示，并保存到历史记录
-              if (parsedData.answer) {
-                addMessage(parsedData.answer, 'bot')
+        // 如果成功解析到数据，处理结构化响应
+        if (parsedData) {
+            // 第一步：先显示基础回答，保存extractedInfo到全局状态
+            if (parsedData.answer) {
+              // 保存extractedInfo到全局状态
+              if (parsedData.extractedInfo && Array.isArray(parsedData.extractedInfo)) {
+                console.log('💾 保存extractedInfo到全局状态:', parsedData.extractedInfo)
+                historyStore.setExtractedInfo(parsedData.extractedInfo)
               } else {
-                // 如果没有answer字段，使用清理后的内容
-                addMessage(cleanContent, 'bot')
+                console.log('🗑️ 清空extractedInfo')
+                historyStore.clearExtractedInfo()
               }
               
-              // 处理长期数据和短期记忆
-              if (parsedData.longTermData && parsedData.longTermData.trim()) {
-                try {
-                  const timestamp = new Date().toISOString()
-                  const key = `ai_long_term_${timestamp}`
-                  const result = await aiDataStorage.saveLongTermData(key, parsedData.longTermData)
-                  if (result.success) {
-                    console.log('长期数据保存成功:', result.message)
-                  } else {
-                    console.error('长期数据保存失败:', result.message)
-                  }
-                } catch (error) {
-                  console.error('保存长期数据时发生错误:', error)
-                }
-              }
-              
-              if (parsedData.shortTermMemory && parsedData.shortTermMemory.trim()) {
-                console.log('短期记忆:', parsedData.shortTermMemory)
-                try {
-                  const timestamp = new Date().toISOString()
-                  const key = `ai_short_term_${timestamp}`
-                  const result = await aiDataStorage.saveShortTermData(key, parsedData.shortTermMemory)
-                  if (result.success) {
-                    console.log('短期记忆保存成功:', result.message)
-                    // 保存成功后调用短期记忆摘要整理
-                    try {
-                      console.log('短期记忆总结已触发')
-                    } catch (summaryError) {
-                      console.error('触发短期记忆总结失败:', summaryError)
-                    }
-                  } else {
-                    console.error('短期记忆保存失败:', result.message)
-                  }
-                } catch (error) {
-                  console.error('保存短期记忆时发生错误:', error)
-                }
-              }
-            } catch (jsonParseError) {
-              console.error('JSON解析失败:', jsonParseError)
-              // JSON解析失败时，直接显示原始内容
+              addMessage(parsedData.answer, 'bot')
+            } else {
+              // 如果没有answer字段，使用清理后的内容
               addMessage(cleanContent, 'bot')
             }
-          } else {
-            // 如果没有找到结构化格式，直接显示原始内容
-            addMessage(cleanContent, 'bot')
+            
+                          // 第二步：如果有相关文档，进行深度文档查询
+              if (parsedData.relevantDocuments && Array.isArray(parsedData.relevantDocuments) && parsedData.relevantDocuments.length > 0) {
+                console.log('相关文档:', parsedData.relevantDocuments)
+                
+                // 添加正在读取相关文档的固定提示信息
+                addMessage('正在读取相关文档...', 'bot')
+                
+                // 调用文档查询
+                try {
+                  const docResponse = await aiService.queryWithDocuments(value, parsedData.relevantDocuments)
+                
+                  if (docResponse.success) {
+                    // 删除"正在读取相关文档..."消息
+                    const lastMessage = historyStore.messages[historyStore.messages.length - 1]
+                    if (lastMessage && lastMessage.content === '正在读取相关文档...') {
+                      historyStore.messages.pop()
+                    }
+                    
+                    // 添加基于文档的详细回答
+                    addMessage(docResponse.content, 'bot')
+                  } else {
+                    // 如果文档查询失败，删除提示消息
+                    const lastMessage = historyStore.messages[historyStore.messages.length - 1]
+                    if (lastMessage && lastMessage.content === '正在读取相关文档...') {
+                      historyStore.messages.pop()
+                    }
+                    addMessage('抱歉，无法获取相关文档信息，请稍后再试。', 'bot')
+                  }
+                } catch (error) {
+                  console.error('文档查询失败:', error)
+                  const lastMessage = historyStore.messages[historyStore.messages.length - 1]
+                  if (lastMessage && lastMessage.content === '正在读取相关文档...') {
+                    historyStore.messages.pop()
+                  }
+                  addMessage('抱歉，文档查询过程中出现错误。', 'bot')
+                }
+            }
+            
+            // 处理可用服务工具信息
+            if (parsedData.availableServices && Array.isArray(parsedData.availableServices)) {
+              console.log('可用服务工具:', parsedData.availableServices)
+              
+              // 根据推荐的工具更新灵动岛卡片
+              if (parsedData.availableServices.length > 0) {
+                // 将工具名称转换为组件名称
+                const componentMap = {
+                  '提供无过敏菜单': 'AllergyFreeMenuCard',
+                  '去除蔬菜菜单': 'NoVegetableMenuCard',
+                  '派对主题推荐': 'PartyThemeCard',
+                  '派对时间建议': 'PartyTimeCard',
+                  '采购清单生成': 'ShoppingListCard',
+                  '餐厅列表': 'RestaurantMatchCard',
+                  '填写餐厅预订信息': 'RestaurantBookingCard'
+                }
+                
+                const recommendedComponents = parsedData.availableServices
+                  .map(service => componentMap[service])
+                  .filter(component => component)
+                
+                if (recommendedComponents.length > 0) {
+                  activeComponentNames.value = recommendedComponents
+                  showDynamicIslandCard.value = true
+                  dynamicIslandData.value = {
+                    timestamp: new Date().toISOString(),
+                    suggestions: [
+                      { id: 1, text: '查看推荐工具' },
+                      { id: 2, text: '了解更多服务' }
+                    ]
+                  }
+                }
+              }
+            }
+            
+            // 处理长期数据和短期记忆
+            if (parsedData.longTermData && parsedData.longTermData.trim()) {
+              try {
+                const timestamp = new Date().toISOString()
+                const key = `ai_long_term_${timestamp}`
+                const result = await aiDataStorage.saveLongTermData(key, parsedData.longTermData)
+                if (result.success) {
+                  console.log('长期数据保存成功:', result.message)
+                } else {
+                  console.error('长期数据保存失败:', result.message)
+                }
+              } catch (error) {
+                console.error('保存长期数据时发生错误:', error)
+              }
+            }
+            
+            if (parsedData.shortTermMemory && parsedData.shortTermMemory.trim()) {
+              console.log('短期记忆:', parsedData.shortTermMemory)
+              try {
+                const timestamp = new Date().toISOString()
+                const key = `ai_short_term_${timestamp}`
+                const result = await aiDataStorage.saveShortTermData(key, parsedData.shortTermMemory)
+                if (result.success) {
+                  console.log('短期记忆保存成功:', result.message)
+                  // 保存成功后调用短期记忆摘要整理
+                  try {
+                    console.log('短期记忆总结已触发')
+                  } catch (summaryError) {
+                    console.error('触发短期记忆总结失败:', summaryError)
+                  }
+                } else {
+                  console.error('短期记忆保存失败:', result.message)
+                }
+              } catch (error) {
+                console.error('保存短期记忆时发生错误:', error)
+              }
+            }
           }
-        } catch (parseError) {
-          console.error('解析AI回复失败:', parseError)
-          // 解析失败时显示原始内容
-          addMessage(cleanContent, 'bot')
-        }
         
         console.log('AI回复成功:', response.data)
         
@@ -893,6 +960,8 @@ const testRestaurantComponent = () => {
     max-width: none;
   }
 }
+
+
 
 @media (max-width: 600px) {
 

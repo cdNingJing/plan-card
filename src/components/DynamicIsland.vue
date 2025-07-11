@@ -44,6 +44,7 @@ import { computed, ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { X } from 'lucide-vue-next'
 import aiDataStorage from '@/utils/aiDataStorage.js'
 import aiService from '@/services/aiService.js'
+import { parseAIResponse } from '@/utils/aiResponseParser.js'
 import { AVAILABLE_TOOLS } from '@/config/infoDenseConfig.js'
 
 // 内容数组（扩充为10条以上）
@@ -432,51 +433,18 @@ ${JSON.stringify(AVAILABLE_TOOLS, null, 2)}
       // 解析AI返回的内容
       const aiContent = aiResponse.data?.choices[0]?.message?.content
       if (aiContent) {
-        // 清理AI回复中的标签
-        const cleanContent = aiContent.replace(/<think>[\s\S]*?<\/think>/g, '')
-        console.log('cleanContent', cleanContent)
-        try {
-          // 尝试解析JSON格式的回复
-          const startMatch = cleanContent.match(/<START>\s*(\{[\s\S]*?\})\s*<END>/)
-          console.log('startMatch', startMatch)
-          if (startMatch) {
-            const jsonContent = startMatch[1].trim()
-            const parsedData = JSON.parse(jsonContent)
-            console.log('parsedData', parsedData)
-            // 使用notifications字段作为数据
-            const notifications = parsedData.notifications || []
-            mockApiData.value = notifications
-            
-            console.log('AI生成的通知数据:', notifications)
-          } else {
-            console.error('未找到结构化数据，使用默认数据')
-            // 使用默认数据
-            mockApiData.value = [
-              {
-                id: 1,
-                type: 'notification',
-                content: '系统更新完成',
-                timestamp: new Date().toISOString(),
-                priority: 'low'
-              },
-              {
-                id: 2,
-                type: 'reminder',
-                content: '下午3点有会议',
-                timestamp: new Date().toISOString(),
-                priority: 'high'
-              },
-              {
-                id: 3,
-                type: 'message',
-                content: '收到新消息',
-                timestamp: new Date().toISOString(),
-                priority: 'medium'
-              }
-            ]
-          }
-        } catch (parseError) {
-          console.error('解析AI回复失败，使用默认数据:', parseError)
+        // 使用公共方法解析AI响应
+        const parsedData = parseAIResponse(aiContent)
+        
+        if (parsedData && parsedData.notifications) {
+          console.log('parsedData', parsedData)
+          // 使用notifications字段作为数据
+          const notifications = parsedData.notifications || []
+          mockApiData.value = notifications
+          
+          console.log('AI生成的通知数据:', notifications)
+        } else {
+          console.error('未找到结构化数据，使用默认数据')
           // 使用默认数据
           mockApiData.value = [
             {

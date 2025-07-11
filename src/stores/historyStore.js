@@ -3,7 +3,8 @@ import { defineStore } from 'pinia'
 export const useHistoryStore = defineStore('history', {
   state: () => ({
     messages: [],
-    currentCardIndex: 0 // 添加当前卡片索引
+    currentCardIndex: 0, // 添加当前卡片索引
+    extractedInfo: [] // 存储提取的关键信息
   }),
   actions: {
     addMessage(msg) {
@@ -68,6 +69,21 @@ export const useHistoryStore = defineStore('history', {
         console.error('加载当前卡片索引失败:', error)
         this.currentCardIndex = 0
       }
+    },
+    
+    // 设置提取的关键信息
+    setExtractedInfo(info) {
+      this.extractedInfo = info || []
+    },
+    
+    // 获取提取的关键信息
+    getExtractedInfo() {
+      return this.extractedInfo
+    },
+    
+    // 清空提取的关键信息
+    clearExtractedInfo() {
+      this.extractedInfo = []
     }
   }
 }) 
