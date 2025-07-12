@@ -2,15 +2,49 @@
   "ai_short_term_memory": {
     "description": "AI助手提取的短期记忆，包括当前会话中的重要信息",
     "created_at": "2025-07-09T13:01:57.677Z",
-    "last_updated": "2025-07-09T13:04:28.430Z",
-    "data_count": 1,
+    "last_updated": "2025-07-12T03:20:33.188Z",
+    "data_count": 2,
     "data_entries": {
       "ai_short_term_2025-07-09T13:04:27.179Z": {
         "value": "用户想去西安旅游",
         "timestamp": "2025-07-09T13:04:27.187Z",
         "created_at": "2025-07-09T13:04:27.187Z"
+      },
+      "ai_short_term_2025-07-12T03:20:31.920Z": {
+        "value": "为妈妈生日在19点预订公司附近餐厅，确保环境安静，提供符合饮食限制的菜品。",
+        "timestamp": "2025-07-12T03:20:31.925Z",
+        "created_at": "2025-07-12T03:20:31.925Z"
       }
     },
-    "summary": "\n\n```json\n{\n  \"data_entries\": [\n    {\n      \"id\": \"ai_short_term_2025-07-09T13:04:27.179Z\",\n      \"value\": \"用户想去西安旅游\",\n      \"timestamp\": \"2025-07-09T13:04:27.187Z\",\n      \"created_at\": \"2025-07-09T13:04:27.187Z\",\n      \"category\": \"重要不紧急\"\n    }\n  ],\n  \"summary\": {\n    \"重要且紧急\": {\n      \"items\": []\n    },\n    \"重要不紧急\": {\n      \"items\": [\n        {\n          \"content\": \"用户想去西安旅游\",\n          \"priority\": \"high\",\n          \"urgency\": \"low\",\n          \"timestamp\": \"2025-07-09T13:04:27.187Z\",\n          \"category\": \"旅行计划\"\n        }\n      ]\n    },\n    \"紧急不重要\": {\n      \"items\": []\n    },\n    \"不重要不紧急\": {\n      \"items\": []\n    }\n  }\n}\n```"
+    "summary": {
+      "重要且紧急": {
+        "items": [
+          {
+            "content": "为妈妈生日在19点预订公司附近餐厅，确保环境安静，提供符合饮食限制的菜品。",
+            "priority": "high",
+            "urgency": "high",
+            "timestamp": "2025-07-12T03:20:31.925Z",
+            "category": "预订餐厅"
+          }
+        ]
+      },
+      "重要不紧急": {
+        "items": [
+          {
+            "content": "用户想去西安旅游",
+            "priority": "high",
+            "urgency": "low",
+            "timestamp": "2025-07-09T13:04:27.187Z",
+            "category": "旅游计划"
+          }
+        ]
+      },
+      "紧急不重要": {
+        "items": []
+      },
+      "不重要不紧急": {
+        "items": []
+      }
+    }
   }
 }

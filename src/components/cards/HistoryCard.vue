@@ -69,13 +69,6 @@ const displayMessages = computed(() => {
 const getHighlightedContent = (message, index) => {
   let content = message?.content || ''
   
-  console.log('🔍 getHighlightedContent被调用:', { 
-    messageType: message?.type, 
-    index, 
-    totalMessages: displayMessages.value.length,
-    isLatestBot: message?.type === 'bot' && index === displayMessages.value.length - 1 
-  })
-  
   // 只对最新的bot消息应用高亮效果
   if (message?.type === 'bot' && index === displayMessages.value.length - 1) {
     const extractedInfo = historyStore.getExtractedInfo()

@@ -8,15 +8,7 @@
           <button class="search-btn" @click="testPartyComponent1">为孩子举办生日派对</button>
           <button class="search-btn" @click="testRestaurantComponent">为妈妈的生日在19点预订公司附近的餐厅</button>
           <button class="ios-btn search-btn" @click="testIsland">测试灵动岛</button>
-          <div class="test-input-group">
-            <input 
-              v-model="documentQueryInput" 
-              class="test-input" 
-              placeholder="输入查询内容，如：妈妈喜欢吃什么？"
-              @keydown.enter="testDocumentQuery"
-            />
-            <button class="test-btn" @click="testDocumentQuery">测试文档查询</button>
-          </div>
+
         </div>
         <DocumentationPanel />
       </div>
@@ -102,7 +94,8 @@ import aiDataStorage from '@/utils/aiDataStorage.js'
 import { parseAIResponse } from '@/utils/aiResponseParser.js'
 import { useDocumentScanStore } from '@/stores/documentScanStore.js'
 import { useRestaurantStore } from '@/stores/restaurantStore'
-import documentQueryService from '@/services/documentQueryService.js'
+import claudeApiService from '@/api/claudeApi.js'
+import { SCENARIOS } from '@/config/scenarios.js'
 
 const historyStore = useHistoryStore()
 const documentScanStore = useDocumentScanStore()
@@ -112,8 +105,7 @@ const { messages } = storeToRefs(historyStore)
 const inputValue = ref('')
 const chatMessagesRef = ref(null)
 
-// 文档查询测试相关变量
-const documentQueryInput = ref('妈妈喜欢吃什么')
+
 
 // 新增：历史卡片显示状态
 const historyCardState = ref('collapsed') // 'collapsed' | 'half' | 'full'
@@ -430,14 +422,12 @@ const handleSubmit = async () => {
         content: msg.content
       }))
       
-      // 调用AI服务，使用简单场景调用方法，传递历史对话上下文
-      const response = await aiService.sendMessageWithScenario(value, 'basic', '', {
-        conversationHistory: conversationHistory
-      })
+      // 第一步：使用 Claude API 进行基础对话
+      const claudeResponse = await claudeApiService.multiTurnChat(conversationHistory, SCENARIOS.basic.systemPrompt)
       
-      if (response.success) {
-        // 处理AI回复
-        const aiContent = response?.data?.choices[0]?.message?.content
+      if (claudeResponse.success) {
+        // 处理 Claude 回复
+        const aiContent = claudeResponse?.data?.content?.[0]?.text || claudeResponse?.data?.content || ''
 
         // 使用公共方法解析AI响应
         const parsedData = parseAIResponse(aiContent)
@@ -573,7 +563,7 @@ const handleSubmit = async () => {
             }
           }
         
-        console.log('AI回复成功:', response.data)
+        console.log('Claude AI回复成功:', claudeResponse.data)
         
         // 完成灵动岛流程 - 成功状态
         completeDynamicIslandFlow('success', {
@@ -593,7 +583,7 @@ const handleSubmit = async () => {
         
         // 添加错误消息
         addMessage('抱歉，我现在无法回答您的问题，请稍后再试。', 'bot')
-        console.error('AI回复失败:', response.error)
+        console.error('Claude AI回复失败:', claudeResponse.error)
       }
     } catch (error) {
       // 完成灵动岛流程 - 网络错误状态
@@ -890,57 +880,7 @@ const testRestaurantComponent = () => {
   }, 3000)
 }
 
-// 测试文档查询功能
-const testDocumentQuery = async () => {
-  const query = documentQueryInput.value.trim()
-  
-  if (!query) {
-    console.log('❌ 请输入查询内容')
-    alert('请输入查询内容')
-    return
-  }
-  
-  console.log('🔍 开始测试文档查询:', query)
-  
-  try {
-    // 调用文档查询服务
-    const result = await documentQueryService.queryDocuments(query, {
-      useAI: true,
-      similarityThreshold: 0.2
-    })
-    
-    console.log('📋 文档查询结果:', result)
-    
-    // 在聊天界面显示结果
-    if (result.success) {
-      // 如果没有找到结果
-      if (result.totalResults === 0) {
-        addMessage(`抱歉，没有找到与"${query}"相关的信息。`, 'bot')
-        return
-      }
-      
-      let responseText = `查询: "${query}"\n\n`
-      responseText += `📊 找到 ${result.totalResults} 个相关片段:\n`
-      
-      result.results.forEach((match, index) => {
-        responseText += `\n${index + 1}. 字段路径: ${match.metadata.path}\n`
-        responseText += `   相似度: ${(match.similarity * 100).toFixed(1)}%\n`
-        responseText += `   内容: ${match.document}\n`
-      })
-      
-      addMessage(responseText, 'bot')
-    } else {
-      addMessage(`查询失败: ${result.error}`, 'bot')
-    }
-    
-    // 清空输入框
-    documentQueryInput.value = ''
-    
-  } catch (error) {
-    console.error('❌ 文档查询测试失败:', error)
-    addMessage(`查询出错: ${error.message}`, 'bot')
-  }
-}
+
 
 
 </script>
