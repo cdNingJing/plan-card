@@ -14,7 +14,13 @@
     "express": "^4.18.0",
     "nodemailer": "^6.9.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.0.0"
+    "dotenv": "^16.0.0",
+    "natural": "^6.10.4",
+    "string-similarity": "^4.0.4",
+    "fuse.js": "^7.0.0",
+    "fastest-levenshtein": "^1.0.16",
+    "onnxruntime-node": "^1.17.0",
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
     "nodemon": "^2.0.22"

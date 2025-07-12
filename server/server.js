@@ -3,6 +3,7 @@ const nodemailer = require('nodemailer')
 const cors = require('cors')
 const fs = require('fs').promises
 const path = require('path')
+const professionalVectorDBService = require('./vectorDBService')
 require('dotenv').config()
 
 const app = express()
@@ -739,6 +740,70 @@ app.use((err, req, res, next) => {
     success: false,
     error: '服务器内部错误'
   })
+})
+
+// 文档查询 API
+app.post('/api/document-query', async (req, res) => {
+  try {
+    const { query, options = {} } = req.body
+    
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: '缺少必填字段: query'
+      })
+    }
+    
+    console.log('[Document Query] 收到查询请求:', query)
+    
+    // 调用专业向量数据库服务
+    const result = await professionalVectorDBService.queryDocuments(query, options)
+    
+    if (result.success) {
+      console.log('[Document Query] 查询成功，找到', result.totalResults, '个结果')
+      res.json(result)
+    } else {
+      console.log('[Document Query] 查询失败:', result.error)
+      res.status(500).json(result)
+    }
+    
+  } catch (error) {
+    console.error('[Document Query] 查询失败:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message || '文档查询失败'
+    })
+  }
+})
+
+// 获取文档信息 API
+app.get('/api/document-info/:docId', async (req, res) => {
+  try {
+    const { docId } = req.params
+    
+    console.log('[Document Info] 获取文档信息:', docId)
+    
+    const docInfo = professionalVectorDBService.getDocumentInfo(docId)
+    
+    if (docInfo) {
+      res.json({
+        success: true,
+        data: docInfo
+      })
+    } else {
+      res.status(404).json({
+        success: false,
+        error: '文档不存在'
+      })
+    }
+    
+  } catch (error) {
+    console.error('[Document Info] 获取失败:', error)
+    res.status(500).json({
+      success: false,
+      error: error.message || '获取文档信息失败'
+    })
+  }
 })
 
 // 404 处理

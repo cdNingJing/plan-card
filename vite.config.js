@@ -13,24 +13,7 @@ export default defineConfig({
     port: 3000,
     open: true,
     proxy: {
-      '/api/claude': {
-        target: 'https://anthropic-proxy.brain.loocaa.com:1443',
-        changeOrigin: true,
-        secure: true,
-        rewrite: (path) => path.replace(/^\/api\/claude/, '/v1/messages'),
-        configure: (proxy, options) => {
-          proxy.on('proxyReq', (proxyReq, req, res) => {
-            // 确保 Authorization header 被正确转发
-            if (req.headers['authorization']) {
-              proxyReq.setHeader('authorization', req.headers['authorization']);
-            }
-            console.log('代理请求:', req.method, req.url)
-          })
-          proxy.on('proxyRes', (proxyRes, req, res) => {
-            console.log('代理响应:', proxyRes.statusCode, req.url)
-          })
-        }
-      },
+
       '/api/flights': {
         target: 'https://api-dev.braininc.net',
         changeOrigin: true,
@@ -101,6 +84,27 @@ export default defineConfig({
           })
           proxy.on('proxyRes', (proxyRes, req, res) => {
             console.log('AI API代理响应:', proxyRes.statusCode, req.url)
+          })
+        }
+      },
+      '/api/claude': {
+        target: 'https://anthropic-proxy.brain.loocaa.com:1443',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/api\/claude/, '/v1/messages'),
+        configure: (proxy, options) => {
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            // 确保 Authorization header 被正确转发
+            if (req.headers['authorization']) {
+              proxyReq.setHeader('authorization', req.headers['authorization']);
+            }
+            // 添加必要的headers
+            proxyReq.setHeader('Accept', 'application/json');
+            proxyReq.setHeader('Content-Type', 'application/json');
+            console.log('Claude API代理请求:', req.method, req.url)
+          })
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            console.log('Claude API代理响应:', proxyRes.statusCode, req.url)
           })
         }
       }

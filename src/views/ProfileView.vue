@@ -3,14 +3,21 @@
     <div class="profile-layout-container">
       <!-- 文档区域 - 70% -->
       <div class="documentation-section">
-        <div style="text-align:center;margin:10px 0 0 0;">
-          <button class="ios-btn search-btn" @click="testIsland">测试灵动岛</button>
-        </div>
-        <!-- <div class="documentation-header">
+        <div class="documentation-header">
           <button class="search-btn" @click="startSearch">模拟检索全部文档</button>
           <button class="search-btn" @click="testPartyComponent1">为孩子举办生日派对</button>
           <button class="search-btn" @click="testRestaurantComponent">为妈妈的生日在19点预订公司附近的餐厅</button>
-        </div> -->
+          <button class="ios-btn search-btn" @click="testIsland">测试灵动岛</button>
+          <div class="test-input-group">
+            <input 
+              v-model="documentQueryInput" 
+              class="test-input" 
+              placeholder="输入查询内容，如：妈妈喜欢吃什么？"
+              @keydown.enter="testDocumentQuery"
+            />
+            <button class="test-btn" @click="testDocumentQuery">测试文档查询</button>
+          </div>
+        </div>
         <DocumentationPanel />
       </div>
       <!-- 聊天区域 - 30% -->
@@ -95,6 +102,7 @@ import aiDataStorage from '@/utils/aiDataStorage.js'
 import { parseAIResponse } from '@/utils/aiResponseParser.js'
 import { useDocumentScanStore } from '@/stores/documentScanStore.js'
 import { useRestaurantStore } from '@/stores/restaurantStore'
+import documentQueryService from '@/services/documentQueryService.js'
 
 const historyStore = useHistoryStore()
 const documentScanStore = useDocumentScanStore()
@@ -103,6 +111,9 @@ const { messages } = storeToRefs(historyStore)
 
 const inputValue = ref('')
 const chatMessagesRef = ref(null)
+
+// 文档查询测试相关变量
+const documentQueryInput = ref('妈妈喜欢吃什么')
 
 // 新增：历史卡片显示状态
 const historyCardState = ref('collapsed') // 'collapsed' | 'half' | 'full'
@@ -879,6 +890,58 @@ const testRestaurantComponent = () => {
   }, 3000)
 }
 
+// 测试文档查询功能
+const testDocumentQuery = async () => {
+  const query = documentQueryInput.value.trim()
+  
+  if (!query) {
+    console.log('❌ 请输入查询内容')
+    alert('请输入查询内容')
+    return
+  }
+  
+  console.log('🔍 开始测试文档查询:', query)
+  
+  try {
+    // 调用文档查询服务
+    const result = await documentQueryService.queryDocuments(query, {
+      useAI: true,
+      similarityThreshold: 0.2
+    })
+    
+    console.log('📋 文档查询结果:', result)
+    
+    // 在聊天界面显示结果
+    if (result.success) {
+      // 如果没有找到结果
+      if (result.totalResults === 0) {
+        addMessage(`抱歉，没有找到与"${query}"相关的信息。`, 'bot')
+        return
+      }
+      
+      let responseText = `查询: "${query}"\n\n`
+      responseText += `📊 找到 ${result.totalResults} 个相关片段:\n`
+      
+      result.results.forEach((match, index) => {
+        responseText += `\n${index + 1}. 字段路径: ${match.metadata.path}\n`
+        responseText += `   相似度: ${(match.similarity * 100).toFixed(1)}%\n`
+        responseText += `   内容: ${match.document}\n`
+      })
+      
+      addMessage(responseText, 'bot')
+    } else {
+      addMessage(`查询失败: ${result.error}`, 'bot')
+    }
+    
+    // 清空输入框
+    documentQueryInput.value = ''
+    
+  } catch (error) {
+    console.error('❌ 文档查询测试失败:', error)
+    addMessage(`查询出错: ${error.message}`, 'bot')
+  }
+}
+
 
 </script>
 
@@ -927,6 +990,38 @@ const testRestaurantComponent = () => {
   backdrop-filter: blur(8px);
   transition: box-shadow 0.2s, background 0.2s;
   cursor: pointer;
+}
+
+.test-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 18px;
+  padding: 2px;
+  box-shadow: 0 2px 12px 0 rgba(245, 158, 11, 0.08);
+}
+
+.test-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 4px 12px;
+  border: none;
+  border-radius: 16px;
+  font-size: 13px;
+  background: transparent;
+  outline: none;
+  color: #f59e0b;
+  font-weight: 500;
+}
+
+.test-input::placeholder {
+  color: #f59e0b;
+  opacity: 0.6;
+}
+
+.test-input:focus {
+  background: rgba(254, 243, 199, 0.3);
 }
 
 .search-btn {

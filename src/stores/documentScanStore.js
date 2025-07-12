@@ -93,9 +93,6 @@ export const useDocumentScanStore = defineStore('documentScan', {
     watchForChanges() {
       console.log('📁 开始监听文档变动...')
       
-      // 启动文件监听服务
-      fileWatcherService.startWatching()
-      
       // 监听文件变动事件
       window.addEventListener('documentScanTriggered', (event) => {
         console.log('📄 收到文件变动事件:', event.detail)

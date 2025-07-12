@@ -1,0 +1,127 @@
+{
+  "id": "virtual-mom-001",
+  "name": "妈妈",
+  "age": 58,
+  "relationship": "mother",
+  "lastUpdated": "2024-12-19T10:30:00Z",
+  "profile": {
+    "basicInfo": {
+      "name": "李秀英",
+      "birthYear": 1966,
+      "occupation": "退休教师",
+      "location": "北京",
+      "hobbies": ["园艺", "烹饪", "广场舞", "看电视剧"]
+    },
+    "dietaryPreferences": {
+      "favoriteFoods": [
+        "红烧肉",
+        "糖醋里脊", 
+        "清蒸鲈鱼",
+        "麻婆豆腐",
+        "宫保鸡丁",
+        "蒜蓉西兰花",
+        "番茄炒蛋",
+        "酸菜鱼"
+      ],
+      "dislikedFoods": [
+        "生鱼片",
+        "芥末",
+        "榴莲",
+        "臭豆腐",
+        "苦瓜"
+      ],
+      "allergies": [
+        "海鲜过敏",
+        "花生过敏"
+      ],
+      "dietaryRestrictions": [
+        "少盐",
+        "少油",
+        "少糖"
+      ],
+      "cookingStyle": "传统中式烹饪",
+      "mealPreferences": {
+        "breakfast": ["粥", "包子", "豆浆", "油条"],
+        "lunch": ["米饭", "炒菜", "汤"],
+        "dinner": ["面条", "饺子", "炒菜"]
+      }
+    },
+    "healthInfo": {
+      "conditions": [
+        "高血压",
+        "糖尿病前期"
+      ],
+      "medications": [
+        "降压药",
+        "降糖药"
+      ],
+      "exercise": "每天散步1小时",
+      "sleep": "晚上10点睡觉，早上6点起床"
+    },
+    "personality": {
+      "traits": [
+        "细心",
+        "节俭",
+        "关心家人",
+        "传统",
+        "勤劳"
+      ],
+      "communication": "喜欢用微信语音",
+      "stressTriggers": ["孩子不按时吃饭", "家人健康问题"],
+      "comfortActivities": ["看电视", "打电话给朋友", "整理家务"]
+    },
+    "familyRelationships": {
+      "children": ["我"],
+      "spouse": "爸爸",
+      "grandchildren": ["小明", "小红"],
+      "siblings": ["大姨", "二姨"]
+    },
+    "dailyRoutine": {
+      "morning": "6:00起床，7:00做早餐，8:00买菜",
+      "afternoon": "12:00做午饭，14:00午休，16:00散步",
+      "evening": "18:00做晚饭，19:30看电视，22:00睡觉"
+    },
+    "shoppingHabits": {
+      "favoriteStores": ["菜市场", "超市", "药店"],
+      "budgetConscious": true,
+      "prefersFresh": true,
+      "buysInBulk": false
+    }
+  },
+  "recentEvents": [
+    {
+      "date": "2024-12-15",
+      "event": "去医院检查血压",
+      "result": "血压正常，继续服药"
+    },
+    {
+      "date": "2024-12-10", 
+      "event": "参加广场舞比赛",
+      "result": "获得三等奖"
+    },
+    {
+      "date": "2024-12-05",
+      "event": "孙子小明感冒",
+      "result": "照顾了一周，现已康复"
+    }
+  ],
+  "preferences": {
+    "gifts": [
+      "实用的家居用品",
+      "保健品",
+      "舒适的鞋子",
+      "按摩器"
+    ],
+    "activities": [
+      "家庭聚餐",
+      "公园散步",
+      "看电视剧",
+      "打电话聊天"
+    ],
+    "concerns": [
+      "家人健康",
+      "物价上涨",
+      "孙子教育"
+    ]
+  }
+} 

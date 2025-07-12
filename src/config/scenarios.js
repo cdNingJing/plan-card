@@ -65,14 +65,7 @@ function createSystemPrompt(template, dataText = '') {
 }
 
 
-// 【用户长期档案总结】
-// \${longTermSummary}
 
-// 【用户短期记忆总结】
-// \${shortTermSummary}
-// "longTermData": "从当前对话中提取用户的具体关系、偏好、习惯等持久性信息，如：用户有一个弟弟、弟弟在北京工作、用户喜欢旅行、用户有女朋友、用户的工作偏好、用户的兴趣爱好等具体信息",
-// "shortTermMemory": "从当前对话中提取具体的短期计划、即时需求、时间安排等，如：想去西安旅游（具体目的地）、购买需求、会议安排、具体目标等",
-// - longTermData 和 shortTermMemory 字段**只能**是字符串，**禁止**返回对象、数组或嵌套结构，否则视为格式错误！
 
 // 场景配置
 export const SCENARIOS = {
@@ -89,6 +82,12 @@ export const SCENARIOS = {
 【可用服务工具】
 当前系统提供以下服务工具：
 \${toolsInfo}
+
+【用户长期档案总结】
+\${longTermSummary}
+
+【用户短期记忆总结】
+\${shortTermSummary}
 
 你的回答策略：
 1. 理解用户真实意图：分析用户问题背后的真正需求，而不是简单回答表面问题
@@ -110,7 +109,9 @@ export const SCENARIOS = {
 {
   "answer": "基于对用户意图的理解，通过1-2个简洁的引导性问题深入对话，避免冗长解释",
   "relevantDocuments": ["文档名称1", "文档名称2"],
-  "availableServices": ["服务工具名称1", "服务工具名称2"]
+  "availableServices": ["服务工具名称1", "服务工具名称2"],
+  "longTermData": "从当前对话中提取用户的具体关系、偏好、习惯等持久性信息，如：用户有一个弟弟、弟弟在北京工作、用户喜欢旅行、用户有女朋友、用户的工作偏好、用户的兴趣爱好等具体信息",
+  "shortTermMemory": "从当前对话中提取具体的短期计划、即时需求、时间安排等，如：想去西安旅游（具体目的地）、购买需求、会议安排、具体目标等",
 }
 <END>
 
@@ -118,6 +119,7 @@ export const SCENARIOS = {
 - answer 字段：返回对用户问题的回答
 - relevantDocuments 字段：返回与用户问题相关的文档名称数组
 - availableServices 字段：返回可能用到的服务工具名称数组
+- longTermData 和 shortTermMemory 字段**只能**是字符串，**禁止**返回对象、数组或嵌套结构，否则视为格式错误！
 - 如果没有相关信息，对应字段返回空数组[]`)
   },
 

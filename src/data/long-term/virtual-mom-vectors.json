@@ -1,0 +1,341 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "created_at": "2024-12-19T10:30:00Z",
+    "description": "虚拟妈妈档案的向量化数据，用于语义搜索",
+    "total_documents": 45
+  },
+  "documents": [
+    {
+      "id": "doc_001",
+      "content": "李秀英，1966年出生，退休教师，居住在北京",
+      "category": "basic_info",
+      "tags": ["姓名", "年龄", "职业", "居住地"],
+      "keywords": ["李秀英", "1966", "退休教师", "北京"]
+    },
+    {
+      "id": "doc_002", 
+      "content": "妈妈喜欢园艺、烹饪、广场舞、看电视剧",
+      "category": "hobbies",
+      "tags": ["兴趣爱好", "休闲活动"],
+      "keywords": ["园艺", "烹饪", "广场舞", "电视剧"]
+    },
+    {
+      "id": "doc_003",
+      "content": "妈妈最喜欢的食物包括红烧肉、糖醋里脊、清蒸鲈鱼、麻婆豆腐、宫保鸡丁、蒜蓉西兰花、番茄炒蛋、酸菜鱼",
+      "category": "dietary_preferences",
+      "tags": ["饮食偏好", "喜欢食物"],
+      "keywords": ["红烧肉", "糖醋里脊", "清蒸鲈鱼", "麻婆豆腐", "宫保鸡丁", "蒜蓉西兰花", "番茄炒蛋", "酸菜鱼"]
+    },
+    {
+      "id": "doc_004",
+      "content": "妈妈不喜欢的食物有生鱼片、芥末、榴莲、臭豆腐、苦瓜",
+      "category": "dietary_preferences", 
+      "tags": ["饮食偏好", "不喜欢食物"],
+      "keywords": ["生鱼片", "芥末", "榴莲", "臭豆腐", "苦瓜"]
+    },
+    {
+      "id": "doc_005",
+      "content": "妈妈对海鲜和花生过敏",
+      "category": "health_info",
+      "tags": ["健康信息", "过敏"],
+      "keywords": ["海鲜过敏", "花生过敏"]
+    },
+    {
+      "id": "doc_006",
+      "content": "妈妈的饮食限制包括少盐、少油、少糖",
+      "category": "dietary_preferences",
+      "tags": ["饮食限制", "健康饮食"],
+      "keywords": ["少盐", "少油", "少糖"]
+    },
+    {
+      "id": "doc_007",
+      "content": "妈妈擅长传统中式烹饪",
+      "category": "cooking",
+      "tags": ["烹饪技能", "烹饪风格"],
+      "keywords": ["传统中式烹饪", "烹饪"]
+    },
+    {
+      "id": "doc_008",
+      "content": "妈妈早餐喜欢吃粥、包子、豆浆、油条",
+      "category": "meal_preferences",
+      "tags": ["早餐", "饮食习惯"],
+      "keywords": ["粥", "包子", "豆浆", "油条", "早餐"]
+    },
+    {
+      "id": "doc_009",
+      "content": "妈妈午餐喜欢吃米饭、炒菜、汤",
+      "category": "meal_preferences",
+      "tags": ["午餐", "饮食习惯"],
+      "keywords": ["米饭", "炒菜", "汤", "午餐"]
+    },
+    {
+      "id": "doc_010",
+      "content": "妈妈晚餐喜欢吃面条、饺子、炒菜",
+      "category": "meal_preferences",
+      "tags": ["晚餐", "饮食习惯"],
+      "keywords": ["面条", "饺子", "炒菜", "晚餐"]
+    },
+    {
+      "id": "doc_011",
+      "content": "妈妈有高血压和糖尿病前期",
+      "category": "health_info",
+      "tags": ["健康信息", "疾病"],
+      "keywords": ["高血压", "糖尿病前期"]
+    },
+    {
+      "id": "doc_012",
+      "content": "妈妈需要服用降压药和降糖药",
+      "category": "health_info",
+      "tags": ["健康信息", "用药"],
+      "keywords": ["降压药", "降糖药"]
+    },
+    {
+      "id": "doc_013",
+      "content": "妈妈每天散步1小时",
+      "category": "health_info",
+      "tags": ["健康信息", "运动"],
+      "keywords": ["散步", "运动", "每天1小时"]
+    },
+    {
+      "id": "doc_014",
+      "content": "妈妈晚上10点睡觉，早上6点起床",
+      "category": "health_info",
+      "tags": ["健康信息", "作息"],
+      "keywords": ["晚上10点睡觉", "早上6点起床", "作息"]
+    },
+    {
+      "id": "doc_015",
+      "content": "妈妈性格细心、节俭、关心家人、传统、勤劳",
+      "category": "personality",
+      "tags": ["性格特点", "个性"],
+      "keywords": ["细心", "节俭", "关心家人", "传统", "勤劳"]
+    },
+    {
+      "id": "doc_016",
+      "content": "妈妈喜欢用微信语音沟通",
+      "category": "communication",
+      "tags": ["沟通方式", "社交"],
+      "keywords": ["微信语音", "沟通"]
+    },
+    {
+      "id": "doc_017",
+      "content": "妈妈的压力来源是孩子不按时吃饭和家人健康问题",
+      "category": "personality",
+      "tags": ["压力来源", "关心"],
+      "keywords": ["孩子不按时吃饭", "家人健康问题", "压力"]
+    },
+    {
+      "id": "doc_018",
+      "content": "妈妈放松的方式是看电视、打电话给朋友、整理家务",
+      "category": "personality",
+      "tags": ["放松方式", "休闲"],
+      "keywords": ["看电视", "打电话给朋友", "整理家务", "放松"]
+    },
+    {
+      "id": "doc_019",
+      "content": "妈妈有一个孩子，配偶是爸爸，有孙子小明和小红",
+      "category": "family",
+      "tags": ["家庭关系", "家庭成员"],
+      "keywords": ["孩子", "爸爸", "孙子", "小明", "小红"]
+    },
+    {
+      "id": "doc_020",
+      "content": "妈妈有大姨和二姨两个姐妹",
+      "category": "family",
+      "tags": ["家庭关系", "兄弟姐妹"],
+      "keywords": ["大姨", "二姨", "姐妹"]
+    },
+    {
+      "id": "doc_021",
+      "content": "妈妈早上6点起床，7点做早餐，8点买菜",
+      "category": "daily_routine",
+      "tags": ["日常作息", "早晨"],
+      "keywords": ["6点起床", "7点做早餐", "8点买菜", "早晨"]
+    },
+    {
+      "id": "doc_022",
+      "content": "妈妈中午12点做午饭，下午2点午休，4点散步",
+      "category": "daily_routine",
+      "tags": ["日常作息", "下午"],
+      "keywords": ["12点做午饭", "2点午休", "4点散步", "下午"]
+    },
+    {
+      "id": "doc_023",
+      "content": "妈妈晚上6点做晚饭，7点半看电视，10点睡觉",
+      "category": "daily_routine",
+      "tags": ["日常作息", "晚上"],
+      "keywords": ["6点做晚饭", "7点半看电视", "10点睡觉", "晚上"]
+    },
+    {
+      "id": "doc_024",
+      "content": "妈妈喜欢去菜市场、超市、药店购物",
+      "category": "shopping",
+      "tags": ["购物习惯", "购物场所"],
+      "keywords": ["菜市场", "超市", "药店", "购物"]
+    },
+    {
+      "id": "doc_025",
+      "content": "妈妈购物时注重预算，喜欢新鲜食材，不大量囤货",
+      "category": "shopping",
+      "tags": ["购物习惯", "消费观念"],
+      "keywords": ["注重预算", "新鲜食材", "不大量囤货"]
+    },
+    {
+      "id": "doc_026",
+      "content": "妈妈2024年12月15日去医院检查血压，结果血压正常，继续服药",
+      "category": "recent_events",
+      "tags": ["近期事件", "健康检查"],
+      "keywords": ["2024年12月15日", "医院检查", "血压正常", "继续服药"]
+    },
+    {
+      "id": "doc_027",
+      "content": "妈妈2024年12月10日参加广场舞比赛，获得三等奖",
+      "category": "recent_events",
+      "tags": ["近期事件", "比赛"],
+      "keywords": ["2024年12月10日", "广场舞比赛", "三等奖"]
+    },
+    {
+      "id": "doc_028",
+      "content": "妈妈2024年12月5日照顾感冒的孙子小明一周，现已康复",
+      "category": "recent_events",
+      "tags": ["近期事件", "照顾家人"],
+      "keywords": ["2024年12月5日", "照顾", "感冒", "孙子", "小明", "康复"]
+    },
+    {
+      "id": "doc_029",
+      "content": "妈妈喜欢的礼物包括实用的家居用品、保健品、舒适的鞋子、按摩器",
+      "category": "preferences",
+      "tags": ["礼物偏好", "喜好"],
+      "keywords": ["实用的家居用品", "保健品", "舒适的鞋子", "按摩器", "礼物"]
+    },
+    {
+      "id": "doc_030",
+      "content": "妈妈喜欢的活动包括家庭聚餐、公园散步、看电视剧、打电话聊天",
+      "category": "preferences",
+      "tags": ["活动偏好", "休闲"],
+      "keywords": ["家庭聚餐", "公园散步", "看电视剧", "打电话聊天", "活动"]
+    },
+    {
+      "id": "doc_031",
+      "content": "妈妈关心的问题包括家人健康、物价上涨、孙子教育",
+      "category": "concerns",
+      "tags": ["关心问题", "担忧"],
+      "keywords": ["家人健康", "物价上涨", "孙子教育", "关心"]
+    },
+    {
+      "id": "doc_032",
+      "content": "妈妈58岁，是退休教师",
+      "category": "basic_info",
+      "tags": ["基本信息", "年龄职业"],
+      "keywords": ["58岁", "退休教师"]
+    },
+    {
+      "id": "doc_033",
+      "content": "妈妈是李秀英，1966年出生",
+      "category": "basic_info",
+      "tags": ["基本信息", "姓名年龄"],
+      "keywords": ["李秀英", "1966年", "出生"]
+    },
+    {
+      "id": "doc_034",
+      "content": "妈妈住在北京，喜欢园艺和烹饪",
+      "category": "basic_info",
+      "tags": ["基本信息", "居住地爱好"],
+      "keywords": ["北京", "园艺", "烹饪"]
+    },
+    {
+      "id": "doc_035",
+      "content": "妈妈喜欢广场舞和看电视剧",
+      "category": "hobbies",
+      "tags": ["兴趣爱好", "娱乐"],
+      "keywords": ["广场舞", "电视剧"]
+    },
+    {
+      "id": "doc_036",
+      "content": "妈妈最喜欢的菜是红烧肉和糖醋里脊",
+      "category": "dietary_preferences",
+      "tags": ["饮食偏好", "最爱食物"],
+      "keywords": ["红烧肉", "糖醋里脊", "最爱"]
+    },
+    {
+      "id": "doc_037",
+      "content": "妈妈喜欢吃清蒸鲈鱼和麻婆豆腐",
+      "category": "dietary_preferences",
+      "tags": ["饮食偏好", "喜欢食物"],
+      "keywords": ["清蒸鲈鱼", "麻婆豆腐"]
+    },
+    {
+      "id": "doc_038",
+      "content": "妈妈喜欢吃宫保鸡丁和蒜蓉西兰花",
+      "category": "dietary_preferences",
+      "tags": ["饮食偏好", "喜欢食物"],
+      "keywords": ["宫保鸡丁", "蒜蓉西兰花"]
+    },
+    {
+      "id": "doc_039",
+      "content": "妈妈喜欢吃番茄炒蛋和酸菜鱼",
+      "category": "dietary_preferences",
+      "tags": ["饮食偏好", "喜欢食物"],
+      "keywords": ["番茄炒蛋", "酸菜鱼"]
+    },
+    {
+      "id": "doc_040",
+      "content": "妈妈对海鲜过敏，不能吃海鲜",
+      "category": "health_info",
+      "tags": ["健康信息", "过敏", "饮食禁忌"],
+      "keywords": ["海鲜过敏", "不能吃海鲜"]
+    },
+    {
+      "id": "doc_041",
+      "content": "妈妈对花生过敏，不能吃花生",
+      "category": "health_info",
+      "tags": ["健康信息", "过敏", "饮食禁忌"],
+      "keywords": ["花生过敏", "不能吃花生"]
+    },
+    {
+      "id": "doc_042",
+      "content": "妈妈需要少盐少油少糖的饮食",
+      "category": "dietary_preferences",
+      "tags": ["饮食限制", "健康饮食"],
+      "keywords": ["少盐", "少油", "少糖", "饮食限制"]
+    },
+    {
+      "id": "doc_043",
+      "content": "妈妈有高血压，需要吃降压药",
+      "category": "health_info",
+      "tags": ["健康信息", "疾病", "用药"],
+      "keywords": ["高血压", "降压药"]
+    },
+    {
+      "id": "doc_044",
+      "content": "妈妈有糖尿病前期，需要吃降糖药",
+      "category": "health_info",
+      "tags": ["健康信息", "疾病", "用药"],
+      "keywords": ["糖尿病前期", "降糖药"]
+    },
+    {
+      "id": "doc_045",
+      "content": "妈妈每天散步1小时，作息规律，晚上10点睡觉早上6点起床",
+      "category": "health_info",
+      "tags": ["健康信息", "运动", "作息"],
+      "keywords": ["每天散步1小时", "作息规律", "晚上10点睡觉", "早上6点起床"]
+    }
+  ],
+  "categories": {
+    "basic_info": "基本信息",
+    "hobbies": "兴趣爱好", 
+    "dietary_preferences": "饮食偏好",
+    "health_info": "健康信息",
+    "personality": "性格特点",
+    "communication": "沟通方式",
+    "family": "家庭关系",
+    "daily_routine": "日常作息",
+    "shopping": "购物习惯",
+    "recent_events": "近期事件",
+    "preferences": "喜好偏好",
+    "concerns": "关心问题",
+    "cooking": "烹饪相关",
+    "meal_preferences": "餐食偏好"
+  }
+} 
