@@ -11,7 +11,9 @@ import {
   FileCode,
   FileType,
   FileJson,
-  FileText as FileTxt
+  FileText as FileTxt,
+  Brain,
+  Database
 } from 'lucide-vue-next'
 
 // 图标库配置
@@ -73,6 +75,14 @@ export const iconLibrary = {
     text: {
       component: FileTxt,
       color: '#6366f1'
+    }
+  },
+  
+  // AI 数据图标
+  'ai-data': {
+    json: {
+      component: Brain,
+      color: '#8b5cf6'
     }
   }
 }

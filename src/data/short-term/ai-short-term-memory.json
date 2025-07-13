@@ -2,8 +2,8 @@
   "ai_short_term_memory": {
     "description": "AI助手提取的短期记忆，包括当前会话中的重要信息",
     "created_at": "2025-07-09T13:01:57.677Z",
-    "last_updated": "2025-07-12T03:20:33.188Z",
-    "data_count": 2,
+    "last_updated": "2025-07-12T04:05:21.896Z",
+    "data_count": 4,
     "data_entries": {
       "ai_short_term_2025-07-09T13:04:27.179Z": {
         "value": "用户想去西安旅游",
@@ -14,6 +14,16 @@
         "value": "为妈妈生日在19点预订公司附近餐厅，确保环境安静，提供符合饮食限制的菜品。",
         "timestamp": "2025-07-12T03:20:31.925Z",
         "created_at": "2025-07-12T03:20:31.925Z"
+      },
+      "ai_short_term_2025-07-12T04:00:07.392Z": {
+        "value": "为妈妈生日在19点预订公司附近餐厅，确保环境安静，提供符合饮食限制的菜品",
+        "timestamp": "2025-07-12T04:00:07.385Z",
+        "created_at": "2025-07-12T04:00:07.385Z"
+      },
+      "ai_short_term_2025-07-12T04:05:20.605Z": {
+        "value": "为妈妈生日在19点预订公司附近餐厅，确保环境安静，提供符合饮食限制的菜品",
+        "timestamp": "2025-07-12T04:05:20.611Z",
+        "created_at": "2025-07-12T04:05:20.611Z"
       }
     },
     "summary": {
@@ -24,7 +34,21 @@
             "priority": "high",
             "urgency": "high",
             "timestamp": "2025-07-12T03:20:31.925Z",
-            "category": "预订餐厅"
+            "category": "重要且紧急"
+          },
+          {
+            "content": "为妈妈生日在19点预订公司附近餐厅，确保环境安静，提供符合饮食限制的菜品",
+            "priority": "high",
+            "urgency": "high",
+            "timestamp": "2025-07-12T04:00:07.385Z",
+            "category": "重要且紧急"
+          },
+          {
+            "content": "为妈妈生日在19点预订公司附近餐厅，确保环境安静，提供符合饮食限制的菜品",
+            "priority": "high",
+            "urgency": "high",
+            "timestamp": "2025-07-12T04:05:20.611Z",
+            "category": "重要且紧急"
           }
         ]
       },
@@ -35,7 +59,7 @@
             "priority": "high",
             "urgency": "low",
             "timestamp": "2025-07-09T13:04:27.187Z",
-            "category": "旅游计划"
+            "category": "重要不紧急"
           }
         ]
       },

@@ -34,6 +34,15 @@
       <div v-for="(message, index) in displayMessages" :key="message?.id || Math.random()" :class="['history-bubble', message?.type]">
         <span class="bubble-content" v-html="getHighlightedContent(message, index)"></span>
       </div>
+      
+      <!-- Loading 动画 -->
+      <div v-if="isLoading" class="loading-bubble">
+        <div class="loading-dots">
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -52,6 +61,10 @@ const props = defineProps({
     default: null
   },
   isFull: {
+    type: Boolean,
+    default: false
+  },
+  isLoading: {
     type: Boolean,
     default: false
   }
@@ -297,4 +310,61 @@ onMounted(() => {
     color: #1e40af;
     font-weight: 600;
   }
+
+/* Loading 动画样式 */
+.loading-bubble {
+  max-width: 80%;
+  padding: 12px 18px;
+  border-radius: 18px;
+  background: #f3f4f6;
+  color: #333;
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 8px 0 rgba(60, 60, 120, 0.06);
+}
+
+.loading-dots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #6366f1;
+  animation: loading-bounce 1.4s ease-in-out infinite both;
+}
+
+.dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+.dot:nth-child(3) {
+  animation-delay: 0s;
+}
+
+@keyframes loading-bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.loading-text {
+  font-size: 0.85rem;
+  color: #6b7280;
+  font-weight: 500;
+}
 </style> 

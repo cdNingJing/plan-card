@@ -8,9 +8,8 @@
           <button class="search-btn" @click="testPartyComponent1">为孩子举办生日派对</button>
           <button class="search-btn" @click="testRestaurantComponent">为妈妈的生日在19点预订公司附近的餐厅</button>
           <button class="ios-btn search-btn" @click="testIsland">测试灵动岛</button>
-
         </div>
-        <DocumentationPanel />
+        <DocumentationPanel ref="docPanelRef" />
       </div>
       <!-- 聊天区域 - 30% -->
       <div class="profile-chat-frame" style="position:relative;">
@@ -61,7 +60,7 @@
             ref="historyCardRef"
           >
             <div class="profile-chat-history">
-              <HistoryCard :messages="messages" :onToggleFull="toggleHistoryCardFull" :isFull="historyCardState === 'full'" />
+              <HistoryCard :messages="messages" :onToggleFull="toggleHistoryCardFull" :isFull="historyCardState === 'full'" :isLoading="isLoading" />
             </div>
           </div>
         </div>
@@ -96,6 +95,7 @@ import { useDocumentScanStore } from '@/stores/documentScanStore.js'
 import { useRestaurantStore } from '@/stores/restaurantStore'
 import claudeApiService from '@/api/claudeApi.js'
 import { SCENARIOS } from '@/config/scenarios.js'
+import documentInfoService from '@/services/documentInfoService.js'
 
 const historyStore = useHistoryStore()
 const documentScanStore = useDocumentScanStore()
@@ -105,6 +105,8 @@ const { messages } = storeToRefs(historyStore)
 const inputValue = ref('')
 const chatMessagesRef = ref(null)
 
+// 新增：loading 状态
+const isLoading = ref(false)
 
 
 // 新增：历史卡片显示状态
@@ -130,6 +132,7 @@ const islandDocuments = ref([]) // 存储多个文档信息
 const currentDocumentIndex = ref(0) // 当前处理的文档索引
 const islandPercent = ref(0)
 let islandTimer = null
+const documentScanTimes = ref({}) // 存储每个文档的实际扫描时间
 
 // 计算当前文档的短名称
 const currentDocumentName = computed(() => {
@@ -173,35 +176,47 @@ async function animatePercentSmart(duration = 2500) {
   // 2. 启用transition，开始动画
   circleTransition.value = true;
   await nextTick();
-  // 3. 动画递增
+  
+  // 获取当前文档的实际扫描时间
+  const currentDoc = islandDocuments.value[currentDocumentIndex.value];
+  const actualDuration = documentScanTimes.value[currentDoc?.name] || duration;
+  
+  console.log(`开始扫描文档: ${currentDoc?.name}, 预计时间: ${actualDuration}ms`);
+  
+  // 3. 动画递增 - 与DocumentationPanel的扫描时间同步
   let startTime = null;
   function step(ts) {
     if (!startTime) startTime = ts;
     const elapsed = ts - startTime;
-    let percent;
-    if (elapsed < 600) {
-      percent = (elapsed / 600) * 30;
-    } else if (elapsed < 2000) {
-      percent = 30 + ((elapsed - 600) / 1400) * 50;
-    } else if (elapsed < 2500) {
-      percent = 80 + ((elapsed - 2000) / 500) * 20;
-    } else {
-      percent = 100;
-    }
-    animatedPercent.value = Math.round(percent);
-    if (percent < 100) {
+    const progress = Math.min(elapsed / actualDuration, 1);
+    
+    // 使用缓动函数使动画更自然
+    const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+    const percent = Math.round(easeOutQuart * 100);
+    
+    animatedPercent.value = percent;
+    
+    if (progress < 1) {
       requestAnimationFrame(step);
     } else {
       animatedPercent.value = 100;
+      console.log(`文档扫描完成: ${currentDoc?.name}`);
+      
+      // 等待一小段时间后进入下一个文档
       setTimeout(() => {
         currentDocumentIndex.value++;
         if (currentDocumentIndex.value >= islandDocuments.value.length) {
+          console.log('所有文档扫描完成');
           showIsland.value = false;
           islandDocuments.value = [];
+          // 重置状态
+          animatedPercent.value = 0;
+          currentDocumentIndex.value = 0;
         } else {
-          animatePercentSmart(2500);
+          // 开始扫描下一个文档
+          animatePercentSmart(actualDuration);
         }
-      }, 800);
+      }, 500);
     }
   }
   requestAnimationFrame(step);
@@ -213,7 +228,11 @@ const processNextDocument = () => {
     islandDocuments.value = [];
     return;
   }
-  animatePercentSmart(2500);
+  
+  // 获取当前文档的扫描时间
+  const currentDoc = islandDocuments.value[currentDocumentIndex.value];
+  const actualDuration = documentScanTimes.value[currentDoc?.name] || 2500;
+  animatePercentSmart(actualDuration);
 }
 
 // 百分比动画监听（只在进度未满时同步动画）
@@ -238,22 +257,50 @@ watch(() => currentDoc.value.progress, (newVal) => {
 
 // 测试灵动岛 - 支持多个文档
 const testIsland = () => {
-  // 模拟多个文档处理
-  const testDocuments = [
-    { id: 1, name: '妈妈.md', progress: 0 },
-    { id: 2, name: '喜好菜品清单.txt', progress: 0 },
-    { id: 3, name: '忌口清单.txt', progress: 0 },
-    { id: 4, name: '聚会人员统计.txt', progress: 0 }
-  ]
+  // 从DocumentationPanel获取真实的文档数据
+  if (!docPanelRef.value || !docPanelRef.value.filteredDocuments) {
+    console.log('无法获取文档数据')
+    return
+  }
   
-  startDocumentProcessing(testDocuments)
+  const realDocuments = docPanelRef.value.filteredDocuments
+  if (realDocuments.length === 0) {
+    console.log('没有可用的文档')
+    return
+  }
+  
+  // 使用真实文档数据
+  const testDocuments = realDocuments.map((doc, index) => ({
+    id: index + 1,
+    name: doc.metadata?.title || doc.metadata?.source || `文档${index + 1}`,
+    progress: 0
+  }))
+  
+  // 根据文档类型和大小估算扫描时间 - 与DocumentationPanel保持一致
+  const testScanTimes = {}
+  testDocuments.forEach(doc => {
+    const docName = doc.name
+    // 根据文档名称估算扫描时间（毫秒）- 与DocumentationPanel的扫描时间同步
+    if (docName.includes('.md') || docName.includes('.txt')) {
+      testScanTimes[docName] = 1200 // 与DocumentationPanel的扫描时间一致
+    } else if (docName.includes('.json')) {
+      testScanTimes[docName] = 800 // 与DocumentationPanel的扫描时间一致
+    } else {
+      testScanTimes[docName] = 1500 // 与DocumentationPanel的扫描时间一致
+    }
+  })
+  
+  console.log('使用真实文档数据:', testDocuments)
+  console.log('扫描时间配置:', testScanTimes)
+  startDocumentProcessing(testDocuments, testScanTimes)
 }
 
 // 开始文档处理流程
-const startDocumentProcessing = (documents) => {
+const startDocumentProcessing = (documents, scanTimes = {}) => {
   islandDocuments.value = documents.map(doc => ({ ...doc, progress: 0 }))
   currentDocumentIndex.value = 0
   islandPercent.value = 0
+  documentScanTimes.value = scanTimes
   showIsland.value = true
   
   // 开始处理第一个文档
@@ -316,6 +363,7 @@ const loadDynamicIslandData = () => {
 
 const historyCardRef = ref(null)
 const inputRef = ref(null)
+const docPanelRef = ref(null)
 
 const handleGlobalClick = (e) => {
   if (
@@ -404,13 +452,168 @@ const addMessage = (content, type = 'user') => {
   scrollToBottom()
 }
 
+// 构建知识库上下文的方法
+const buildKnowledgeContext = (bestMatch) => {
+  const now = new Date()
+  const currentTime = now.toTimeString().split(' ')[0]
+  const toolsMarkdown = documentInfoService.getToolsMarkdown()
+  
+  // 基础提示词模板
+  const basePrompt = `
+你是一个富有创意和洞察力的AI助手，请用中文回答问题。当前时间：${currentTime}。
+
+你的回答策略：
+1. 理解用户真实意图：分析用户问题背后的真正需求，而不是简单回答表面问题
+2. 智能信息使用：
+   - 长期档案：仅在涉及用户偏好、习惯、关系等问题时使用，用于提供个性化建议
+   - 短期记忆：用于理解当前对话的上下文关联性和连续性
+3. 问题区分：
+   - "你是谁"：询问AI的身份，应该介绍自己是AI助手
+   - "我是谁"：询问用户身份，应该引导用户说明具体需求，不要直接输出个人信息
+4. 对话连续性：当用户连续询问类似问题时，基于之前的对话上下文给出连贯的回答
+5. 保护隐私：当用户询问身份时，不要直接输出完整个人信息，而是引导用户说明具体需求或通过提问了解意图
+6. 提供价值：基于理解给出实用建议，而不是信息罗列
+7. answer字段策略：只推荐一个最核心的观点或建议，避免多个选项
+
+【可用服务工具】
+当前系统提供以下服务工具：
+${toolsMarkdown}
+
+**强制要求：你必须严格按照以下<START>内容<END>格式返回，不能有任何其他内容！**
+<START>
+{
+  "answer": "基于对用户意图的理解，通过1-2个简洁的引导性问题深入对话，避免冗长解释",
+  "availableServices": ["服务工具名称1", "服务工具名称2"]
+}
+<END>
+
+**格式要求说明：**
+- answer 字段：返回对用户问题的回答
+- availableServices 字段：返回可能用到的服务工具名称数组
+  `.trim()
+  
+  if (bestMatch) {
+    // 有匹配的知识库内容，添加知识库信息
+    const knowledgeInfo = `
+# 知识库上下文信息
+
+## 文档标题
+${bestMatch.metadata?.title || '无标题'}
+
+## 文档来源
+${bestMatch.metadata?.source || '未知来源'}
+
+## 匹配分数
+${bestMatch.score}
+
+## 原始内容
+${bestMatch.content}
+
+## 内容类型
+${bestMatch.metadata?.content_type || 'document'}
+
+## 内容摘要
+${bestMatch.metadata?.summary || '无摘要'}
+
+## 抽取结果
+${bestMatch.metadata?.entities || '无抽取结果'}
+
+## 分析结果
+${bestMatch.metadata?.analysis || '无分析结果'}
+
+---
+请基于以上知识库信息回答用户的问题。
+
+${basePrompt}`
+    
+    return knowledgeInfo
+  } else {
+    // 没有匹配的知识库内容，直接返回基础提示词
+    return basePrompt
+  }
+}
+
 const handleSubmit = async () => {
   const value = inputValue.value.trim()
   console.log('value', value)
   if (value) {
+    // 设置 loading 状态
+    isLoading.value = true
+    
     // 添加用户消息
     addMessage(value, 'user')
     inputValue.value = ''
+    let bestMatch = null
+    // 新增：调用DocumentationPanel的搜索方法
+    try {
+      if (docPanelRef.value && docPanelRef.value.searchInFirstCollection) {
+        console.log('开始搜索知识库...')
+        const searchResult = await docPanelRef.value.searchInFirstCollection(value, 10)
+        console.log('知识库搜索结果:', searchResult)
+        
+        if (searchResult.success) {
+          console.log(`在合集 "${searchResult.collectionName}" 中找到 ${searchResult.resultsCount} 条相关结果`)
+          if (searchResult.data && searchResult.data.results && searchResult.data.results.length > 0) {
+            console.log('搜索结果详情:', searchResult.data.results)
+            
+            // 新增：过滤出score大于40%且最大的文档
+            const results = searchResult.data.results
+            if (results && results.length > 0) {
+              // 过滤出score大于40%的文档
+              const filteredResults = results.filter(result => result.score > 0.4)
+              
+              if (filteredResults.length > 0) {
+                // 按score降序排序，获取score最大的文档
+                const sortedResults = filteredResults.sort((a, b) => b.score - a.score)
+                bestMatch = sortedResults[0]
+                console.log(`找到 ${filteredResults.length} 个相关度大于40%的文档，最高相关度: ${(bestMatch.score * 100).toFixed(1)}%`)
+              } else {
+                console.log('没有找到相关度大于40%的文档')
+              }
+            }
+          }
+        } else {
+          console.log('知识库搜索失败:', searchResult.message)
+        }
+      } else {
+        console.log('DocumentationPanel搜索方法不可用')
+      }
+    } catch (error) {
+      console.error('调用知识库搜索时发生错误:', error)
+    }
+    console.log('bestMatch', bestMatch)
+    
+    // 新增：当bestMatch有值时，执行文档扫描和灵动岛动画
+    if (bestMatch) {
+      console.log('开始执行文档扫描和灵动岛动画...')
+      
+      // 1. 执行DocumentationPanel的文档扫描
+      if (docPanelRef.value && docPanelRef.value.highlightDocumentsSequentially) {
+        const docId = bestMatch.id || bestMatch.metadata?.descriptive_id
+        if (docId) {
+          console.log('开始扫描文档:', docId)
+          docPanelRef.value.highlightDocumentsSequentially([docId])
+        }
+      }
+      
+      // 2. 启动灵动岛动画
+      const docName = bestMatch.metadata?.title || bestMatch.metadata?.source || '相关文档'
+      const scanTime = 1200 // 与DocumentationPanel扫描时间一致
+      
+      const islandDoc = {
+        id: 1,
+        name: docName,
+        progress: 0
+      }
+      
+      const scanTimes = {
+        [docName]: scanTime
+      }
+      
+      console.log('启动灵动岛动画:', islandDoc)
+      startDocumentProcessing([islandDoc], scanTimes)
+    }
+    
     
     // 启动灵动岛流程
     // startDynamicIslandFlow()
@@ -422,8 +625,15 @@ const handleSubmit = async () => {
         content: msg.content
       }))
       
+      // 新增：整合bestMatch内容作为AI提示词
+      let enhancedConversationHistory = [...conversationHistory]
+      let knowledgeContext = buildKnowledgeContext(bestMatch)
+      
+      console.log('整合的知识库上下文:', knowledgeContext)
+
+      
       // 第一步：使用 Claude API 进行基础对话
-      const claudeResponse = await claudeApiService.multiTurnChat(conversationHistory, SCENARIOS.basic.systemPrompt)
+      const claudeResponse = await claudeApiService.multiTurnChat(enhancedConversationHistory, knowledgeContext)
       
       if (claudeResponse.success) {
         // 处理 Claude 回复
@@ -431,64 +641,25 @@ const handleSubmit = async () => {
 
         // 使用公共方法解析AI响应
         const parsedData = parseAIResponse(aiContent)
-
         // 如果成功解析到数据，处理结构化响应
         if (parsedData) {
             // 第一步：先显示基础回答，保存extractedInfo到全局状态
             if (parsedData.answer) {
               // 保存extractedInfo到全局状态
-              if (parsedData.extractedInfo && Array.isArray(parsedData.extractedInfo)) {
-                console.log('💾 保存extractedInfo到全局状态:', parsedData.extractedInfo)
-                historyStore.setExtractedInfo(parsedData.extractedInfo)
-              } else {
-                console.log('🗑️ 清空extractedInfo')
-                historyStore.clearExtractedInfo()
-              }
-              
+              // if (parsedData.extractedInfo && Array.isArray(parsedData.extractedInfo)) {
+              //   console.log('💾 保存extractedInfo到全局状态:', parsedData.extractedInfo)
+              //   historyStore.setExtractedInfo(parsedData.extractedInfo)
+              // } else {
+              //   console.log('🗑️ 清空extractedInfo')
+              //   historyStore.clearExtractedInfo()
+              // }
+              console.log('parsedData', parsedData)
               addMessage(parsedData.answer, 'bot')
             } else {
               // 如果没有answer字段，使用清理后的内容
               addMessage(cleanContent, 'bot')
             }
-            
-                          // 第二步：如果有相关文档，进行深度文档查询
-              if (parsedData.relevantDocuments && Array.isArray(parsedData.relevantDocuments) && parsedData.relevantDocuments.length > 0) {
-                console.log('相关文档:', parsedData.relevantDocuments)
-                
-                // 添加正在读取相关文档的固定提示信息
-                addMessage('正在读取相关文档...', 'bot')
-                
-                // 调用文档查询
-                try {
-                  const docResponse = await aiService.queryWithDocuments(value, parsedData.relevantDocuments)
-                
-                  if (docResponse.success) {
-                    // 删除"正在读取相关文档..."消息
-                    const lastMessage = historyStore.messages[historyStore.messages.length - 1]
-                    if (lastMessage && lastMessage.content === '正在读取相关文档...') {
-                      historyStore.messages.pop()
-                    }
-                    
-                    // 添加基于文档的详细回答
-                    addMessage(docResponse.content, 'bot')
-                  } else {
-                    // 如果文档查询失败，删除提示消息
-                    const lastMessage = historyStore.messages[historyStore.messages.length - 1]
-                    if (lastMessage && lastMessage.content === '正在读取相关文档...') {
-                      historyStore.messages.pop()
-                    }
-                    addMessage('抱歉，无法获取相关文档信息，请稍后再试。', 'bot')
-                  }
-                } catch (error) {
-                  console.error('文档查询失败:', error)
-                  const lastMessage = historyStore.messages[historyStore.messages.length - 1]
-                  if (lastMessage && lastMessage.content === '正在读取相关文档...') {
-                    historyStore.messages.pop()
-                  }
-                  addMessage('抱歉，文档查询过程中出现错误。', 'bot')
-                }
-            }
-            
+
             // 处理可用服务工具信息
             if (parsedData.availableServices && Array.isArray(parsedData.availableServices)) {
               console.log('可用服务工具:', parsedData.availableServices)
@@ -598,6 +769,11 @@ const handleSubmit = async () => {
       // 添加错误消息
       addMessage('抱歉，发生了网络错误，请检查网络连接。', 'bot')
       console.error('AI服务错误:', error)
+    } finally {
+      // 重置 loading 状态
+      isLoading.value = false
+      // 确保停止文档处理动画
+      stopDocumentProcessing()
     }
     
     // 保持在当前卡片，不自动跳转到历史记录页面
@@ -733,36 +909,18 @@ const handleIslandDismiss = () => {
 
 // 文档扫描相关方法
 const startSearch = () => {
-  // 获取所有文档信息
-  const documents = documentScanStore.documents
-  if (documents && documents.length > 0) {
-    // 转换为灵动岛格式
-    const islandDocs = documents.map((doc, index) => ({
-      id: index + 1,
-      name: doc.name || `文档${index + 1}`,
-      progress: 0
-    }))
-    
-    // 启动灵动岛处理流程
-    startDocumentProcessing(islandDocs)
-    
-    // 开始实际的文档扫描
-    documentScanStore.startScan()
-    
-    // 模拟扫描完成后发送消息
-    setTimeout(() => {
-      const scanCompleteMessage = "文档扫描已完成！\n\n已成功扫描全部文档，发现以下关键信息：\n\n• 项目配置文件完整\n• 组件结构清晰\n• 数据流设计合理\n• 文档覆盖全面\n\n建议：您可以查看灵动岛卡片获取更详细的分析结果。"
-      addMessage(scanCompleteMessage, 'bot')
-    }, 5000)
+  console.log('startSearch called')
+  if (!docPanelRef.value) {
+    console.log('docPanelRef.value 不存在')
+    return
+  }
+  console.log('docPanelRef.value 存在')
+  if (docPanelRef.value.startSearch) {
+    console.log('startSearch 方法可用')
+    docPanelRef.value.startSearch()
+    console.log('startSearch 已调用')
   } else {
-    // 如果没有文档，使用默认测试数据
-    const testDocuments = [
-      { id: 1, name: '妈妈.md', progress: 0 },
-      { id: 2, name: '喜好菜品清单.txt', progress: 0 },
-      { id: 3, name: '忌口清单.txt', progress: 0 },
-      { id: 4, name: '聚会人员统计.txt', progress: 0 }
-    ]
-    startDocumentProcessing(testDocuments)
+    console.log('startSearch 方法不可用')
   }
 }
 
