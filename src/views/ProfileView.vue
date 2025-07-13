@@ -94,8 +94,10 @@ import { parseAIResponse } from '@/utils/aiResponseParser.js'
 import { useDocumentScanStore } from '@/stores/documentScanStore.js'
 import { useRestaurantStore } from '@/stores/restaurantStore'
 import claudeApiService from '@/api/claudeApi.js'
+import knowledgeApi from '@/api/knowledgeApi.js'
 import { SCENARIOS } from '@/config/scenarios.js'
 import documentInfoService from '@/services/documentInfoService.js'
+
 
 const historyStore = useHistoryStore()
 const documentScanStore = useDocumentScanStore()
@@ -474,6 +476,7 @@ const buildKnowledgeContext = (bestMatch) => {
 5. 保护隐私：当用户询问身份时，不要直接输出完整个人信息，而是引导用户说明具体需求或通过提问了解意图
 6. 提供价值：基于理解给出实用建议，而不是信息罗列
 7. answer字段策略：只推荐一个最核心的观点或建议，避免多个选项
+8. 在extractedInfo字段中先总结文档中与用户问题直接相关的关键信息要点
 
 【可用服务工具】
 当前系统提供以下服务工具：
@@ -483,13 +486,17 @@ ${toolsMarkdown}
 <START>
 {
   "answer": "基于对用户意图的理解，通过1-2个简洁的引导性问题深入对话，避免冗长解释",
-  "availableServices": ["服务工具名称1", "服务工具名称2"]
+  "availableServices": ["服务工具名称1", "服务工具名称2"],
+  "longTermData": "从当前对话中提取用户的隐含意图、偏好趋势、生活习惯、恐惧避雷、人生心愿、社交关系、健康档案等持久性信息。重点关注：1)隐含行程意图（如查询天气背后的出行动机）；2)偏好迁移趋势（如饮品、食物选择变化）；3)恐惧动物/食物自动规避；4)未言明生活习惯（如周五披萨啤酒看片）；5)人生心愿回溯（如开猫咖、考潜水证）；6)长期收藏偏好；7)过敏食物避雷；8)重要纪念日和人物关系；9)职业规划心愿；10)超长期愿望记忆。提取格式：用户[具体行为/偏好/心愿/关系/恐惧]"
+  "extractedInfo": ["与用户问题直接相关的关键信息1", "关键信息2", "关键信息3"],
 }
 <END>
 
 **格式要求说明：**
 - answer 字段：返回对用户问题的回答
 - availableServices 字段：返回可能用到的服务工具名称数组
+- longTermData 字段：提取用户的隐含意图、偏好趋势、生活习惯、恐惧避雷、人生心愿、社交关系、健康档案等持久性信息，重点关注隐含行程意图、偏好迁移趋势、恐惧自动规避、未言明生活习惯、人生心愿回溯、长期收藏偏好、过敏食物避雷、重要纪念日关系、职业规划心愿、超长期愿望记忆等
+- extractedInfo 字段：先总结文档中与用户问题直接相关的关键信息要点数组，只提取能回答用户问题的信息
   `.trim()
   
   if (bestMatch) {
@@ -698,14 +705,28 @@ const handleSubmit = async () => {
             // 处理长期数据和短期记忆
             if (parsedData.longTermData && parsedData.longTermData.trim()) {
               try {
-                const timestamp = new Date().toISOString()
-                const key = `ai_long_term_${timestamp}`
-                const result = await aiDataStorage.saveLongTermData(key, parsedData.longTermData)
-                if (result.success) {
-                  console.log('长期数据保存成功:', result.message)
-                } else {
-                  console.error('长期数据保存失败:', result.message)
+                console.log('🔍 检测到长期记忆数据:', parsedData.longTermData)
+                
+                // 直接使用 knowledgeApi.uploadContent 保存长期记忆数据
+                const metadata = {
+                  title: 'Understanding System',
+                  source: 'AI Assistant',
+                  author: 'AI Assistant',
+                  type: 'long_term_memory',
+                  timestamp: new Date().toISOString(),
+                  category: 'user_understanding'
                 }
+
+                await knowledgeApi.uploadContent(
+                  parsedData.longTermData,
+                  'understanding-system',
+                  metadata,
+                  true,
+                  false
+                )
+                
+                console.log('✅ 长期记忆数据保存成功')
+                
               } catch (error) {
                 console.error('保存长期数据时发生错误:', error)
               }
