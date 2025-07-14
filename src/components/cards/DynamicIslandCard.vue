@@ -75,7 +75,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { AVAILABLE_TOOLS } from '@/config/infoDenseConfig.js'
-import { Maximize2, X, UtensilsCrossed, Leaf, Sparkles, CalendarClock, ListChecks } from 'lucide-vue-next'
+import { Maximize2, X, UtensilsCrossed, Leaf, Sparkles, CalendarClock, ListChecks, TrendingUp, Shield, Star, BookOpen, Calendar, Brain, Target, CheckCircle, AlertTriangle, Heart, Zap } from 'lucide-vue-next'
 
 // 导入所有工具组件
 import AllergyFreeMenuCard from './AllergyFreeMenuCard.vue'
@@ -85,6 +85,14 @@ import PartyTimeCard from './PartyTimeCard.vue'
 import ShoppingListCard from './ShoppingListCard.vue'
 import RestaurantMatchCard from './RestaurantMatchCard.vue'
 import RestaurantBookingCard from './RestaurantBookingCard.vue'
+
+// 导入新增的通用组件
+import TrendAnalysisCard from './TrendAnalysisCard.vue'
+import AvoidanceFilterCard from './AvoidanceFilterCard.vue'
+import WishMemoryCard from './WishMemoryCard.vue'
+import CollectionRecommendCard from './CollectionRecommendCard.vue'
+import AnniversaryReminderCard from './AnniversaryReminderCard.vue'
+import HabitInsightCard from './HabitInsightCard.vue'
 
 const showCard = ref(false)
 const cardStates = ref({})
@@ -97,7 +105,14 @@ const componentMap = {
   'PartyTimeCard': PartyTimeCard,
   'ShoppingListCard': ShoppingListCard,
   'RestaurantMatchCard': RestaurantMatchCard,
-  'RestaurantBookingCard': RestaurantBookingCard
+  'RestaurantBookingCard': RestaurantBookingCard,
+  // 新增的通用组件
+  'TrendAnalysisCard': TrendAnalysisCard,
+  'AvoidanceFilterCard': AvoidanceFilterCard,
+  'WishMemoryCard': WishMemoryCard,
+  'CollectionRecommendCard': CollectionRecommendCard,
+  'AnniversaryReminderCard': AnniversaryReminderCard,
+  'HabitInsightCard': HabitInsightCard
 }
 
 // 图标映射
@@ -108,7 +123,13 @@ const iconMap = {
   'PartyTimeCard': CalendarClock,
   'ShoppingListCard': ListChecks,
   'RestaurantMatchCard': UtensilsCrossed,
-  'RestaurantBookingCard': CalendarClock
+  'RestaurantBookingCard': CalendarClock,
+  'TrendAnalysisCard': TrendingUp,
+  'AvoidanceFilterCard': Shield,
+  'WishMemoryCard': Star,
+  'CollectionRecommendCard': BookOpen,
+  'AnniversaryReminderCard': Calendar,
+  'HabitInsightCard': Brain
 }
 
 // 控制显示哪些组件的数组（可以通过props传入）
@@ -122,7 +143,13 @@ const props = defineProps({
       'PartyTimeCard',
       'ShoppingListCard',
       'RestaurantMatchCard',
-      'RestaurantBookingCard'
+      'RestaurantBookingCard',
+      'TrendAnalysisCard',
+      'AvoidanceFilterCard',
+      'WishMemoryCard',
+      'CollectionRecommendCard',
+      'AnniversaryReminderCard',
+      'HabitInsightCard'
     ]
   }
 })
@@ -148,6 +175,13 @@ const sectionTitle = computed(() => {
     return '派对策划助手'
   }
   
+  // 判断是否为通用组件场景
+  if (components.includes('TrendAnalysisCard') || components.includes('AvoidanceFilterCard') || 
+      components.includes('WishMemoryCard') || components.includes('CollectionRecommendCard') ||
+      components.includes('AnniversaryReminderCard') || components.includes('HabitInsightCard')) {
+    return '智能分析助手'
+  }
+  
   // 默认场景
   return '智能助手'
 })
@@ -163,6 +197,13 @@ const sectionDescription = computed(() => {
   // 判断是否为聚会场景
   if (components.includes('PartyThemeCard') || components.includes('PartyTimeCard')) {
     return '为您的孩子派对提供全方位的策划支持'
+  }
+  
+  // 判断是否为通用组件场景
+  if (components.includes('TrendAnalysisCard') || components.includes('AvoidanceFilterCard') || 
+      components.includes('WishMemoryCard') || components.includes('CollectionRecommendCard') ||
+      components.includes('AnniversaryReminderCard') || components.includes('HabitInsightCard')) {
+    return '基于您的偏好和习惯，提供个性化的智能分析服务'
   }
   
   // 默认场景
@@ -445,6 +486,11 @@ onMounted(() => {
   font-size: 11px;
   color: #666;
   display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-width: 200px;
 }
 .component-controls {
   display: flex;

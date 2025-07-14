@@ -194,6 +194,85 @@
         @update="handleUpdate"
       />
       
+      <!-- 趋势分析卡片 -->
+      <TrendAnalysisCard 
+        v-else-if="card.type === 'trend-analysis'"
+        :title="card.data.title"
+        :description="card.data.description"
+        :trendData="card.data.trendData"
+        :insight="card.data.insight"
+        :primaryAction="card.data.primaryAction"
+        :secondaryAction="card.data.secondaryAction"
+        @primaryAction="handleTrendAnalysisAction"
+        @secondaryAction="handleTrendAnalysisSecondary"
+      />
+      
+      <!-- 避雷筛选卡片 -->
+      <AvoidanceFilterCard 
+        v-else-if="card.type === 'avoidance-filter'"
+        :title="card.data.title"
+        :description="card.data.description"
+        :avoidanceItems="card.data.avoidanceItems"
+        :safeRecommendations="card.data.safeRecommendations"
+        :primaryAction="card.data.primaryAction"
+        :secondaryAction="card.data.secondaryAction"
+        @primaryAction="handleAvoidanceFilterAction"
+        @secondaryAction="handleAvoidanceFilterSecondary"
+      />
+      
+      <!-- 心愿记忆卡片 -->
+      <WishMemoryCard 
+        v-else-if="card.type === 'wish-memory'"
+        :title="card.data.title"
+        :description="card.data.description"
+        :wishes="card.data.wishes"
+        :insight="card.data.insight"
+        :primaryAction="card.data.primaryAction"
+        :secondaryAction="card.data.secondaryAction"
+        @primaryAction="handleWishMemoryAction"
+        @secondaryAction="handleWishMemorySecondary"
+      />
+      
+      <!-- 收藏推荐卡片 -->
+      <CollectionRecommendCard 
+        v-else-if="card.type === 'collection-recommend'"
+        :title="card.data.title"
+        :description="card.data.description"
+        :collections="card.data.collections"
+        :recommendations="card.data.recommendations"
+        :primaryAction="card.data.primaryAction"
+        :secondaryAction="card.data.secondaryAction"
+        @primaryAction="handleCollectionRecommendAction"
+        @secondaryAction="handleCollectionRecommendSecondary"
+      />
+      
+      <!-- 纪念日提醒卡片 -->
+      <AnniversaryReminderCard 
+        v-else-if="card.type === 'anniversary-reminder'"
+        :title="card.data.title"
+        :description="card.data.description"
+        :anniversaries="card.data.anniversaries"
+        :insight="card.data.insight"
+        :primaryAction="card.data.primaryAction"
+        :secondaryAction="card.data.secondaryAction"
+        @primaryAction="handleAnniversaryReminderAction"
+        @secondaryAction="handleAnniversaryReminderSecondary"
+      />
+      
+      <!-- 生活习惯洞察卡片 -->
+      <HabitInsightCard 
+        v-else-if="card.type === 'habit-insight'"
+        :title="card.data.title"
+        :description="card.data.description"
+        :patterns="card.data.patterns"
+        :predictions="card.data.predictions"
+        :insight="card.data.insight"
+        :primaryAction="card.data.primaryAction"
+        :secondaryAction="card.data.secondaryAction"
+        @primaryAction="handleHabitInsightAction"
+        @secondaryAction="handleHabitInsightSecondary"
+      />
+      
       <!-- 行程卡片 -->
       <GenericCard 
         v-else-if="card.type === 'itinerary'"
@@ -368,6 +447,14 @@ import ShopCard from './cards/ShopCard.vue'
 import SelectedProductsCard from './cards/SelectedProductsCard.vue'
 import BusinessTravelCard from './cards/BusinessTravelCard.vue'
 import CommunicationCard from './cards/CommunicationCard.vue'
+
+// 新增通用组件
+import TrendAnalysisCard from './cards/TrendAnalysisCard.vue'
+import AvoidanceFilterCard from './cards/AvoidanceFilterCard.vue'
+import WishMemoryCard from './cards/WishMemoryCard.vue'
+import CollectionRecommendCard from './cards/CollectionRecommendCard.vue'
+import AnniversaryReminderCard from './cards/AnniversaryReminderCard.vue'
+import HabitInsightCard from './cards/HabitInsightCard.vue'
 
 const props = defineProps({
   card: {
@@ -669,6 +756,67 @@ const handleBookFlight = (flightInfo) => {
 const handleBookHotel = (hotelInfo) => {
   console.log('[SmartCard] 预订酒店:', hotelInfo)
   // 这里可以触发酒店预订流程
+}
+
+// 新增通用组件事件处理方法
+const handleTrendAnalysisAction = (data) => {
+  console.log('[SmartCard] 趋势分析主要操作:', data)
+  emit('update-data', props.card.id, { action: 'trendAnalysis', data })
+}
+
+const handleTrendAnalysisSecondary = (data) => {
+  console.log('[SmartCard] 趋势分析次要操作:', data)
+  emit('update-data', props.card.id, { action: 'trendAnalysisSecondary', data })
+}
+
+const handleAvoidanceFilterAction = (data) => {
+  console.log('[SmartCard] 避雷筛选主要操作:', data)
+  emit('update-data', props.card.id, { action: 'avoidanceFilter', data })
+}
+
+const handleAvoidanceFilterSecondary = (data) => {
+  console.log('[SmartCard] 避雷筛选次要操作:', data)
+  emit('update-data', props.card.id, { action: 'avoidanceFilterSecondary', data })
+}
+
+const handleWishMemoryAction = (data) => {
+  console.log('[SmartCard] 心愿记忆主要操作:', data)
+  emit('update-data', props.card.id, { action: 'wishMemory', data })
+}
+
+const handleWishMemorySecondary = (data) => {
+  console.log('[SmartCard] 心愿记忆次要操作:', data)
+  emit('update-data', props.card.id, { action: 'wishMemorySecondary', data })
+}
+
+const handleCollectionRecommendAction = (data) => {
+  console.log('[SmartCard] 收藏推荐主要操作:', data)
+  emit('update-data', props.card.id, { action: 'collectionRecommend', data })
+}
+
+const handleCollectionRecommendSecondary = (data) => {
+  console.log('[SmartCard] 收藏推荐次要操作:', data)
+  emit('update-data', props.card.id, { action: 'collectionRecommendSecondary', data })
+}
+
+const handleAnniversaryReminderAction = (data) => {
+  console.log('[SmartCard] 纪念日提醒主要操作:', data)
+  emit('update-data', props.card.id, { action: 'anniversaryReminder', data })
+}
+
+const handleAnniversaryReminderSecondary = (data) => {
+  console.log('[SmartCard] 纪念日提醒次要操作:', data)
+  emit('update-data', props.card.id, { action: 'anniversaryReminderSecondary', data })
+}
+
+const handleHabitInsightAction = (data) => {
+  console.log('[SmartCard] 生活习惯洞察主要操作:', data)
+  emit('update-data', props.card.id, { action: 'habitInsight', data })
+}
+
+const handleHabitInsightSecondary = (data) => {
+  console.log('[SmartCard] 生活习惯洞察次要操作:', data)
+  emit('update-data', props.card.id, { action: 'habitInsightSecondary', data })
 }
 
 const handleBookTransport = (transportInfo) => {

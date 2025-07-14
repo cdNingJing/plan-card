@@ -3,12 +3,12 @@
     <div class="profile-layout-container">
       <!-- 文档区域 - 70% -->
       <div class="documentation-section">
-        <div class="documentation-header">
+        <!-- <div class="documentation-header">
           <button class="search-btn" @click="startSearch">模拟检索全部文档</button>
           <button class="search-btn" @click="testPartyComponent1">为孩子举办生日派对</button>
           <button class="search-btn" @click="testRestaurantComponent">为妈妈的生日在19点预订公司附近的餐厅</button>
           <button class="ios-btn search-btn" @click="testIsland">测试灵动岛</button>
-        </div> 
+        </div>  -->
         <DocumentationPanel ref="docPanelRef" />
       </div>
       <!-- 聊天区域 - 30% -->
@@ -470,14 +470,14 @@ const addMessage = (content, type = 'user') => {
   scrollToBottom()
 }
 
-// 构建知识库上下文的方法
-const buildKnowledgeContext = (bestMatch) => {
-  const now = new Date()
-  const currentTime = now.toTimeString().split(' ')[0]
-  const toolsMarkdown = documentInfoService.getToolsMarkdown()
-  
-  // 基础提示词模板
-  const basePrompt = `
+  // 构建知识库上下文的方法
+  const buildKnowledgeContext = (bestMatch) => {
+    const now = new Date()
+    const currentTime = now.toTimeString().split(' ')[0]
+    const toolsMarkdown = documentInfoService.getToolsMarkdown(true) // 为AI提供详细描述
+    
+    // 基础提示词模板
+    const basePrompt = `
 你是一个富有创意和洞察力的AI助手，请用中文回答问题。当前时间：${currentTime}。
 
 你的回答策略：
@@ -502,7 +502,7 @@ ${toolsMarkdown}
 <START>
 {
   "answer": "基于对用户意图的理解，通过1-2个简洁的引导性问题深入对话，避免冗长解释",
-  "availableServices": ["服务工具名称1", "服务工具名称2"],
+  "availableServices": ["组件名称1", "组件名称2", "组件名称3", ...],
   "longTermData": "从当前对话中提取用户的隐含意图、偏好趋势、生活习惯、恐惧避雷、人生心愿、社交关系、健康档案等持久性信息。重点关注：1)隐含行程意图（如查询天气背后的出行动机）；2)偏好迁移趋势（如饮品、食物选择变化）；3)恐惧动物/食物自动规避；4)未言明生活习惯（如周五披萨啤酒看片）；5)人生心愿回溯（如开猫咖、考潜水证）；6)长期收藏偏好；7)过敏食物避雷；8)重要纪念日和人物关系；9)职业规划心愿；10)超长期愿望记忆。提取格式：用户[具体行为/偏好/心愿/关系/恐惧]"
   "extractedInfo": ["与用户问题直接相关的关键信息1", "关键信息2", "关键信息3"],
 }
@@ -510,7 +510,7 @@ ${toolsMarkdown}
 
 **格式要求说明：**
 - answer 字段：返回对用户问题的回答
-- availableServices 字段：返回可能用到的服务工具名称数组
+- availableServices 字段：返回可能用到的组件名称数组（如：AllergyFreeMenuCard、PartyThemeCard, 等等或者更多）
 - longTermData 字段：提取用户的隐含意图、偏好趋势、生活习惯、恐惧避雷、人生心愿、社交关系、健康档案等持久性信息，重点关注隐含行程意图、偏好迁移趋势、恐惧自动规避、未言明生活习惯、人生心愿回溯、长期收藏偏好、过敏食物避雷、重要纪念日关系、职业规划心愿、超长期愿望记忆等
 - extractedInfo 字段：先总结文档中与用户问题直接相关的关键信息要点数组，只提取能回答用户问题的信息
   `.trim()
@@ -679,20 +679,8 @@ const handleSubmit = async () => {
               
               // 根据推荐的工具更新灵动岛卡片
               if (parsedData.availableServices.length > 0) {
-                // 将工具名称转换为组件名称
-                const componentMap = {
-                  '提供无过敏菜单': 'AllergyFreeMenuCard',
-                  '去除蔬菜菜单': 'NoVegetableMenuCard',
-                  '派对主题推荐': 'PartyThemeCard',
-                  '派对时间建议': 'PartyTimeCard',
-                  '采购清单生成': 'ShoppingListCard',
-                  '餐厅列表': 'RestaurantMatchCard',
-                  '填写餐厅预订信息': 'RestaurantBookingCard'
-                }
-                
-                const recommendedComponents = parsedData.availableServices
-                  .map(service => componentMap[service])
-                  .filter(component => component)
+                // availableServices 现在直接返回组件名称
+                const recommendedComponents = parsedData.availableServices.filter(component => component)
                 
                 if (recommendedComponents.length > 0) {
                   activeComponentNames.value = recommendedComponents
@@ -712,6 +700,7 @@ const handleSubmit = async () => {
             if (parsedData.longTermData && parsedData.longTermData.trim()) {
               try {
                 console.log('🔍 检测到长期记忆数据:', parsedData.longTermData)
+                return;
                 // 直接使用 knowledgeApi.uploadContent 保存长期记忆数据
                 const metadata = {
                   title: 'Understanding System',
