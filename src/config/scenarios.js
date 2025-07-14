@@ -52,8 +52,8 @@ function createSystemPrompt(template, dataText = '') {
     return line
   }).join('\n')
   
-  console.log('formattedDocuments', formattedDocuments)
-  console.log('toolsMarkdown', toolsMarkdown)
+  // console.log('formattedDocuments', formattedDocuments)
+  // console.log('toolsMarkdown', toolsMarkdown)
   
   return template
     .replace('${currentTime}', new Date().toLocaleString('zh-CN'))

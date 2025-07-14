@@ -8,7 +8,7 @@
           <button class="search-btn" @click="testPartyComponent1">为孩子举办生日派对</button>
           <button class="search-btn" @click="testRestaurantComponent">为妈妈的生日在19点预订公司附近的餐厅</button>
           <button class="ios-btn search-btn" @click="testIsland">测试灵动岛</button>
-        </div>
+        </div> 
         <DocumentationPanel ref="docPanelRef" />
       </div>
       <!-- 聊天区域 - 30% -->
@@ -179,13 +179,22 @@ async function animatePercentSmart(duration = 2500) {
   circleTransition.value = true;
   await nextTick();
   
+  // 获取API开始时间
+  const apiStartTime = window.apiStartTime || Date.now();
+  const currentTime = Date.now();
+  const totalElapsed = currentTime - apiStartTime;
+  
+  // 计算基于API请求时间的进度
+  const estimatedTotalDuration = 8000; // 预估总时间8秒
+  const overallProgress = Math.min(totalElapsed / estimatedTotalDuration, 0.9); // 最多到90%
+  
   // 获取当前文档的实际扫描时间
   const currentDoc = islandDocuments.value[currentDocumentIndex.value];
   const actualDuration = documentScanTimes.value[currentDoc?.name] || duration;
   
-  console.log(`开始扫描文档: ${currentDoc?.name}, 预计时间: ${actualDuration}ms`);
+  console.log(`开始扫描文档: ${currentDoc?.name}, API已运行: ${totalElapsed}ms, 总体进度: ${(overallProgress * 100).toFixed(1)}%`);
   
-  // 3. 动画递增 - 与DocumentationPanel的扫描时间同步
+  // 3. 动画递增 - 基于API请求时间
   let startTime = null;
   function step(ts) {
     if (!startTime) startTime = ts;
@@ -214,6 +223,8 @@ async function animatePercentSmart(duration = 2500) {
           // 重置状态
           animatedPercent.value = 0;
           currentDocumentIndex.value = 0;
+          // 清除API开始时间
+          delete window.apiStartTime;
         } else {
           // 开始扫描下一个文档
           animatePercentSmart(actualDuration);
@@ -298,12 +309,17 @@ const testIsland = () => {
 }
 
 // 开始文档处理流程
-const startDocumentProcessing = (documents, scanTimes = {}) => {
+const startDocumentProcessing = (documents, scanTimes = {}, apiStartTime = null) => {
   islandDocuments.value = documents.map(doc => ({ ...doc, progress: 0 }))
   currentDocumentIndex.value = 0
   islandPercent.value = 0
   documentScanTimes.value = scanTimes
   showIsland.value = true
+  
+  // 保存API开始时间
+  if (apiStartTime) {
+    window.apiStartTime = apiStartTime
+  }
   
   // 开始处理第一个文档
   processNextDocument()
@@ -499,34 +515,20 @@ ${toolsMarkdown}
 - extractedInfo 字段：先总结文档中与用户问题直接相关的关键信息要点数组，只提取能回答用户问题的信息
   `.trim()
   
-  if (bestMatch) {
+  if (bestMatch && bestMatch.length > 0) {
     // 有匹配的知识库内容，添加知识库信息
+    const documentsInfo = bestMatch.map((doc, index) => `
+## 文档 ${index + 1}
+**标题：** ${doc.title}
+**相关度：** ${(doc.score * 100).toFixed(1)}%
+**内容：**
+${doc.content}
+`).join('\n\n')
+
     const knowledgeInfo = `
 # 知识库上下文信息
 
-## 文档标题
-${bestMatch.metadata?.title || '无标题'}
-
-## 文档来源
-${bestMatch.metadata?.source || '未知来源'}
-
-## 匹配分数
-${bestMatch.score}
-
-## 原始内容
-${bestMatch.content}
-
-## 内容类型
-${bestMatch.metadata?.content_type || 'document'}
-
-## 内容摘要
-${bestMatch.metadata?.summary || '无摘要'}
-
-## 抽取结果
-${bestMatch.metadata?.entities || '无抽取结果'}
-
-## 分析结果
-${bestMatch.metadata?.analysis || '无分析结果'}
+${documentsInfo}
 
 ---
 请基于以上知识库信息回答用户的问题。
@@ -542,17 +544,17 @@ ${basePrompt}`
 
 const handleSubmit = async () => {
   const value = inputValue.value.trim()
-  console.log('value', value)
+  console.log('[handleSubmit] 输入值:', value)
   if (value) {
-    // 设置 loading 状态
     isLoading.value = true
-    
+    console.log('[handleSubmit] isLoading set true, 开始处理')
     // 添加用户消息
     addMessage(value, 'user')
     inputValue.value = ''
-    let bestMatch = null
+    let bestMatch = []
     // 新增：调用DocumentationPanel的搜索方法
     try {
+      console.log('[handleSubmit] try块执行中')
       if (docPanelRef.value && docPanelRef.value.searchInFirstCollection) {
         console.log('开始搜索知识库...')
         const searchResult = await docPanelRef.value.searchInFirstCollection(value, 10)
@@ -563,19 +565,27 @@ const handleSubmit = async () => {
           if (searchResult.data && searchResult.data.results && searchResult.data.results.length > 0) {
             console.log('搜索结果详情:', searchResult.data.results)
             
-            // 新增：过滤出score大于40%且最大的文档
+            // 新增：过滤出score大于30%的所有文档
             const results = searchResult.data.results
             if (results && results.length > 0) {
-              // 过滤出score大于40%的文档
-              const filteredResults = results.filter(result => result.score > 0.4)
+              // 过滤出score大于30%的文档
+              const filteredResults = results.filter(result => result.score > 0.3)
               
               if (filteredResults.length > 0) {
-                // 按score降序排序，获取score最大的文档
+                // 按score降序排序，获取所有匹配文档的内容组合
                 const sortedResults = filteredResults.sort((a, b) => b.score - a.score)
-                bestMatch = sortedResults[0]
-                console.log(`找到 ${filteredResults.length} 个相关度大于40%的文档，最高相关度: ${(bestMatch.score * 100).toFixed(1)}%`)
+                
+                // 将所有匹配文档保存为数组
+                bestMatch = sortedResults.map(result => ({
+                  id: result.id || result.metadata?.descriptive_id,
+                  title: result.metadata?.title || result.metadata?.source || '无标题',
+                  score: result.score,
+                  content: result.content,
+                  metadata: result.metadata
+                }))
+                console.log(`找到 ${filteredResults.length} 个相关度大于30%的文档，内容已组合`)
               } else {
-                console.log('没有找到相关度大于40%的文档')
+                console.log('没有找到相关度大于30%的文档')
               }
             }
           }
@@ -591,34 +601,30 @@ const handleSubmit = async () => {
     console.log('bestMatch', bestMatch)
     
     // 新增：当bestMatch有值时，执行文档扫描和灵动岛动画
-    if (bestMatch) {
+    if (bestMatch && bestMatch.length > 0) {
       console.log('开始执行文档扫描和灵动岛动画...')
       
       // 1. 执行DocumentationPanel的文档扫描
       if (docPanelRef.value && docPanelRef.value.highlightDocumentsSequentially) {
-        const docId = bestMatch.id || bestMatch.metadata?.descriptive_id
-        if (docId) {
-          console.log('开始扫描文档:', docId)
-          docPanelRef.value.highlightDocumentsSequentially([docId])
+        const docIds = bestMatch.map(doc => doc.id).filter(id => id)
+        if (docIds.length > 0) {
+          console.log('开始扫描文档:', docIds)
+          docPanelRef.value.highlightDocumentsSequentially(docIds)
         }
       }
       
-      // 2. 启动灵动岛动画
-      const docName = bestMatch.metadata?.title || bestMatch.metadata?.source || '相关文档'
-      const scanTime = 1200 // 与DocumentationPanel扫描时间一致
-      
-      const islandDoc = {
-        id: 1,
-        name: docName,
+      // 2. 启动灵动岛动画 - 基于API请求时间
+      const islandDocs = bestMatch.map((doc, index) => ({
+        id: index + 1,
+        name: doc.title,
         progress: 0
-      }
+      }))
       
-      const scanTimes = {
-        [docName]: scanTime
-      }
+      // 记录API请求开始时间
+      const apiStartTime = Date.now()
       
-      console.log('启动灵动岛动画:', islandDoc)
-      startDocumentProcessing([islandDoc], scanTimes)
+      console.log('启动灵动岛动画:', islandDocs)
+      startDocumentProcessing(islandDocs, {}, apiStartTime)
     }
     
     
@@ -706,7 +712,6 @@ const handleSubmit = async () => {
             if (parsedData.longTermData && parsedData.longTermData.trim()) {
               try {
                 console.log('🔍 检测到长期记忆数据:', parsedData.longTermData)
-                
                 // 直接使用 knowledgeApi.uploadContent 保存长期记忆数据
                 const metadata = {
                   title: 'Understanding System',
@@ -717,16 +722,14 @@ const handleSubmit = async () => {
                   category: 'user_understanding'
                 }
 
-                await knowledgeApi.uploadContent(
+                knowledgeApi.uploadContent(
                   parsedData.longTermData,
                   'understanding-system',
                   metadata,
                   true,
                   false
                 )
-                
                 console.log('✅ 长期记忆数据保存成功')
-                
               } catch (error) {
                 console.error('保存长期数据时发生错误:', error)
               }
@@ -757,6 +760,13 @@ const handleSubmit = async () => {
         
         console.log('Claude AI回复成功:', claudeResponse.data)
         
+        // 完成灵动岛流程 - 成功状态，基于API响应时间
+        const apiEndTime = Date.now();
+        const apiStartTime = window.apiStartTime || apiEndTime;
+        const totalApiTime = apiEndTime - apiStartTime;
+        
+        console.log(`API请求总耗时: ${totalApiTime}ms`);
+        
         // 完成灵动岛流程 - 成功状态
         completeDynamicIslandFlow('success', {
           message: 'AI 已成功处理您的请求',
@@ -765,6 +775,12 @@ const handleSubmit = async () => {
         
       } else {
         // 完成灵动岛流程 - 错误状态
+        const apiEndTime = Date.now();
+        const apiStartTime = window.apiStartTime || apiEndTime;
+        const totalApiTime = apiEndTime - apiStartTime;
+        
+        console.log(`API请求失败，总耗时: ${totalApiTime}ms`);
+        
         completeDynamicIslandFlow('conflict', {
           message: '抱歉，我现在无法回答您的问题，请稍后再试。',
           suggestions: [
@@ -779,6 +795,12 @@ const handleSubmit = async () => {
       }
     } catch (error) {
       // 完成灵动岛流程 - 网络错误状态
+      const apiEndTime = Date.now();
+      const apiStartTime = window.apiStartTime || apiEndTime;
+      const totalApiTime = apiEndTime - apiStartTime;
+      
+      console.log(`API网络错误，总耗时: ${totalApiTime}ms`);
+      
       completeDynamicIslandFlow('conflict', {
         message: '抱歉，发生了网络错误，请检查网络连接。',
         suggestions: [
@@ -791,10 +813,12 @@ const handleSubmit = async () => {
       addMessage('抱歉，发生了网络错误，请检查网络连接。', 'bot')
       console.error('AI服务错误:', error)
     } finally {
-      // 重置 loading 状态
       isLoading.value = false
+      console.log('[handleSubmit] finally块执行，isLoading set false')
       // 确保停止文档处理动画
       stopDocumentProcessing()
+      // 清除API开始时间
+      delete window.apiStartTime
     }
     
     // 保持在当前卡片，不自动跳转到历史记录页面
@@ -861,8 +885,22 @@ const completeDynamicIslandFlow = (resultType, data = {}) => {
     progressTimer = null
   }
   
+  // 获取API开始时间
+  const apiStartTime = window.apiStartTime || Date.now();
+  const currentTime = Date.now();
+  const totalElapsed = currentTime - apiStartTime;
+  
+  console.log(`灵动岛完成，API总耗时: ${totalElapsed}ms`);
+  
   // 完成进度
   islandProgress.value = 100
+  
+  // 基于API响应时间调整完成时机
+  const minDelay = 1000; // 最少1秒
+  const maxDelay = 3000; // 最多3秒
+  const delay = Math.max(minDelay, Math.min(maxDelay, totalElapsed * 0.1)); // 基于API时间的10%
+  
+  console.log(`灵动岛完成延迟: ${delay}ms`);
   
   // 切换到全展开态
   setTimeout(() => {
@@ -881,7 +919,7 @@ const completeDynamicIslandFlow = (resultType, data = {}) => {
       islandResultMessage.value = data.message || 'AI 已成功处理您的请求'
       islandNextStepText.value = data.nextStepText || '下一步'
     }
-  }, 500)
+  }, delay)
 }
 
 const hideDynamicIsland = () => {

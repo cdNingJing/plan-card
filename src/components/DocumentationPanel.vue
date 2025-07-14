@@ -114,9 +114,6 @@
           </svg>
           <p class="empty-text">暂无文档</p>
           <p class="empty-subtext">上传内容后，文档将显示在这里</p>
-          <div class="api-notice">
-            <p class="notice-text">注意：当前API仅支持文档查看，编辑和删除功能暂未开放</p>
-          </div>
         </div>
       </div>
 
@@ -482,12 +479,24 @@ const executeScanQueue = async () => {
     return
   }
   
+  // 获取API开始时间
+  const apiStartTime = window.apiStartTime || Date.now()
+  const currentTime = Date.now()
+  const totalElapsed = currentTime - apiStartTime
+  
   const currentId = globalScanState.value.scanQueue[globalScanState.value.currentScanIndex]
   if (currentId) {
     const idx = filteredDocuments.value.findIndex(doc => getDocId(doc) === currentId)
     if (idx !== -1) {
       testHighlightIndex.value = idx
-      await new Promise(resolve => setTimeout(resolve, 1200))
+      
+      // 基于API请求时间计算扫描时间
+      const estimatedTotalDuration = 8000 // 预估总时间8秒
+      const overallProgress = Math.min(totalElapsed / estimatedTotalDuration, 0.9)
+      const scanTime = Math.max(800, Math.min(2000, 1200 * (1 + overallProgress * 0.5))) // 800-2000ms之间
+      
+      console.log(`executeScanQueue扫描时间: ${scanTime}ms, API进度: ${(overallProgress * 100).toFixed(1)}%`)
+      await new Promise(resolve => setTimeout(resolve, scanTime))
       testHighlightIndex.value = -1
     }
   }
@@ -906,12 +915,27 @@ function getDocId(doc) {
 async function highlightDocumentsSequentially(ids = []) {
   if (!Array.isArray(ids) || ids.length === 0) return
   console.log('highlightDocumentsSequentially called, ids:', ids)
+  
+  // 获取API开始时间
+  const apiStartTime = window.apiStartTime || Date.now()
+  const currentTime = Date.now()
+  const totalElapsed = currentTime - apiStartTime
+  
+  console.log(`DocumentationPanel扫描开始，API已运行: ${totalElapsed}ms`)
+  
   for (let i = 0; i < ids.length; i++) {
     const idx = filteredDocuments.value.findIndex(doc => getDocId(doc) === ids[i])
     console.log(`高亮第${i+1}个文档，id:`, ids[i], 'idx:', idx, 'filteredDocuments:', filteredDocuments.value)
     if (idx === -1) continue
     testHighlightIndex.value = idx
-    await new Promise(resolve => setTimeout(resolve, 1200))
+    
+    // 基于API请求时间计算扫描时间
+    const estimatedTotalDuration = 8000 // 预估总时间8秒
+    const overallProgress = Math.min(totalElapsed / estimatedTotalDuration, 0.9)
+    const scanTime = Math.max(800, Math.min(2000, 1200 * (1 + overallProgress * 0.5))) // 800-2000ms之间
+    
+    console.log(`文档扫描时间: ${scanTime}ms, 基于API进度: ${(overallProgress * 100).toFixed(1)}%`)
+    await new Promise(resolve => setTimeout(resolve, scanTime))
     testHighlightIndex.value = -1
     if (i < ids.length - 1) {
       console.log('准备高亮下一个文档')
@@ -955,7 +979,9 @@ defineExpose({
   highlightDocumentsSequentially,
   highlightAllDocuments,
   startSearch,
-  searchInFirstCollection
+  searchInFirstCollection,
+  loadDocuments,
+  loadCollections
 })
 </script>
 
