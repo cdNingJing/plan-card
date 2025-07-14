@@ -22,6 +22,30 @@
           </svg>
           搜索
         </button>
+        
+        <!-- 上传开关和进度条 -->
+        <div class="upload-controls">
+          <!-- 上传开关 -->
+          <div class="upload-toggle-container">
+            <label class="upload-toggle-label">记录上传</label>
+            <button 
+              class="upload-toggle-btn" 
+              :class="{ 'active': uploadSettings.enableUpload }"
+              @click="toggleUpload"
+              title="控制是否上传记录信息到知识库"
+            >
+              <div class="toggle-slider"></div>
+            </button>
+          </div>
+          
+          <!-- 上传进度条 -->
+          <div v-if="isUploading" class="upload-progress-container">
+            <div class="upload-progress-bar">
+              <div class="upload-progress-fill" :style="{ width: uploadProgress + '%' }"></div>
+            </div>
+            <span class="upload-progress-text">{{ uploadProgress }}%</span>
+          </div>
+        </div>
       </div>
 
       <!-- 集合列表 -->
@@ -393,12 +417,17 @@ import { onMounted, ref, computed, defineExpose, watch } from 'vue'
 import knowledgeApi from '@/api/knowledgeApi.js'
 import DynamicIsland from './DynamicIsland.vue'
 import { Folder, FileText, Trash } from 'lucide-vue-next'
+import { useUserInfoStore } from '@/stores/userInfoStore.js'
 
 // 状态管理
 const collections = ref([])
 const searchResults = ref([])
 const documents = ref([])
 const isLoading = ref(false)
+
+// 用户信息store
+const userInfoStore = useUserInfoStore()
+const { uploadSettings } = userInfoStore
 
 // 对话框状态
 const showCreateDialog = ref(false)
@@ -433,6 +462,7 @@ const currentDocument = ref(null)
 // 加载状态
 const isCreating = ref(false)
 const isUploading = ref(false)
+const uploadProgress = ref(0)
 const isSearching = ref(false)
 const isSimulatingSearch = ref(false)
 const isScanning = ref(false)
@@ -594,41 +624,115 @@ const closeUploadDialog = () => {
   }
 }
 
+// 切换上传开关
+const toggleUpload = () => {
+  userInfoStore.toggleUpload()
+}
+
+// 通用上传方法，可以被外部调用
+const uploadContentToCollection = async (content, collectionName, metadata = {}) => {
+  if (!content || !content.trim()) {
+    console.error('上传内容为空')
+    return { success: false, message: '上传内容为空' }
+  }
+
+  if (!collectionName) {
+    console.error('集合名称为空')
+    return { success: false, message: '集合名称为空' }
+  }
+
+  try {
+    isUploading.value = true
+    uploadProgress.value = 0
+    
+    // 模拟上传进度 - 30%前快，中间慢，后面快
+    const progressInterval = setInterval(() => {
+      if (uploadProgress.value < 90) {
+        let increment = 0
+        
+        if (uploadProgress.value < 30) {
+          // 前30%：快速增长 8-15
+          increment = Math.floor(Math.random() * 8) + 8
+        } else if (uploadProgress.value < 70) {
+          // 30%-70%：慢速增长 2-5
+          increment = Math.floor(Math.random() * 4) + 2
+        } else {
+          // 70%-90%：快速增长 6-12
+          increment = Math.floor(Math.random() * 7) + 6
+        }
+        
+        uploadProgress.value = Math.min(uploadProgress.value + increment, 90)
+      }
+    }, 200)
+    
+    const defaultMetadata = {
+      title: '无标题',
+      source: '系统上传',
+      author: '系统'
+    }
+    
+    const finalMetadata = { ...defaultMetadata, ...metadata }
+
+    await knowledgeApi.uploadContent(
+      content,
+      collectionName,
+      finalMetadata,
+      true,
+      false
+    )
+    
+    // 完成上传
+    clearInterval(progressInterval)
+    uploadProgress.value = 100
+    
+    // 等待一小段时间显示100%
+    await new Promise(resolve => setTimeout(resolve, 300))
+    
+    console.log('✅ 内容上传成功')
+    
+    // 立即更新集合列表和文档列表
+    try {
+      await loadCollections()
+      await loadDocuments()
+      console.log('✅ 页面数据更新成功')
+    } catch (error) {
+      console.error('❌ 页面数据更新失败:', error)
+    }
+    
+    return { success: true, message: '内容上传成功' }
+  } catch (error) {
+    console.error('上传内容失败:', error)
+    return { success: false, message: '上传内容失败: ' + error.message, error }
+  } finally {
+    isUploading.value = false
+    uploadProgress.value = 0
+  }
+}
+
 const uploadContent = async () => {
   if (!uploadForm.value.collectionName || !uploadForm.value.content.trim()) {
     showSuccessNotification('请选择集合并输入内容')
     return
   }
 
-  try {
-    isUploading.value = true
-    
-    const metadata = {
-      title: uploadForm.value.title || '无标题',
-      source: uploadForm.value.source || '用户上传',
-      author: '用户'
-    }
+  const metadata = {
+    title: uploadForm.value.title || '无标题',
+    source: uploadForm.value.source || '用户上传',
+    author: '用户'
+  }
 
-    await knowledgeApi.uploadContent(
-      uploadForm.value.content,
-      uploadForm.value.collectionName,
-      metadata,
-      true,
-      false
-    )
-    
+  const result = await uploadContentToCollection(
+    uploadForm.value.content,
+    uploadForm.value.collectionName,
+    metadata
+  )
+  
+  if (result.success) {
     showSuccessNotification('内容上传成功')
     closeUploadDialog()
     await loadCollections()
-    // 延迟刷新文档列表，确保新上传的内容能够显示
-    setTimeout(async () => {
-      await loadDocuments()
-    }, 500)
-  } catch (error) {
-    console.error('上传内容失败:', error)
-    showSuccessNotification('上传内容失败: ' + error.message)
-  } finally {
-    isUploading.value = false
+  } else {
+    showSuccessNotification(result.message)
   }
 }
 
@@ -981,7 +1085,8 @@ defineExpose({
   startSearch,
   searchInFirstCollection,
   loadDocuments,
-  loadCollections
+  loadCollections,
+  uploadContentToCollection
 })
 </script>
 
@@ -1766,5 +1871,119 @@ defineExpose({
   background: #e0fdf4;
   position: relative;
   transition: box-shadow 0.3s, background 0.3s;
+}
+
+/* 上传进度条样式 */
+.upload-progress-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  border-radius: 20px;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  min-width: 120px;
+}
+
+.upload-progress-bar {
+  flex: 1;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.upload-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.upload-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.upload-progress-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6366f1;
+  min-width: 32px;
+  text-align: center;
+}
+
+/* 上传控制区域样式 */
+.upload-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.upload-toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  border-radius: 20px;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.upload-toggle-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6366f1;
+  white-space: nowrap;
+}
+
+.upload-toggle-btn {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  background: #e2e8f0;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0;
+}
+
+.upload-toggle-btn.active {
+  background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+}
+
+.toggle-slider {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: white;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.upload-toggle-btn.active .toggle-slider {
+  left: 18px;
 }
 </style>

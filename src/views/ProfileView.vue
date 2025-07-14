@@ -93,6 +93,7 @@ import aiDataStorage from '@/utils/aiDataStorage.js'
 import { parseAIResponse } from '@/utils/aiResponseParser.js'
 import { useDocumentScanStore } from '@/stores/documentScanStore.js'
 import { useRestaurantStore } from '@/stores/restaurantStore'
+import { useUserInfoStore } from '@/stores/userInfoStore.js'
 import claudeApiService from '@/api/claudeApi.js'
 import knowledgeApi from '@/api/knowledgeApi.js'
 import { SCENARIOS } from '@/config/scenarios.js'
@@ -102,6 +103,7 @@ import documentInfoService from '@/services/documentInfoService.js'
 const historyStore = useHistoryStore()
 const documentScanStore = useDocumentScanStore()
 const restaurantStore = useRestaurantStore()
+const userInfoStore = useUserInfoStore()
 const { messages } = storeToRefs(historyStore)
 
 const inputValue = ref('')
@@ -700,25 +702,37 @@ const handleSubmit = async () => {
             if (parsedData.longTermData && parsedData.longTermData.trim()) {
               try {
                 console.log('🔍 检测到长期记忆数据:', parsedData.longTermData)
-                return;
-                // 直接使用 knowledgeApi.uploadContent 保存长期记忆数据
-                const metadata = {
-                  title: 'Understanding System',
-                  source: 'AI Assistant',
-                  author: 'AI Assistant',
-                  type: 'long_term_memory',
-                  timestamp: new Date().toISOString(),
-                  category: 'user_understanding'
-                }
+                
+                // 检查上传开关状态
+                if (userInfoStore.uploadSettings.enableUpload) {
+                  // 使用DocumentationPanel的上传方法
+                  const metadata = {
+                    title: 'Understanding System',
+                    source: 'AI Assistant',
+                    author: 'AI Assistant',
+                    type: 'long_term_memory',
+                    timestamp: new Date().toISOString(),
+                    category: 'user_understanding'
+                  }
 
-                knowledgeApi.uploadContent(
-                  parsedData.longTermData,
-                  'understanding-system',
-                  metadata,
-                  true,
-                  false
-                )
-                console.log('✅ 长期记忆数据保存成功')
+                  if (docPanelRef.value && docPanelRef.value.uploadContentToCollection) {
+                    const result = docPanelRef.value.uploadContentToCollection(
+                      parsedData.longTermData,
+                      'understanding-system',
+                      metadata
+                    )
+                    
+                    if (result.success) {
+                      console.log('✅ 长期记忆数据保存成功')
+                    } else {
+                      console.error('❌ 长期记忆数据保存失败:', result.message)
+                    }
+                  } else {
+                    console.error('❌ DocumentationPanel上传方法不可用')
+                  }
+                } else {
+                  console.log('⚠️ 上传开关已关闭，跳过长期记忆数据保存')
+                }
               } catch (error) {
                 console.error('保存长期数据时发生错误:', error)
               }

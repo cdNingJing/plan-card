@@ -37,6 +37,11 @@ export const useUserInfoStore = defineStore('userInfo', () => {
 
   // 当前活跃场景
   const currentScenario = ref('travel')
+  
+  // 上传开关设置
+  const uploadSettings = ref({
+    enableUpload: true // 默认开启上传
+  })
 
   // 计算属性：获取当前场景的信息
   const currentInfo = computed(() => {
@@ -123,6 +128,18 @@ export const useUserInfoStore = defineStore('userInfo', () => {
     } catch (error) {
       console.error('[UserInfoStore] 从本地存储加载数据失败:', error)
     }
+    
+    // 加载上传设置
+    try {
+      const uploadStored = localStorage.getItem('plan_card_upload_settings')
+      if (uploadStored) {
+        const parsed = JSON.parse(uploadStored)
+        uploadSettings.value = { ...uploadSettings.value, ...parsed }
+        console.log('[UserInfoStore] 从本地存储加载上传设置成功')
+      }
+    } catch (error) {
+      console.error('[UserInfoStore] 从本地存储加载上传设置失败:', error)
+    }
   }
 
   // 保存到本地存储
@@ -134,6 +151,23 @@ export const useUserInfoStore = defineStore('userInfo', () => {
       console.error('[UserInfoStore] 保存到本地存储失败:', error)
     }
   }
+  
+  // 保存上传设置到本地存储
+  const saveUploadSettings = () => {
+    try {
+      localStorage.setItem('plan_card_upload_settings', JSON.stringify(uploadSettings.value))
+      console.log('[UserInfoStore] 保存上传设置到本地存储成功')
+    } catch (error) {
+      console.error('[UserInfoStore] 保存上传设置到本地存储失败:', error)
+    }
+  }
+  
+  // 切换上传开关
+  const toggleUpload = () => {
+    uploadSettings.value.enableUpload = !uploadSettings.value.enableUpload
+    saveUploadSettings()
+    console.log('[UserInfoStore] 切换上传开关:', uploadSettings.value.enableUpload)
+  }
 
   // 监听数据变化，自动保存到本地存储
   watch(userInfo, () => {
@@ -144,6 +178,7 @@ export const useUserInfoStore = defineStore('userInfo', () => {
     // 状态
     userInfo,
     currentScenario,
+    uploadSettings,
     
     // 计算属性
     currentInfo,
@@ -158,6 +193,8 @@ export const useUserInfoStore = defineStore('userInfo', () => {
     getScenarioInfo,
     clearScenarioInfo,
     loadFromStorage,
-    saveToStorage
+    saveToStorage,
+    toggleUpload,
+    saveUploadSettings
   }
 }) 
