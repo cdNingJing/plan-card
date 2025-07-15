@@ -76,6 +76,15 @@
           />
         </div>
       </div>
+      
+      <!-- 场景信息卡片 - 右侧悬浮 -->
+      <div v-if="showCollectionInfo" class="collection-info-overlay">
+        <CollectionInfoCard 
+          ref="collectionInfoRef" 
+          :show-close-button="true"
+          @close="handleCollectionInfoClose"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -88,12 +97,14 @@ import HistoryCard from '@/components/cards/HistoryCard.vue'
 import DynamicIsland from '@/components/DynamicIsland.vue'
 import DynamicIslandCard from '@/components/cards/DynamicIslandCard.vue'
 import DocumentationPanel from '@/components/DocumentationPanel.vue'
+import CollectionInfoCard from '@/components/cards/CollectionInfoCard.vue'
 import aiService from '@/services/aiService.js'
 import aiDataStorage from '@/utils/aiDataStorage.js'
 import { parseAIResponse } from '@/utils/aiResponseParser.js'
 import { useDocumentScanStore } from '@/stores/documentScanStore.js'
 import { useRestaurantStore } from '@/stores/restaurantStore'
 import { useUserInfoStore } from '@/stores/userInfoStore.js'
+import { useScenarioStore } from '@/stores/scenarioStore'
 import claudeApiService from '@/api/claudeApi.js'
 import knowledgeApi from '@/api/knowledgeApi.js'
 import { SCENARIOS } from '@/config/scenarios.js'
@@ -115,6 +126,30 @@ const isLoading = ref(false)
 
 // 新增：历史卡片显示状态
 const historyCardState = ref('collapsed') // 'collapsed' | 'half' | 'full'
+
+// CollectionInfoCard相关
+const collectionInfoRef = ref(null)
+// 全局数据模拟显示
+const showCollectionInfo = ref(false) // 控制CollectionInfoCard显示状态
+
+// 处理CollectionInfoCard关闭事件
+const handleCollectionInfoClose = () => {
+  // 隐藏整个overlay
+  showCollectionInfo.value = false
+  console.log('CollectionInfoCard 已关闭')
+}
+
+// 重新显示CollectionInfoCard
+const showCollectionInfoCard = () => {
+  showCollectionInfo.value = true
+  console.log('CollectionInfoCard 已显示')
+}
+
+// 暴露方法给父组件
+defineExpose({
+  showCollectionInfoCard,
+  showCollectionInfo: computed(() => showCollectionInfo.value)
+})
 
 // 灵动岛相关变量
 let progressTimer = null
@@ -385,6 +420,8 @@ const historyCardRef = ref(null)
 const inputRef = ref(null)
 const docPanelRef = ref(null)
 
+
+
 const handleGlobalClick = (e) => {
   if (
     historyCardRef.value?.contains(e.target) ||
@@ -396,6 +433,10 @@ const handleGlobalClick = (e) => {
     historyCardState.value = 'collapsed'
   }
 }
+
+
+
+
 
 onMounted(() => {
   // 只在本地没有历史数据时发送欢迎消息
@@ -505,8 +546,22 @@ ${toolsMarkdown}
 {
   "answer": "基于对用户意图的理解，通过1-2个简洁的引导性问题深入对话，避免冗长解释",
   "availableServices": ["组件名称1", "组件名称2", "组件名称3", ...],
-  "longTermData": "从当前对话中提取用户的隐含意图、偏好趋势、生活习惯、恐惧避雷、人生心愿、社交关系、健康档案等持久性信息。重点关注：1)隐含行程意图（如查询天气背后的出行动机）；2)偏好迁移趋势（如饮品、食物选择变化）；3)恐惧动物/食物自动规避；4)未言明生活习惯（如周五披萨啤酒看片）；5)人生心愿回溯（如开猫咖、考潜水证）；6)长期收藏偏好；7)过敏食物避雷；8)重要纪念日和人物关系；9)职业规划心愿；10)超长期愿望记忆。提取格式：用户[具体行为/偏好/心愿/关系/恐惧]"
+  "longTermData": "从当前对话中提取用户的隐含意图、偏好趋势、生活习惯、恐惧避雷、人生心愿、社交关系、健康档案等持久性信息。重点关注：1)隐含行程意图（如查询天气背后的出行动机）；2)偏好迁移趋势（如饮品、食物选择变化）；3)恐惧动物/食物自动规避；4)未言明生活习惯（如周五披萨啤酒看片）；5)人生心愿回溯（如开猫咖、考潜水证）；6)长期收藏偏好；7)过敏食物避雷；8)重要纪念日和人物关系；9)职业规划心愿；10)超长期愿望记忆。提取格式：用户[具体行为/偏好/心愿/关系/恐惧]",
   "extractedInfo": ["与用户问题直接相关的关键信息1", "关键信息2", "关键信息3"],
+  "dataModifications": {
+    "basicInfo": {
+      "userName": "李四",
+      "phone": "139****9999",
+      "email": "lisi@example.com"
+    },
+    "flightBooking": {
+      "departure": "北京",
+      "destination": "上海"
+    },
+    "preferences": {
+      "seatClass": "商务舱"
+    }
+  }
 }
 <END>
 
@@ -515,6 +570,7 @@ ${toolsMarkdown}
 - availableServices 字段：返回可能用到的组件名称数组（如：AllergyFreeMenuCard、PartyThemeCard, 等等或者更多）
 - longTermData 字段：提取用户的隐含意图、偏好趋势、生活习惯、恐惧避雷、人生心愿、社交关系、健康档案等持久性信息，重点关注隐含行程意图、偏好迁移趋势、恐惧自动规避、未言明生活习惯、人生心愿回溯、长期收藏偏好、过敏食物避雷、重要纪念日关系、职业规划心愿、超长期愿望记忆等
 - extractedInfo 字段：先总结文档中与用户问题直接相关的关键信息要点数组，只提取能回答用户问题的信息
+- dataModifications 字段：当用户要求修改模拟数据时，返回需要修改的数据对象。格式为嵌套对象，包含要修改的场景数据（如basicInfo、flightBooking、preferences等）和对应的新值。如果用户没有要求修改数据，则返回空对象{}
   `.trim()
   
   if (bestMatch && bestMatch.length > 0) {
@@ -627,6 +683,8 @@ const handleSubmit = async () => {
       
       console.log('启动灵动岛动画:', islandDocs)
       startDocumentProcessing(islandDocs, {}, apiStartTime)
+      
+
     }
     
     
@@ -735,6 +793,34 @@ const handleSubmit = async () => {
                 }
               } catch (error) {
                 console.error('保存长期数据时发生错误:', error)
+              }
+            }
+            
+            // 处理数据修改请求
+            if (parsedData.dataModifications && typeof parsedData.dataModifications === 'object') {
+              try {
+                console.log('🔧 检测到数据修改请求:', parsedData.dataModifications)
+                
+                // 获取场景数据store
+                const scenarioStore = useScenarioStore()
+                
+                // 遍历修改请求并更新数据
+                Object.keys(parsedData.dataModifications).forEach(scenarioKey => {
+                  const modifications = parsedData.dataModifications[scenarioKey]
+                  if (typeof modifications === 'object' && modifications !== null) {
+                    console.log(`🔄 更新场景数据: ${scenarioKey}`, modifications)
+                    scenarioStore.updateScenarioData(scenarioKey, modifications)
+                  }
+                })
+                
+                console.log('✅ 模拟数据更新成功')
+                
+                // 添加确认消息
+                // addMessage('数据已成功更新！', 'bot')
+                
+              } catch (error) {
+                console.error('更新模拟数据时发生错误:', error)
+                addMessage('抱歉，数据更新失败，请稍后重试。', 'bot')
               }
             }
             
@@ -1744,27 +1830,22 @@ const testRestaurantComponent = () => {
   }
 }
 
-
-
-@media (max-width: 600px) {
-
-  .documentation-section {
-    flex: 0 0 50%;
-  }
-  
-  .profile-chat-frame {
-    flex: 0 0 50%;
-    border-radius: 20px;
-  }
-  
-  .profile-chat-root, .profile-chat-frame {
-    width: 100vw !important;
-    height: 100dvh !important;
-    min-height: 100dvh !important;
-    max-height: 100dvh !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    border: none !important;
-  }
+/* 集合信息卡片悬浮层 */
+.collection-info-overlay {
+  position: fixed;
+  top: 20px;
+  right: 430px;
+  z-index: 1000;
+  pointer-events: auto;
+  width: 400px;
+  height: auto;
+  overflow-y: auto;
+  border-radius: 20px;
+  /* 隐藏滚动条 */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.collection-info-overlay::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
 }
 </style> 

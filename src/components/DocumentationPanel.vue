@@ -1110,6 +1110,10 @@ defineExpose({
   position: relative;
 }
 
+.documentation-content::-webkit-scrollbar {
+  display: none;
+}
+
 .action-buttons {
   display: flex;
   gap: 12px;
