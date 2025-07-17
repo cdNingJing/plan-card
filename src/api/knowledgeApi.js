@@ -4,7 +4,10 @@
  */
 
 const BASE_URL = 'http://54.68.80.214';
+// 测试环境 ning
 const TOKEN = 'b781774904fb97b75f393cc6caec05869a511cad'
+// huang
+// const TOKEN = '28abe80c479c91d957f6af8df0c981f65bbcba27'
 
 class KnowledgeApi {
   constructor() {
@@ -223,7 +226,7 @@ class KnowledgeApi {
         includeGraphContext = true,
         includeReranking = true,
         includeReasoning = true,
-        scoreThreshold = 0.0
+        scoreThreshold = 0
       } = options;
 
       const requestBody = {
@@ -266,7 +269,7 @@ class KnowledgeApi {
   async rerankSearch(query, options = {}) {
     try {
       const {
-        limit = 5,
+        limit = 10,
         collectionName = null,
         includeExplanation = true,
         rerankingStrategy = 'cerebras_llm'
@@ -323,7 +326,7 @@ class KnowledgeApi {
    * @param {number} limit - 建议数量
    * @returns {Promise<Object>}
    */
-  async getSearchSuggestions(query, limit = 5) {
+  async getSearchSuggestions(query, limit = 10) {
     try {
       const params = new URLSearchParams({
         query: query,

@@ -812,17 +812,17 @@ const uploadForm = ref({
 const searchForm = ref({
   query: '',
   collectionName: '',
-  limit: 5,
+  limit: 10,
   includeGraphContext: true, // 默认勾选：包含图上下文
   includeReranking: true, // 默认勾选：启用重排序
   includeReasoning: true, // 默认勾选：生成推理合成
-  scoreThreshold: 0.0
+  scoreThreshold: 0
 })
 
 const rerankForm = ref({
   query: '',
   collectionName: '',
-  limit: 5,
+  limit: 10,
   rerankingStrategy: 'cerebras_llm',
   includeExplanation: false
 })
@@ -887,6 +887,20 @@ watch(filteredDocuments, (newDocs) => {
     executeScanQueue()
   }
 }, { deep: true })
+
+// 监听集合列表变化，自动设置第一个合集为默认搜索目标
+watch(collections, (newCollections) => {
+  if (newCollections && newCollections.length > 0) {
+    if (!searchForm.value.collectionName) {
+      searchForm.value.collectionName = newCollections[0].name
+      console.log('自动设置默认搜索合集:', newCollections[0].name)
+    }
+    if (!rerankForm.value.collectionName) {
+      rerankForm.value.collectionName = newCollections[0].name
+      console.log('自动设置默认重排序搜索合集:', newCollections[0].name)
+    }
+  }
+}, { immediate: true })
 
 // 执行扫描队列
 const executeScanQueue = async () => {
@@ -1220,14 +1234,16 @@ const uploadContent = async () => {
 // 搜索功能
 const closeSearchDialog = () => {
   showSearchDialog.value = false
+  // 保持当前选择的合集，只清空查询
+  const currentCollection = searchForm.value.collectionName
   searchForm.value = {
     query: '',
-    collectionName: '',
-    limit: 5,
+    collectionName: currentCollection || (collections.value.length > 0 ? collections.value[0].name : ''),
+    limit: 10,
     includeGraphContext: true,
     includeReranking: true,
     includeReasoning: true,
-    scoreThreshold: 0.0
+    scoreThreshold: 0
   }
 }
 
@@ -1241,9 +1257,8 @@ const performSearch = async () => {
     isSearching.value = true
     
     const searchOptions = {
-      limit: searchForm.value.limit || 5,
+      limit: searchForm.value.limit || 10,
       collectionName: searchForm.value.collectionName || null,
-      filters: {},
       includeGraphContext: searchForm.value.includeGraphContext,
       includeReranking: searchForm.value.includeReranking,
       includeReasoning: searchForm.value.includeReasoning,
@@ -1267,7 +1282,7 @@ const performSearch = async () => {
 }
 
 // 新增：默认搜索方法，使用第一个合集
-const searchInFirstCollection = async (query, limit = 5) => {
+const searchInFirstCollection = async (query, limit = 10) => {
   if (!query || !query.trim()) {
     console.log('搜索查询为空')
     return { success: false, message: '搜索查询为空' }
@@ -1296,7 +1311,7 @@ const searchInFirstCollection = async (query, limit = 5) => {
         includeGraphContext: true,
         includeReranking: true,
         includeReasoning: true,
-        scoreThreshold: 0.0
+        scoreThreshold: 0
       }
     )
     
@@ -1320,7 +1335,7 @@ const searchInFirstCollection = async (query, limit = 5) => {
 }
 
 // 新增：便捷的重排序搜索方法
-const rerankSearchInFirstCollection = async (query, limit = 5) => {
+const rerankSearchInFirstCollection = async (query, limit = 10) => {
   if (!query || !query.trim()) {
     console.log('重排序搜索查询为空')
     return { success: false, message: '重排序搜索查询为空' }
@@ -1398,7 +1413,7 @@ const loadDocuments = async () => {
           includeGraphContext: true,
           includeReranking: true,
           includeReasoning: true,
-          scoreThreshold: 0.0
+          scoreThreshold: 0
         })
         if (response.results) {
           allDocuments.push(...response.results.map(result => ({
@@ -1465,8 +1480,8 @@ const closeDocumentDialog = () => {
 const openRerankDialog = () => {
   rerankForm.value = {
     query: '',
-    collectionName: '',
-    limit: 5,
+    collectionName: collections.value.length > 0 ? collections.value[0].name : '',
+    limit: 10,
     rerankingStrategy: 'cerebras_llm',
     includeExplanation: false
   }
@@ -1476,6 +1491,15 @@ const openRerankDialog = () => {
 
 const closeRerankDialog = () => {
   showRerankDialog.value = false
+  // 保持当前选择的合集，只清空查询
+  const currentCollection = rerankForm.value.collectionName
+  rerankForm.value = {
+    query: '',
+    collectionName: currentCollection || (collections.value.length > 0 ? collections.value[0].name : ''),
+    limit: 10,
+    rerankingStrategy: 'cerebras_llm',
+    includeExplanation: false
+  }
 }
 
 const performRerankSearch = async () => {
@@ -1496,7 +1520,7 @@ const performRerankSearch = async () => {
     })
     
     const rerankOptions = {
-      limit: rerankForm.value.limit || 5,
+      limit: rerankForm.value.limit || 10,
       collectionName: rerankForm.value.collectionName || null,
       includeExplanation: rerankForm.value.includeExplanation,
       rerankingStrategy: rerankForm.value.rerankingStrategy
