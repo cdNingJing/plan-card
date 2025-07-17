@@ -22,6 +22,24 @@
           </svg>
           搜索
         </button>
+        <button class="ios-btn rerank-btn" @click="openRerankDialog">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          重排序搜索
+        </button>
+        <button class="ios-btn history-btn" @click="openHistoryDialog">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          操作历史
+        </button>
+        <button class="ios-btn health-btn" @click="performHealthCheck">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          系统状态
+        </button>
         
         <!-- 上传开关和进度条 -->
         <div class="upload-controls">
@@ -95,36 +113,100 @@
             :class="{
               'search-highlight': isSimulatingSearch,
               'scan-highlight': isScanning && scanningDocs[scanningIndex] === getDocId(document),
-              'test-highlight': testHighlightIndex === idx
+              'test-highlight': testHighlightIndex === idx,
+              editing: editingDocument?.id === getDocId(document)
             }"
-            @click="openDocumentDetails(document)"
+            @click="handleDocumentClick(document)"
           >
             <div v-if="isScanning && scanningDocs[scanningIndex] === getDocId(document)" class="scan-loading">
               正在读取...
             </div>
             <div v-if="testHighlightIndex === idx" class="scan-loading">正在读取...</div>
-            <div class="document-icon">
-              <FileText :size="48" :stroke-width="2" color="#6366f1" />
-            </div>
-            <div class="document-info">
-              <div class="document-title">{{ document.metadata?.title || '无标题' }}</div>
-              <div class="document-meta">
-                <span class="source">{{ document.metadata?.source || '未知来源' }}</span>
-                <span class="date">{{ formatDate(document.created_at) }}</span>
+            
+            <!-- 编辑模式 -->
+            <div v-if="editingDocument?.id === getDocId(document)" class="document-edit-mode">
+              <div class="edit-header">
+                <span class="edit-label">编辑文档</span>
+                <div class="edit-actions">
+                  <button class="edit-action-btn save-btn" @click.stop="saveDocumentEdit(document)" :disabled="isSaving">
+                    <svg v-if="!isSaving" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M19 21H5a2 2 0 0 1-2-2h11l5 5v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-11l5-5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <polyline points="17 21 17 13 7 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <polyline points="7 3 7 21 17 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <svg v-else class="spinner" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="31.416" stroke-dashoffset="31.416">
+                        <animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
+                        <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/>
+                      </circle>
+                    </svg>
+                  </button>
+                  <button class="edit-action-btn cancel-btn" @click.stop="cancelDocumentEdit">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              
+              <div class="edit-content">
+                <div class="edit-field">
+                  <label class="edit-field-label">标题</label>
+                  <input 
+                    v-model="editingDocument.metadata.title" 
+                    type="text" 
+                    class="edit-input"
+                    placeholder="输入文档标题"
+                  />
+                </div>
+                
+                <div class="edit-field">
+                  <label class="edit-field-label">来源</label>
+                  <input 
+                    v-model="editingDocument.metadata.source" 
+                    type="text" 
+                    class="edit-input"
+                    placeholder="输入文档来源"
+                  />
+                </div>
+                
+                <div class="edit-field">
+                  <label class="edit-field-label">内容</label>
+                  <textarea 
+                    v-model="editingDocument.content" 
+                    class="edit-textarea"
+                    placeholder="输入文档内容"
+                    rows="6"
+                  ></textarea>
+                </div>
               </div>
             </div>
-            <div class="document-actions">
-              <button class="action-btn edit-btn disabled" @click.stop="showEditNotAvailable" title="编辑功能暂未开放">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
-              <button class="action-btn delete-btn disabled" @click.stop="showDeleteNotAvailable" title="删除功能暂未开放">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
+            
+            <!-- 查看模式 -->
+            <div v-else class="document-view-mode">
+              <div class="document-icon">
+                <FileText :size="48" :stroke-width="2" color="#6366f1" />
+              </div>
+              <div class="document-info">
+                <div class="document-title">{{ document.metadata?.title || '无标题' }}</div>
+                <div class="document-meta">
+                  <span class="source">{{ document.metadata?.source || '未知来源' }}</span>
+                  <span class="date">{{ formatDate(document.created_at) }}</span>
+                </div>
+              </div>
+              <div class="document-actions">
+                <button class="action-btn edit-btn" @click.stop="startDocumentEdit(document)" title="编辑文档">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+                <button class="action-btn delete-btn" @click.stop="deleteDocument(document)" title="删除文档">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -308,13 +390,29 @@
         <div class="edit-dialog-content">
           <div class="edit-field">
             <label class="edit-label">搜索关键词</label>
-            <input 
-              v-model="searchForm.query" 
-              type="text" 
-              class="edit-input ios-input"
-              placeholder="输入搜索关键词"
-              @keyup.enter="performSearch"
-            />
+            <div class="search-input-container">
+              <input 
+                v-model="searchForm.query" 
+                type="text" 
+                class="edit-input ios-input"
+                placeholder="输入搜索关键词"
+                @keyup.enter="performSearch"
+              />
+              <!-- 搜索建议下拉框 -->
+              <div v-if="searchSuggestions.length > 0" class="search-suggestions">
+                <div 
+                  v-for="suggestion in searchSuggestions" 
+                  :key="suggestion"
+                  class="suggestion-item"
+                  @click="selectSuggestion(suggestion)"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                  {{ suggestion }}
+                </div>
+              </div>
+            </div>
           </div>
           <div class="edit-field">
             <label class="edit-label">选择集合</label>
@@ -335,6 +433,55 @@
               min="1"
               max="20"
             />
+          </div>
+          
+          <!-- 新增：高级搜索选项 -->
+          <div class="search-options">
+            <h4 class="options-title">高级搜索选项</h4>
+            <div class="options-grid">
+              <div class="option-item">
+                <label class="option-label">
+                  <input 
+                    v-model="searchForm.includeGraphContext" 
+                    type="checkbox" 
+                    class="option-checkbox"
+                  />
+                  包含图上下文
+                </label>
+              </div>
+              <div class="option-item">
+                <label class="option-label">
+                  <input 
+                    v-model="searchForm.includeReranking" 
+                    type="checkbox" 
+                    class="option-checkbox"
+                  />
+                  启用重排序
+                </label>
+              </div>
+              <div class="option-item">
+                <label class="option-label">
+                  <input 
+                    v-model="searchForm.includeReasoning" 
+                    type="checkbox" 
+                    class="option-checkbox"
+                  />
+                  生成推理合成
+                </label>
+              </div>
+            </div>
+            <div class="edit-field">
+              <label class="edit-label">最小相关性分数 (0.0-1.0)</label>
+              <input 
+                v-model.number="searchForm.scoreThreshold" 
+                type="number" 
+                class="edit-input ios-input"
+                placeholder="0.0"
+                min="0.0"
+                max="1.0"
+                step="0.1"
+              />
+            </div>
           </div>
         </div>
         
@@ -360,13 +507,12 @@
       </div>
     </div>
 
-    <!-- 文档详情对话框 -->
-    <div v-if="showDocumentDialog" class="edit-dialog-overlay" @click="closeDocumentDialog">
+    <!-- 新增：重排序搜索对话框 -->
+    <div v-if="showRerankDialog" class="edit-dialog-overlay" @click="closeRerankDialog">
       <div class="edit-dialog" @click.stop>
         <div class="edit-dialog-header">
-          <h3 class="edit-dialog-title">{{ currentDocument?.metadata?.title || '文档详情' }}</h3>
-          <div class="dialog-subtitle">仅支持查看，编辑功能暂未开放</div>
-          <button class="close-btn" @click="closeDocumentDialog" aria-label="关闭">
+          <h3 class="edit-dialog-title">高级重排序搜索</h3>
+          <button class="close-btn" @click="closeRerankDialog" aria-label="关闭">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
@@ -374,28 +520,208 @@
         </div>
         
         <div class="edit-dialog-content">
-          <div class="document-details">
-            <div class="detail-item">
-              <label class="detail-label">标题</label>
-              <div class="detail-value">{{ currentDocument?.metadata?.title || '无标题' }}</div>
-            </div>
-            <div class="detail-item">
-              <label class="detail-label">来源</label>
-              <div class="detail-value">{{ currentDocument?.metadata?.source || '未知来源' }}</div>
-            </div>
-            <div class="detail-item">
-              <label class="detail-label">创建时间</label>
-              <div class="detail-value">{{ formatDate(currentDocument?.created_at) }}</div>
-            </div>
-            <div class="detail-item">
-              <label class="detail-label">内容</label>
-              <div class="detail-content">{{ currentDocument?.content || '无内容' }}</div>
-            </div>
+          <div class="edit-field">
+            <label class="edit-label">搜索关键词</label>
+            <input 
+              v-model="rerankForm.query" 
+              type="text" 
+              class="edit-input ios-input"
+              placeholder="输入搜索关键词"
+              @keyup.enter="performRerankSearch"
+            />
+          </div>
+          <div class="edit-field">
+            <label class="edit-label">选择集合</label>
+            <select v-model="rerankForm.collectionName" class="edit-input ios-input">
+              <option value="">所有集合</option>
+              <option v-for="collection in collections" :key="collection.name" :value="collection.name">
+                {{ collection.name }}
+              </option>
+            </select>
+          </div>
+          <div class="edit-field">
+            <label class="edit-label">结果数量</label>
+            <input 
+              v-model.number="rerankForm.limit" 
+              type="number" 
+              class="edit-input ios-input"
+              placeholder="5"
+              min="1"
+              max="20"
+            />
+          </div>
+          <div class="edit-field">
+            <label class="edit-label">重排序策略</label>
+            <select v-model="rerankForm.rerankingStrategy" class="edit-input ios-input">
+              <option value="cerebras_llm">Cerebras LLM</option>
+            </select>
+          </div>
+          <div class="edit-field">
+            <label class="edit-label">
+              <input 
+                v-model="rerankForm.includeExplanation" 
+                type="checkbox" 
+                class="option-checkbox"
+              />
+              包含详细解释
+            </label>
           </div>
         </div>
         
         <div class="edit-dialog-footer">
-          <button class="cancel-btn ios-btn" @click="closeDocumentDialog">关闭</button>
+          <button class="cancel-btn ios-btn" @click="closeRerankDialog">取消</button>
+          <button 
+            class="save-btn ios-btn" 
+            @click="performRerankSearch" 
+            :disabled="isReranking"
+          >
+            <span v-if="!isReranking">重排序搜索</span>
+            <span v-else class="saving-indicator">
+              <svg class="spinner" width="16" height="16" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="31.416" stroke-dashoffset="31.416">
+                  <animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
+                  <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/>
+                </circle>
+              </svg>
+              重排序中...
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 新增：操作历史对话框 -->
+    <div v-if="showHistoryDialog" class="edit-dialog-overlay" @click="closeHistoryDialog">
+      <div class="edit-dialog" @click.stop>
+        <div class="edit-dialog-header">
+          <h3 class="edit-dialog-title">操作历史</h3>
+          <button class="close-btn" @click="closeHistoryDialog" aria-label="关闭">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+        
+        <div class="edit-dialog-content">
+          <div class="history-filters">
+            <div class="edit-field">
+              <label class="edit-label">操作类型</label>
+              <select v-model="historyForm.operationType" class="edit-input ios-input">
+                <option value="">所有操作</option>
+                <option value="edit">编辑操作</option>
+                <option value="delete">删除操作</option>
+              </select>
+            </div>
+            <div class="edit-field">
+              <label class="edit-label">显示数量</label>
+              <input 
+                v-model.number="historyForm.limit" 
+                type="number" 
+                class="edit-input ios-input"
+                placeholder="50"
+                min="1"
+                max="100"
+              />
+            </div>
+          </div>
+          
+          <div v-if="isLoadingHistory" class="loading-state">
+            <svg class="spinner" width="24" height="24" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="31.416" stroke-dashoffset="31.416">
+                <animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
+                <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/>
+              </circle>
+            </svg>
+            加载操作历史中...
+          </div>
+          
+          <div v-else-if="operationHistory.length > 0" class="history-list">
+            <div 
+              v-for="operation in operationHistory" 
+              :key="operation.operation_id"
+              class="history-item"
+            >
+              <div class="history-header">
+                <span class="operation-type" :class="operation.operation_type">
+                  {{ operation.operation_type === 'edit' ? '编辑' : '删除' }}
+                </span>
+                <span class="operation-time">{{ formatDate(operation.start_time) }}</span>
+              </div>
+              <div class="history-details">
+                <div class="detail-row">
+                  <span class="detail-label">集合:</span>
+                  <span class="detail-value">{{ operation.collection_name }}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">块ID:</span>
+                  <span class="detail-value">{{ operation.chunk_id }}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">处理时间:</span>
+                  <span class="detail-value">{{ operation.processing_time }}ms</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">状态:</span>
+                  <span class="detail-value" :class="operation.status">
+                    {{ operation.status === 'success' ? '成功' : '失败' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div v-else class="empty-state">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" class="empty-icon">
+              <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p class="empty-text">暂无操作历史</p>
+          </div>
+        </div>
+        
+        <div class="edit-dialog-footer">
+          <button class="cancel-btn ios-btn" @click="closeHistoryDialog">关闭</button>
+          <button 
+            class="save-btn ios-btn" 
+            @click="loadOperationHistory" 
+            :disabled="isLoadingHistory"
+          >
+            刷新历史
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 文档详情对话框（可编辑） -->
+    <div v-if="showDocumentDialog" class="edit-dialog-overlay">
+      <div class="edit-dialog" @click.stop>
+        <div class="edit-dialog-header">
+          <h3 class="edit-dialog-title">编辑文档</h3>
+          <button class="close-btn" @click="closeDocumentDialog" aria-label="关闭">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="edit-dialog-content">
+          <div class="edit-field">
+            <label class="edit-label">标题</label>
+            <input v-model="editingDialogDocument.metadata.title" class="edit-input" placeholder="输入标题" />
+          </div>
+          <div class="edit-field">
+            <label class="edit-label">来源</label>
+            <input v-model="editingDialogDocument.metadata.source" class="edit-input" placeholder="输入来源" />
+          </div>
+          <div class="edit-field">
+            <label class="edit-label">内容</label>
+            <textarea v-model="editingDialogDocument.content" class="edit-textarea" rows="8" placeholder="输入内容"></textarea>
+          </div>
+        </div>
+        <div class="edit-dialog-footer">
+          <button class="cancel-btn ios-btn" @click="closeDocumentDialog">取消</button>
+          <button class="save-btn ios-btn" @click="saveDialogDocumentEdit" :disabled="isSaving">
+            <span v-if="!isSaving">确认修改</span>
+            <span v-else>保存中...</span>
+          </button>
         </div>
       </div>
     </div>
@@ -433,6 +759,8 @@ const { uploadSettings } = userInfoStore
 const showCreateDialog = ref(false)
 const showUploadDialog = ref(false)
 const showSearchDialog = ref(false)
+const showRerankDialog = ref(false)
+const showHistoryDialog = ref(false)
 const showDocumentDialog = ref(false)
 const showSuccessMessage = ref(false)
 const successMessage = ref('')
@@ -453,11 +781,33 @@ const uploadForm = ref({
 const searchForm = ref({
   query: '',
   collectionName: '',
-  limit: 5
+  limit: 5,
+  includeGraphContext: false,
+  includeReranking: false,
+  includeReasoning: false,
+  scoreThreshold: 0.0
+})
+
+const rerankForm = ref({
+  query: '',
+  collectionName: '',
+  limit: 5,
+  rerankingStrategy: 'cerebras_llm',
+  includeExplanation: false
+})
+
+const historyForm = ref({
+  operationType: '',
+  limit: 50
 })
 
 // 当前选中的文档
 const currentDocument = ref(null)
+
+// 编辑文档相关状态
+const editingDocument = ref(null)
+const isSaving = ref(false)
+const originalDocument = ref(null)
 
 // 加载状态
 const isCreating = ref(false)
@@ -468,6 +818,8 @@ const isSimulatingSearch = ref(false)
 const isScanning = ref(false)
 const scanningIndex = ref(-1)
 const scanningDocs = ref([])
+const isReranking = ref(false)
+const isLoadingHistory = ref(false)
 
 // 灵动岛相关状态
 const showIsland = ref(false)
@@ -487,6 +839,9 @@ const globalScanState = ref({
   scanQueue: [],
   currentScanIndex: -1
 })
+
+// 操作历史
+const operationHistory = ref([])
 
 // 计算过滤后的文档列表
 const filteredDocuments = computed(() => {
@@ -673,7 +1028,7 @@ const uploadContentToCollection = async (content, collectionName, metadata = {})
     
     const finalMetadata = { ...defaultMetadata, ...metadata }
 
-    await knowledgeApi.uploadContent(
+    await knowledgeApi.uploadTextContent(
       content,
       collectionName,
       finalMetadata,
@@ -742,7 +1097,11 @@ const closeSearchDialog = () => {
   searchForm.value = {
     query: '',
     collectionName: '',
-    limit: 5
+    limit: 5,
+    includeGraphContext: false,
+    includeReranking: false,
+    includeReasoning: false,
+    scoreThreshold: 0.0
   }
 }
 
@@ -756,17 +1115,18 @@ const performSearch = async () => {
     isSearching.value = true
     
     const searchOptions = {
-      query: searchForm.value.query,
-      collectionName: searchForm.value.collectionName || undefined,
       limit: searchForm.value.limit || 5,
-      includeGraphContext: true
+      collectionName: searchForm.value.collectionName || null,
+      filters: {},
+      includeGraphContext: searchForm.value.includeGraphContext,
+      includeReranking: searchForm.value.includeReranking,
+      includeReasoning: searchForm.value.includeReasoning,
+      scoreThreshold: searchForm.value.scoreThreshold
     }
 
     const response = await knowledgeApi.search(
-      searchOptions.query,
-      searchOptions.collectionName,
-      searchOptions.limit,
-      searchOptions.includeGraphContext
+      searchForm.value.query,
+      searchOptions
     )
     
     searchResults.value = response.results || []
@@ -804,9 +1164,14 @@ const searchInFirstCollection = async (query, limit = 5) => {
 
     const response = await knowledgeApi.search(
       query.trim(),
-      firstCollection.name,
-      limit,
-      true // includeGraphContext
+      {
+        limit: limit,
+        collectionName: firstCollection.name,
+        includeGraphContext: true,
+        includeReranking: true,
+        includeReasoning: true,
+        scoreThreshold: 0.0
+      }
     )
     
     console.log('搜索返回结果:', response)
@@ -847,7 +1212,14 @@ const loadDocuments = async () => {
     for (const collection of collections.value) {
       try {
         // 使用搜索功能获取文档列表
-        const response = await knowledgeApi.search('', collection.name, 50, true)
+        const response = await knowledgeApi.search('', {
+          limit: 50,
+          collectionName: collection.name,
+          includeGraphContext: true,
+          includeReranking: true,
+          includeReasoning: true,
+          scoreThreshold: 0.0
+        })
         if (response.results) {
           allDocuments.push(...response.results.map(result => ({
             id: result.id,
@@ -888,6 +1260,16 @@ const loadDocuments = async () => {
 // 查看文档详情
 const openDocumentDetails = (document) => {
   currentDocument.value = document
+  editingDialogDocument.value = {
+    id: getDocId(document),
+    content: document.content || '',
+    metadata: {
+      title: document.metadata?.title || '',
+      source: document.metadata?.source || '',
+      author: document.metadata?.author || ''
+    },
+    collection_name: document.collection_name
+  }
   showDocumentDialog.value = true
 }
 
@@ -897,6 +1279,114 @@ const closeDocumentDialog = () => {
   currentDocument.value = null
 }
 
+// 重排序搜索
+const openRerankDialog = () => {
+  rerankForm.value = {
+    query: '',
+    collectionName: '',
+    limit: 5,
+    rerankingStrategy: 'cerebras_llm',
+    includeExplanation: false
+  }
+  isReranking.value = false
+  showRerankDialog.value = true
+}
+
+const closeRerankDialog = () => {
+  showRerankDialog.value = false
+}
+
+const performRerankSearch = async () => {
+  if (!rerankForm.value.query.trim()) {
+    showSuccessNotification('请输入搜索关键词')
+    return
+  }
+
+  try {
+    isReranking.value = true
+    
+    const rerankOptions = {
+      limit: rerankForm.value.limit || 5,
+      collectionName: rerankForm.value.collectionName || null,
+      includeExplanation: rerankForm.value.includeExplanation,
+      rerankingStrategy: rerankForm.value.rerankingStrategy
+    }
+
+    const response = await knowledgeApi.rerankSearch(
+      rerankForm.value.query,
+      rerankOptions
+    )
+    
+    searchResults.value = response.reranked_results || []
+    showSuccessNotification(`重排序搜索结果: ${searchResults.value.length} 条`)
+    closeRerankDialog()
+  } catch (error) {
+    console.error('重排序搜索失败:', error)
+    showSuccessNotification('重排序搜索失败: ' + error.message)
+  } finally {
+    isReranking.value = false
+  }
+}
+
+// 操作历史
+const openHistoryDialog = () => {
+  historyForm.value = {
+    operationType: '',
+    limit: 50
+  }
+  isLoadingHistory.value = false
+  operationHistory.value = []
+  showHistoryDialog.value = true
+  // 自动加载操作历史
+  loadOperationHistory()
+}
+
+const closeHistoryDialog = () => {
+  showHistoryDialog.value = false
+}
+
+const loadOperationHistory = async () => {
+  try {
+    isLoadingHistory.value = true
+    const response = await knowledgeApi.getOperationHistory({
+      operationType: historyForm.value.operationType,
+      limit: historyForm.value.limit
+    })
+    operationHistory.value = response.operation_history?.operations || []
+    
+    if (operationHistory.value.length > 0) {
+      showSuccessNotification(`加载了 ${operationHistory.value.length} 条操作记录`)
+    } else {
+      showSuccessNotification('暂无操作历史记录')
+    }
+  } catch (error) {
+    console.error('加载操作历史失败:', error)
+    showSuccessNotification('加载操作历史失败: ' + error.message)
+  } finally {
+    isLoadingHistory.value = false
+  }
+}
+
+// 系统健康检查
+const performHealthCheck = async () => {
+  try {
+    const healthInfo = await knowledgeApi.healthCheck()
+    const systemInfo = await knowledgeApi.getSystemInfo()
+    
+    const message = `系统状态: ${healthInfo.status}\n` +
+                   `版本: ${healthInfo.version}\n` +
+                   `运行时间: ${healthInfo.uptime}\n` +
+                   `活跃用户: ${healthInfo.active_users}\n` +
+                   `总集合数: ${healthInfo.total_collections}`
+    
+    showSuccessNotification('系统状态检查完成')
+    console.log('系统健康信息:', healthInfo)
+    console.log('系统信息:', systemInfo)
+  } catch (error) {
+    console.error('健康检查失败:', error)
+    showSuccessNotification('健康检查失败: ' + error.message)
+  }
+}
 
 
 // 显示编辑功能不可用提示
@@ -1013,7 +1503,9 @@ function highlightFirstDocument() {
 }
 
 function getDocId(doc) {
-  return doc.id !== undefined ? doc.id : (doc.metadata && doc.metadata.descriptive_id ? doc.metadata.descriptive_id : undefined)
+  return doc.metadata && doc.metadata.chunk_id ? doc.metadata.chunk_id : 
+         (doc.metadata && doc.metadata.descriptive_id ? doc.metadata.descriptive_id : 
+          (doc.id !== undefined ? doc.id : undefined))
 }
 
 async function highlightDocumentsSequentially(ids = []) {
@@ -1075,6 +1567,211 @@ function startSearch() {
   highlightAllDocuments()
 }
 
+// 新增：搜索建议功能
+const searchSuggestions = ref([])
+const isLoadingSuggestions = ref(false)
+
+const getSearchSuggestions = async (query, limit = 3) => {
+  if (!query || !query.trim()) {
+    searchSuggestions.value = []
+    return
+  }
+
+  try {
+    isLoadingSuggestions.value = true
+    const response = await knowledgeApi.getSearchSuggestions(query.trim(), limit)
+    searchSuggestions.value = response.suggestions || []
+  } catch (error) {
+    console.error('获取搜索建议失败:', error)
+    searchSuggestions.value = []
+  } finally {
+    isLoadingSuggestions.value = false
+  }
+}
+
+// 监听搜索输入，自动获取建议
+watch(() => searchForm.value.query, (newQuery) => {
+  if (newQuery && newQuery.trim().length > 2) {
+    getSearchSuggestions(newQuery, 3)
+  } else {
+    searchSuggestions.value = []
+  }
+}, { debounce: 300 })
+
+// 选择搜索建议
+const selectSuggestion = (suggestion) => {
+  searchForm.value.query = suggestion
+  searchSuggestions.value = []
+}
+
+// 文档编辑功能
+const handleDocumentClick = (document) => {
+  // 如果正在编辑，点击其他地方不退出编辑模式
+  if (editingDocument.value?.id === getDocId(document)) return
+  
+  // 如果正在编辑其他文档，先取消编辑
+  if (editingDocument.value) {
+    cancelDocumentEdit()
+  }
+  
+  // 打开文档详情
+  openDocumentDetails(document)
+}
+
+const startDocumentEdit = (document) => {
+  // 保存原始文档数据
+  originalDocument.value = JSON.parse(JSON.stringify(document))
+  
+  // 创建编辑副本
+  editingDocument.value = {
+    id: getDocId(document),
+    content: document.content || '',
+    metadata: {
+      title: document.metadata?.title || '',
+      source: document.metadata?.source || '',
+      author: document.metadata?.author || ''
+    },
+    collection_name: document.collection_name
+  }
+}
+
+const cancelDocumentEdit = () => {
+  editingDocument.value = null
+  originalDocument.value = null
+}
+
+const saveDocumentEdit = async (document) => {
+  if (!editingDocument.value) return
+  
+  try {
+    isSaving.value = true
+    
+    // 获取文档的chunk_id
+    const chunkId = getDocId(document)
+    console.log('编辑文档 - 使用的chunk_id:', chunkId)
+    console.log('编辑文档 - 完整文档信息:', document)
+    
+    // 构建 new_metadata，包含 title/source
+    const newMetadata = {
+      version: 2.0,
+      last_updated: new Date().toISOString(),
+      editor: document.metadata?.descriptive_id || document.metadata?.chunk_id || chunkId || document.id || '',
+      title: editingDocument.value.metadata?.title || document.metadata?.title || '',
+      source: editingDocument.value.metadata?.source || document.metadata?.source || ''
+    }
+    
+    // 调用编辑API
+    const response = await knowledgeApi.editChunk(
+      document.collection_name,
+      chunkId,
+      editingDocument.value.content,
+      newMetadata
+    )
+    
+    console.log('编辑API响应:', response)
+    
+    // 检查编辑是否成功
+    if (response.status === 'success') {
+      console.log('编辑成功，operation_id:', response.operation_id)
+      console.log('处理时间:', response.processing_time)
+      
+      // 更新本地文档数据
+      const docIndex = documents.value.findIndex(doc => getDocId(doc) === chunkId)
+      if (docIndex !== -1) {
+        documents.value[docIndex] = {
+          ...documents.value[docIndex],
+          content: editingDocument.value.content,
+          metadata: newMetadata
+        }
+      }
+      
+      showSuccessNotification('文档保存成功')
+      cancelDocumentEdit()
+      
+      // 重新加载文档列表
+      await loadDocuments()
+    } else {
+      throw new Error('编辑失败: ' + (response.message || '未知错误'))
+    }
+  } catch (error) {
+    console.error('保存文档失败:', error)
+    showSuccessNotification('保存文档失败: ' + error.message)
+  } finally {
+    isSaving.value = false
+  }
+}
+
+const deleteDocument = async (document) => {
+  if (!confirm(`确定要删除文档 "${document.metadata?.title || '无标题'}" 吗？`)) return
+  
+  try {
+    const chunkId = getDocId(document)
+    console.log('删除文档 - 使用的chunk_id:', chunkId)
+    console.log('删除文档 - 完整文档信息:', document)
+    
+    // 调用删除API
+    await knowledgeApi.deleteChunk(document.collection_name, chunkId)
+    
+    showSuccessNotification('文档删除成功')
+    
+    // 重新加载文档列表
+    await loadDocuments()
+  } catch (error) {
+    console.error('删除文档失败:', error)
+    showSuccessNotification('删除文档失败: ' + error.message)
+  }
+}
+
+// 编辑弹窗的副本
+const editingDialogDocument = ref({
+  id: '',
+  content: '',
+  metadata: { title: '', source: '', author: '' },
+  collection_name: ''
+});
+
+// 保存弹窗编辑
+const saveDialogDocumentEdit = async () => {
+  if (!editingDialogDocument.value) return;
+  try {
+    isSaving.value = true;
+    console.log('弹窗编辑 - 使用的chunk_id:', editingDialogDocument.value.id);
+    console.log('弹窗编辑 - 完整文档信息:', editingDialogDocument.value);
+    
+    // 构建 new_metadata，包含 title/source
+    const newMetadata = {
+      version: 2.0,
+      last_updated: new Date().toISOString(),
+      editor: editingDialogDocument.value.metadata?.descriptive_id || editingDialogDocument.value.id || '',
+      title: editingDialogDocument.value.metadata?.title || '',
+      source: editingDialogDocument.value.metadata?.source || ''
+    }
+    
+    const response = await knowledgeApi.editChunk(
+      editingDialogDocument.value.collection_name,
+      editingDialogDocument.value.id,
+      editingDialogDocument.value.content,
+      newMetadata
+    );
+    
+    console.log('弹窗编辑API响应:', response)
+    
+    // 检查编辑是否成功
+    if (response.status === 'success') {
+      console.log('弹窗编辑成功，operation_id:', response.operation_id)
+      showSuccessNotification('文档修改成功');
+      showDocumentDialog.value = false;
+      await loadDocuments();
+    } else {
+      throw new Error('编辑失败: ' + (response.message || '未知错误'))
+    }
+  } catch (error) {
+    showSuccessNotification('保存失败: ' + error.message);
+  } finally {
+    isSaving.value = false;
+  }
+};
+
 defineExpose({ 
   simulateSearchAll, 
   filteredDocuments, 
@@ -1086,7 +1783,11 @@ defineExpose({
   searchInFirstCollection,
   loadDocuments,
   loadCollections,
-  uploadContentToCollection
+  uploadContentToCollection,
+  openRerankDialog,
+  openHistoryDialog,
+  loadOperationHistory,
+  performHealthCheck
 })
 </script>
 
@@ -1147,6 +1848,21 @@ defineExpose({
 }
 
 .search-btn {
+  background: #f6f7fa;
+  color: #6366f1;
+}
+
+.rerank-btn {
+  background: #f6f7fa;
+  color: #6366f1;
+}
+
+.history-btn {
+  background: #f6f7fa;
+  color: #6366f1;
+}
+
+.health-btn {
   background: #f6f7fa;
   color: #6366f1;
 }
@@ -1989,5 +2705,291 @@ defineExpose({
 
 .upload-toggle-btn.active .toggle-slider {
   left: 18px;
+}
+
+/* 高级搜索选项样式 */
+.search-options {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.options-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #22223b;
+  margin-bottom: 12px;
+  letter-spacing: 0.5px;
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.option-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.option-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: #6366f1;
+}
+
+/* 操作历史样式 */
+.history-filters {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.history-item {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #22223b;
+}
+
+.operation-type {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.operation-type.edit {
+  background-color: #e0f2fe;
+  color: #1d4ed8;
+}
+
+.operation-type.delete {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.operation-time {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.history-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.detail-label {
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.detail-value {
+  font-weight: 400;
+  color: #22223b;
+}
+
+.detail-value.success {
+  color: #10b981;
+}
+
+.detail-value.failed {
+  color: #ef4444;
+}
+
+/* 搜索建议样式 */
+.search-input-container {
+  position: relative;
+}
+
+.search-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 4px;
+}
+
+.suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  color: #6366f1;
+  font-size: 14px;
+}
+
+.suggestion-item:hover {
+  background-color: #f6f7fa;
+}
+
+.suggestion-item svg {
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+/* 文档编辑模式样式 */
+.document-item.editing {
+  border-color: #6366f1 !important;
+  background: #f5f7ff;
+  box-shadow: 0 0 0 2px #bfcfff55;
+  transition: border-color 0.3s, background 0.3s;
+}
+
+.document-edit-mode {
+  width: 100%;
+  padding: 18px 8px 8px 8px;
+  background: #f8fafc;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px 0 #bfcfff22;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.edit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.edit-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #6366f1;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.edit-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background: #f3f4f6;
+  color: #6b7280;
+  transition: background 0.2s, color 0.2s;
+}
+
+.edit-action-btn.save-btn {
+  background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+  color: #fff;
+}
+.edit-action-btn.save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.edit-action-btn.save-btn:hover:not(:disabled) {
+  background: linear-gradient(90deg, #7c82f7 0%, #a78bfa 100%);
+}
+
+.edit-action-btn.cancel-btn {
+  background: #fee2e2;
+  color: #dc2626;
+}
+.edit-action-btn.cancel-btn:hover {
+  background: #fecaca;
+  color: #b91c1c;
+}
+
+.edit-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.edit-field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6366f1;
+  margin-bottom: 2px;
+}
+
+.edit-input,
+.edit-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 15px;
+  background: #f6f7fa;
+  color: #22223b;
+  transition: border-color 0.2s, background 0.2s;
+  font-family: inherit;
+  resize: none;
+}
+
+.edit-input:focus,
+.edit-textarea:focus {
+  outline: none;
+  border-color: #6366f1;
+  background: #fff;
+}
+
+.edit-textarea {
+  min-height: 90px;
+  resize: vertical;
 }
 </style>

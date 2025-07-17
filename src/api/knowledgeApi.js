@@ -1,6 +1,6 @@
 /**
  * Enhanced Knowledge System API
- * 基于 http://54.68.80.214 的知识系统API封装
+ * 基于 FE_API_GUIDE_v1.md 的最新API文档实现
  */
 
 const BASE_URL = 'http://54.68.80.214';
@@ -16,10 +16,434 @@ class KnowledgeApi {
     };
   }
 
+  // ==================== 1. System Endpoints ====================
+
   /**
-   * 创建集合
+   * GET / - 获取系统基本信息
+   * @returns {Promise<Object>}
+   */
+  async getSystemInfo() {
+    try {
+      const response = await fetch(`${this.baseUrl}/`, {
+        method: 'GET'
+      });
+
+      if (!response.ok) {
+        throw new Error(`获取系统信息失败: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('获取系统信息时出错:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * GET /health - 系统健康检查
+   * @returns {Promise<Object>}
+   */
+  async healthCheck() {
+    try {
+      const response = await fetch(`${this.baseUrl}/health`, {
+        method: 'GET'
+      });
+
+      if (!response.ok) {
+        throw new Error(`健康检查失败: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('健康检查时出错:', error);
+      throw error;
+    }
+  }
+
+  // ==================== 2. Content Management Endpoints ====================
+
+  /**
+   * POST /content - 上传内容
+   * @param {string|Object} content - 内容（文本、JSON对象或结构化数据）
+   * @param {string} contentType - 内容类型：text, json, document, structured
+   * @param {Object} metadata - 元数据
    * @param {string} collectionName - 集合名称
-   * @param {number} vectorSize - 向量大小，默认1536
+   * @param {boolean} enableGraphStorage - 是否启用图存储
+   * @param {boolean} enableReasoning - 是否启用推理
+   * @returns {Promise<Object>}
+   */
+  async uploadContent(content, contentType = 'text', metadata = {}, collectionName = null, enableGraphStorage = true, enableReasoning = false) {
+    try {
+      const requestBody = {
+        content: content,
+        content_type: contentType,
+        metadata: metadata,
+        enable_graph_storage: enableGraphStorage,
+        enable_reasoning: enableReasoning
+      };
+
+      if (collectionName) {
+        requestBody.collection_name = collectionName;
+      }
+
+      const response = await fetch(`${this.baseUrl}/content`, {
+        method: 'POST',
+        headers: this.headers,
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        throw new Error(`上传内容失败: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('上传内容时出错:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 上传文本内容（便捷方法）
+   * @param {string} content - 文本内容
+   * @param {string} collectionName - 集合名称
+   * @param {Object} metadata - 元数据
+   * @param {boolean} enableGraphStorage - 是否启用图存储
+   * @param {boolean} enableReasoning - 是否启用推理
+   * @returns {Promise<Object>}
+   */
+  async uploadTextContent(content, collectionName = null, metadata = {}, enableGraphStorage = true, enableReasoning = false) {
+    return this.uploadContent(content, 'text', metadata, collectionName, enableGraphStorage, enableReasoning);
+  }
+
+  /**
+   * 上传JSON内容（便捷方法）
+   * @param {Object} content - JSON内容
+   * @param {string} collectionName - 集合名称
+   * @param {Object} metadata - 元数据
+   * @param {boolean} enableGraphStorage - 是否启用图存储
+   * @param {boolean} enableReasoning - 是否启用推理
+   * @returns {Promise<Object>}
+   */
+  async uploadJsonContent(content, collectionName = null, metadata = {}, enableGraphStorage = true, enableReasoning = false) {
+    return this.uploadContent(content, 'json', metadata, collectionName, enableGraphStorage, enableReasoning);
+  }
+
+  /**
+   * 上传文档内容（便捷方法）
+   * @param {string} content - 文档内容
+   * @param {string} collectionName - 集合名称
+   * @param {Object} metadata - 元数据
+   * @param {boolean} enableGraphStorage - 是否启用图存储
+   * @param {boolean} enableReasoning - 是否启用推理
+   * @returns {Promise<Object>}
+   */
+  async uploadDocumentContent(content, collectionName = null, metadata = {}, enableGraphStorage = true, enableReasoning = false) {
+    return this.uploadContent(content, 'document', metadata, collectionName, enableGraphStorage, enableReasoning);
+  }
+
+  /**
+   * 上传结构化内容（便捷方法）
+   * @param {Object} content - 结构化数据
+   * @param {string} collectionName - 集合名称
+   * @param {Object} metadata - 元数据
+   * @param {boolean} enableGraphStorage - 是否启用图存储
+   * @param {boolean} enableReasoning - 是否启用推理
+   * @returns {Promise<Object>}
+   */
+  async uploadStructuredContent(content, collectionName = null, metadata = {}, enableGraphStorage = true, enableReasoning = false) {
+    return this.uploadContent(content, 'structured', metadata, collectionName, enableGraphStorage, enableReasoning);
+  }
+
+  /**
+   * GET /content/{collection_name}/stats - 获取集合统计信息
+   * @param {string} collectionName - 集合名称
+   * @returns {Promise<Object>}
+   */
+  async getCollectionStats(collectionName) {
+    try {
+      const response = await fetch(`${this.baseUrl}/content/${collectionName}/stats`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`获取统计信息失败: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('获取统计信息时出错:', error);
+      throw error;
+    }
+  }
+
+  // ==================== 3. Search Endpoints ====================
+
+  /**
+   * POST /search - 增强搜索
+   * @param {string} query - 搜索查询
+   * @param {Object} options - 搜索选项
+   * @returns {Promise<Object>}
+   */
+  async search(query, options = {}) {
+    try {
+      const {
+        limit = 10,
+        collectionName = null,
+        filters = {},
+        includeGraphContext = true,
+        includeReranking = true,
+        includeReasoning = true,
+        scoreThreshold = 0.0
+      } = options;
+
+      const requestBody = {
+        query: query,
+        limit: limit,
+        filters: filters,
+        include_graph_context: includeGraphContext,
+        include_reranking: includeReranking,
+        include_reasoning: includeReasoning,
+        score_threshold: scoreThreshold
+      };
+
+      if (collectionName) {
+        requestBody.collection_name = collectionName;
+      }
+
+      const response = await fetch(`${this.baseUrl}/search`, {
+        method: 'POST',
+        headers: this.headers,
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        throw new Error(`搜索失败: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('搜索时出错:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * POST /search/rerank - 高级重排序搜索
+   * @param {string} query - 搜索查询
+   * @param {Object} options - 重排序选项
+   * @returns {Promise<Object>}
+   */
+  async rerankSearch(query, options = {}) {
+    try {
+      const {
+        limit = 5,
+        collectionName = null,
+        includeExplanation = false,
+        rerankingStrategy = 'cerebras_llm'
+      } = options;
+
+      const requestBody = {
+        query: query,
+        limit: limit,
+        include_explanation: includeExplanation,
+        reranking_strategy: rerankingStrategy
+      };
+
+      if (collectionName) {
+        requestBody.collection_name = collectionName;
+      }
+
+      const response = await fetch(`${this.baseUrl}/search/rerank`, {
+        method: 'POST',
+        headers: this.headers,
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        throw new Error(`重排序搜索失败: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('重排序搜索时出错:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * GET /search/suggestions - 获取搜索建议
+   * @param {string} query - 查询词
+   * @param {number} limit - 建议数量
+   * @returns {Promise<Object>}
+   */
+  async getSearchSuggestions(query, limit = 5) {
+    try {
+      const params = new URLSearchParams({
+        query: query,
+        limit: limit.toString()
+      });
+
+      const response = await fetch(`${this.baseUrl}/search/suggestions?${params}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`获取搜索建议失败: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('获取搜索建议时出错:', error);
+      throw error;
+    }
+  }
+
+  // ==================== 4. Content Management ====================
+
+  /**
+   * GET /content/{collection_name}/chunk/{chunk_id} - 获取块详情
+   * @param {string} collectionName - 集合名称
+   * @param {string} chunkId - 块ID
+   * @returns {Promise<Object>}
+   */
+  async getChunkDetails(collectionName, chunkId) {
+    try {
+      const response = await fetch(`${this.baseUrl}/content/${collectionName}/chunk/${chunkId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`获取块详情失败: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('获取块详情时出错:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * DELETE /content/{collection_name}/chunk/{chunk_id} - 删除块
+   * @param {string} collectionName - 集合名称
+   * @param {string} chunkId - 块ID
+   * @returns {Promise<Object>}
+   */
+  async deleteChunk(collectionName, chunkId) {
+    try {
+      const response = await fetch(`${this.baseUrl}/content/${collectionName}/chunk/${chunkId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${this.token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`删除块失败: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('删除块时出错:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * PUT /content/{collection_name}/chunk/{chunk_id} - 编辑块
+   * @param {string} collectionName - 集合名称
+   * @param {string} chunkId - 块ID
+   * @param {string} newContent - 新内容
+   * @param {Object} newMetadata - 新元数据
+   * @returns {Promise<Object>}
+   */
+  async editChunk(collectionName, chunkId, newContent, newMetadata = {}) {
+    try {
+      // 根据错误信息，API期望在请求体中包含所有字段
+      const requestBody = {
+        collection_name: collectionName,
+        chunk_id: chunkId,
+        new_content: newContent,
+        new_metadata: newMetadata
+      };
+      // 调试日志
+      console.log('编辑块请求:', {
+        url: `${this.baseUrl}/content/${collectionName}/chunk/${chunkId}`,
+        method: 'PUT',
+        body: requestBody
+      });
+      const response = await fetch(`${this.baseUrl}/content/${collectionName}/chunk/${chunkId}`, {
+        method: 'PUT',
+        headers: this.headers,
+        body: JSON.stringify(requestBody)
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('编辑块响应错误:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorText: errorText
+        });
+        throw new Error(`编辑块失败: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('编辑块时出错:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * GET /content/operations/history - 获取操作历史
+   * @param {Object} options - 查询选项
+   * @returns {Promise<Object>}
+   */
+  async getOperationHistory(options = {}) {
+    try {
+      const { operationType = '', limit = 50 } = options;
+      const params = new URLSearchParams();
+      
+      if (operationType) {
+        params.append('operation_type', operationType);
+      }
+      if (limit) {
+        params.append('limit', limit.toString());
+      }
+
+      const response = await fetch(`${this.baseUrl}/content/operations/history?${params}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`获取操作历史失败: ${response.status} ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('获取操作历史时出错:', error);
+      throw error;
+    }
+  }
+
+  // ==================== 5. Collection Management Endpoints ====================
+
+  /**
+   * POST /collections - 创建集合
+   * @param {string} collectionName - 集合名称
+   * @param {number} vectorSize - 向量大小
    * @param {string} description - 集合描述
    * @returns {Promise<Object>}
    */
@@ -47,130 +471,7 @@ class KnowledgeApi {
   }
 
   /**
-   * 上传文本内容
-   * @param {string} content - 文本内容
-   * @param {string} collectionName - 集合名称
-   * @param {Object} metadata - 元数据
-   * @param {boolean} enableGraphStorage - 是否启用图存储
-   * @param {boolean} enableReasoning - 是否启用推理
-   * @returns {Promise<Object>}
-   */
-  async uploadContent(content, collectionName, metadata = {}, enableGraphStorage = true, enableReasoning = false) {
-    try {
-      const response = await fetch(`${this.baseUrl}/content`, {
-        method: 'POST',
-        headers: this.headers,
-        body: JSON.stringify({
-          content: content,
-          content_type: 'text',
-          metadata: metadata,
-          collection_name: collectionName,
-          enable_graph_storage: enableGraphStorage,
-          enable_reasoning: enableReasoning
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`上传内容失败: ${response.status} ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('上传内容时出错:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 获取集合统计信息
-   * @param {string} collectionName - 集合名称
-   * @returns {Promise<Object>}
-   */
-  async getCollectionStats(collectionName) {
-    try {
-      const response = await fetch(`${this.baseUrl}/content/${collectionName}/stats`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${this.token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`获取统计信息失败: ${response.status} ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('获取统计信息时出错:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 执行搜索查询
-   * @param {string} query - 搜索查询
-   * @param {string} collectionName - 集合名称
-   * @param {number} limit - 返回结果数量限制
-   * @param {boolean} includeGraphContext - 是否包含图上下文
-   * @returns {Promise<Object>}
-   */
-  async search(query, collectionName, limit = 5, includeGraphContext = true) {
-    try {
-      const response = await fetch(`${this.baseUrl}/search`, {
-        method: 'POST',
-        headers: this.headers,
-        body: JSON.stringify({
-          query: query,
-          limit: limit,
-          collection_name: collectionName,
-          include_graph_context: includeGraphContext
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`搜索失败: ${response.status} ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('搜索时出错:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 获取搜索建议
-   * @param {string} query - 查询词
-   * @param {number} limit - 建议数量限制
-   * @returns {Promise<Object>}
-   */
-  async getSearchSuggestions(query, limit = 3) {
-    try {
-      const params = new URLSearchParams({
-        query: query,
-        limit: limit.toString()
-      });
-
-      const response = await fetch(`${this.baseUrl}/search/suggestions?${params}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${this.token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`获取搜索建议失败: ${response.status} ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('获取搜索建议时出错:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 列出所有集合
+   * GET /collections - 列出集合
    * @returns {Promise<Object>}
    */
   async listCollections() {
@@ -194,7 +495,7 @@ class KnowledgeApi {
   }
 
   /**
-   * 删除集合
+   * DELETE /collections/{collection_name} - 删除集合
    * @param {string} collectionName - 集合名称
    * @returns {Promise<Object>}
    */
@@ -218,194 +519,99 @@ class KnowledgeApi {
     }
   }
 
+  // ==================== 便捷方法和工具函数 ====================
+
   /**
-   * 获取集合中的文档列表 - 通过搜索功能实现
-   * @param {string} collectionName - 集合名称
-   * @param {number} limit - 返回结果数量限制
-   * @param {number} offset - 偏移量
+   * 测试API连接
    * @returns {Promise<Object>}
    */
-  async getDocuments(collectionName, limit = 50, offset = 0) {
+  async testConnection() {
     try {
-      // 使用搜索功能获取文档列表，搜索空字符串获取所有文档
-      const response = await this.search('', collectionName, limit, true);
-      
-      // 转换搜索结果为文档列表格式
+      const [health, systemInfo] = await Promise.all([
+        this.healthCheck(),
+        this.getSystemInfo()
+      ]);
+
       return {
-        documents: response.results?.map(result => ({
-          id: result.id,
-          content: result.content,
-          metadata: result.metadata,
-          created_at: new Date().toISOString(), // 搜索API可能不返回创建时间
-          score: result.score
-        })) || []
+        connected: true,
+        health,
+        systemInfo,
+        timestamp: new Date().toISOString()
       };
     } catch (error) {
-      console.error('获取文档列表时出错:', error);
+      return {
+        connected: false,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  /**
+   * 获取API使用统计
+   * @returns {Promise<Object>}
+   */
+  async getApiUsageStats() {
+    try {
+      const health = await this.healthCheck();
+      return {
+        totalRequests: health.system_metrics?.total_requests || 0,
+        activeConnections: health.system_metrics?.active_connections || 0,
+        memoryUsage: health.system_metrics?.memory_usage || 'N/A',
+        activeUsers: health.active_users || 0,
+        totalCollections: health.total_collections || 0,
+        uptime: health.uptime || 'N/A'
+      };
+    } catch (error) {
+      console.error('获取API使用统计时出错:', error);
       throw error;
     }
   }
 
   /**
-   * 获取单个文档详情
+   * 检查集合是否存在
    * @param {string} collectionName - 集合名称
-   * @param {string} documentId - 文档ID
+   * @returns {Promise<boolean>}
+   */
+  async collectionExists(collectionName) {
+    try {
+      await this.getCollectionStats(collectionName);
+      return true;
+    } catch (error) {
+      if (error.message.includes('404') || error.message.includes('not found')) {
+        return false;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * 获取用户统计信息
    * @returns {Promise<Object>}
    */
-  async getDocument(collectionName, documentId) {
+  async getUserStats() {
     try {
-      const response = await fetch(`${this.baseUrl}/content/${collectionName}/documents/${documentId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${this.token}`
+      const collections = await this.listCollections();
+      const stats = {
+        totalCollections: collections.collections?.length || 0,
+        collections: []
+      };
+
+      for (const collectionName of collections.collections || []) {
+        try {
+          const collectionStats = await this.getCollectionStats(collectionName);
+          stats.collections.push({
+            name: collectionName,
+            stats: collectionStats.statistics
+          });
+        } catch (error) {
+          console.warn(`获取集合 ${collectionName} 统计信息失败:`, error);
         }
-      });
-
-      if (!response.ok) {
-        throw new Error(`获取文档详情失败: ${response.status} ${response.statusText}`);
       }
 
-      return await response.json();
+      return stats;
     } catch (error) {
-      console.error('获取文档详情时出错:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 更新文档内容
-   * @param {string} collectionName - 集合名称
-   * @param {string} documentId - 文档ID
-   * @param {Object} updateData - 更新数据
-   * @returns {Promise<Object>}
-   */
-  async updateDocument(collectionName, documentId, updateData) {
-    try {
-      const response = await fetch(`${this.baseUrl}/content/${collectionName}/documents/${documentId}`, {
-        method: 'PUT',
-        headers: this.headers,
-        body: JSON.stringify(updateData)
-      });
-
-      if (!response.ok) {
-        throw new Error(`更新文档失败: ${response.status} ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('更新文档时出错:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 删除文档
-   * @param {string} collectionName - 集合名称
-   * @param {string} documentId - 文档ID
-   * @returns {Promise<Object>}
-   */
-  async deleteDocument(collectionName, documentId) {
-    try {
-      const response = await fetch(`${this.baseUrl}/content/${collectionName}/documents/${documentId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${this.token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`删除文档失败: ${response.status} ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('删除文档时出错:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 系统健康检查
-   * @returns {Promise<Object>}
-   */
-  async healthCheck() {
-    try {
-      const response = await fetch(`${this.baseUrl}/health`);
-
-      if (!response.ok) {
-        throw new Error(`健康检查失败: ${response.status} ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('健康检查时出错:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 批量上传内容
-   * @param {Array} contents - 内容数组，每个元素包含content、metadata等
-   * @param {string} collectionName - 集合名称
-   * @returns {Promise<Array>}
-   */
-  async batchUploadContent(contents, collectionName) {
-    const results = [];
-    
-    for (const content of contents) {
-      try {
-        const result = await this.uploadContent(
-          content.content,
-          collectionName,
-          content.metadata || {},
-          content.enableGraphStorage !== false,
-          content.enableReasoning || false
-        );
-        results.push({ success: true, data: result });
-      } catch (error) {
-        results.push({ success: false, error: error.message });
-      }
-    }
-
-    return results;
-  }
-
-  /**
-   * 高级搜索 - 支持多个查询条件
-   * @param {Object} searchOptions - 搜索选项
-   * @returns {Promise<Object>}
-   */
-  async advancedSearch(searchOptions) {
-    const {
-      query,
-      collectionName,
-      limit = 5,
-      includeGraphContext = true,
-      filters = {},
-      sortBy = 'relevance'
-    } = searchOptions;
-
-    try {
-      const response = await fetch(`${this.baseUrl}/search`, {
-        method: 'POST',
-        headers: this.headers,
-        body: JSON.stringify({
-          query: query,
-          limit: limit,
-          collection_name: collectionName,
-          include_graph_context: includeGraphContext,
-          filters: filters,
-          sort_by: sortBy
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`高级搜索失败: ${response.status} ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('高级搜索时出错:', error);
+      console.error('获取用户统计信息时出错:', error);
       throw error;
     }
   }
