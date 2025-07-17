@@ -4,7 +4,7 @@
  */
 
 const BASE_URL = 'http://54.68.80.214';
-const TOKEN = 'DlJYSkMVj1x4zoe8jZnjvxfHG6z5yGxK';
+const TOKEN = 'b781774904fb97b75f393cc6caec05869a511cad'
 
 class KnowledgeApi {
   constructor() {
@@ -74,17 +74,35 @@ class KnowledgeApi {
    */
   async uploadContent(content, contentType = 'text', metadata = {}, collectionName = null, enableGraphStorage = true, enableReasoning = false) {
     try {
+      // 验证必需参数
+      if (!content) {
+        throw new Error('内容不能为空');
+      }
+
+      if (!contentType || !['text', 'json', 'document', 'structured'].includes(contentType)) {
+        throw new Error('内容类型必须是: text, json, document, structured 之一');
+      }
+
+      // 构建请求体，与API文档完全匹配
       const requestBody = {
         content: content,
         content_type: contentType,
-        metadata: metadata,
+        metadata: metadata || {},
         enable_graph_storage: enableGraphStorage,
         enable_reasoning: enableReasoning
       };
 
+      // 如果指定了集合名称，添加到请求体中
       if (collectionName) {
         requestBody.collection_name = collectionName;
       }
+
+      console.log('上传内容请求:', {
+        url: `${this.baseUrl}/content`,
+        method: 'POST',
+        headers: this.headers,
+        body: requestBody
+      });
 
       const response = await fetch(`${this.baseUrl}/content`, {
         method: 'POST',
@@ -93,10 +111,18 @@ class KnowledgeApi {
       });
 
       if (!response.ok) {
-        throw new Error(`上传内容失败: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('上传内容响应错误:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorText: errorText
+        });
+        throw new Error(`上传内容失败: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
-      return await response.json();
+      const result = await response.json();
+      console.log('上传内容成功:', result);
+      return result;
     } catch (error) {
       console.error('上传内容时出错:', error);
       throw error;
@@ -242,10 +268,11 @@ class KnowledgeApi {
       const {
         limit = 5,
         collectionName = null,
-        includeExplanation = false,
+        includeExplanation = true,
         rerankingStrategy = 'cerebras_llm'
       } = options;
 
+      // 构建请求体，与curl命令完全匹配
       const requestBody = {
         query: query,
         limit: limit,
@@ -253,9 +280,17 @@ class KnowledgeApi {
         reranking_strategy: rerankingStrategy
       };
 
+      // 如果指定了集合名称，添加到请求体中
       if (collectionName) {
         requestBody.collection_name = collectionName;
       }
+
+      console.log('重排序搜索请求:', {
+        url: `${this.baseUrl}/search/rerank`,
+        method: 'POST',
+        headers: this.headers,
+        body: requestBody
+      });
 
       const response = await fetch(`${this.baseUrl}/search/rerank`, {
         method: 'POST',
@@ -264,10 +299,18 @@ class KnowledgeApi {
       });
 
       if (!response.ok) {
-        throw new Error(`重排序搜索失败: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('重排序搜索响应错误:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorText: errorText
+        });
+        throw new Error(`重排序搜索失败: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
-      return await response.json();
+      const result = await response.json();
+      console.log('重排序搜索结果:', result);
+      return result;
     } catch (error) {
       console.error('重排序搜索时出错:', error);
       throw error;

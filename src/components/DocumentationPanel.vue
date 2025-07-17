@@ -114,7 +114,7 @@
               'search-highlight': isSimulatingSearch,
               'scan-highlight': isScanning && scanningDocs[scanningIndex] === getDocId(document),
               'test-highlight': testHighlightIndex === idx,
-              editing: editingDocument?.id === getDocId(document)
+              editing: editingDocument?.id === getChunkId(document)
             }"
             @click="handleDocumentClick(document)"
           >
@@ -122,65 +122,6 @@
               正在读取...
             </div>
             <div v-if="testHighlightIndex === idx" class="scan-loading">正在读取...</div>
-            
-            <!-- 编辑模式 -->
-            <div v-if="editingDocument?.id === getDocId(document)" class="document-edit-mode">
-              <div class="edit-header">
-                <span class="edit-label">编辑文档</span>
-                <div class="edit-actions">
-                  <button class="edit-action-btn save-btn" @click.stop="saveDocumentEdit(document)" :disabled="isSaving">
-                    <svg v-if="!isSaving" width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M19 21H5a2 2 0 0 1-2-2h11l5 5v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-11l5-5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <polyline points="17 21 17 13 7 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <polyline points="7 3 7 21 17 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <svg v-else class="spinner" width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="31.416" stroke-dashoffset="31.416">
-                        <animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416" repeatCount="indefinite"/>
-                        <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416" repeatCount="indefinite"/>
-                      </circle>
-                    </svg>
-                  </button>
-                  <button class="edit-action-btn cancel-btn" @click.stop="cancelDocumentEdit">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              
-              <div class="edit-content">
-                <div class="edit-field">
-                  <label class="edit-field-label">标题</label>
-                  <input 
-                    v-model="editingDocument.metadata.title" 
-                    type="text" 
-                    class="edit-input"
-                    placeholder="输入文档标题"
-                  />
-                </div>
-                
-                <div class="edit-field">
-                  <label class="edit-field-label">来源</label>
-                  <input 
-                    v-model="editingDocument.metadata.source" 
-                    type="text" 
-                    class="edit-input"
-                    placeholder="输入文档来源"
-                  />
-                </div>
-                
-                <div class="edit-field">
-                  <label class="edit-field-label">内容</label>
-                  <textarea 
-                    v-model="editingDocument.content" 
-                    class="edit-textarea"
-                    placeholder="输入文档内容"
-                    rows="6"
-                  ></textarea>
-                </div>
-              </div>
-            </div>
             
             <!-- 查看模式 -->
             <div v-else class="document-view-mode">
@@ -195,7 +136,7 @@
                 </div>
               </div>
               <div class="document-actions">
-                <button class="action-btn edit-btn" @click.stop="startDocumentEdit(document)" title="编辑文档">
+                <button class="action-btn edit-btn" @click.stop="handleDocumentClick(document)" title="编辑文档">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -247,7 +188,7 @@
     </div>
 
     <!-- 新建集合对话框 -->
-    <div v-if="showCreateDialog" class="edit-dialog-overlay" @click="closeCreateDialog">
+    <div v-if="showCreateDialog" class="edit-dialog-overlay">
       <div class="edit-dialog" @click.stop>
         <div class="edit-dialog-header">
           <h3 class="edit-dialog-title">新建知识集合</h3>
@@ -303,7 +244,7 @@
     </div>
 
     <!-- 上传内容对话框 -->
-    <div v-if="showUploadDialog" class="edit-dialog-overlay" @click="closeUploadDialog">
+    <div v-if="showUploadDialog" class="edit-dialog-overlay">
       <div class="edit-dialog" @click.stop>
         <div class="edit-dialog-header">
           <h3 class="edit-dialog-title">上传内容</h3>
@@ -325,6 +266,81 @@
             </select>
           </div>
           <div class="edit-field">
+            <label class="edit-label">内容类型</label>
+            <div class="content-type-selector">
+              <label class="content-type-option" :class="{ active: uploadForm.contentType === 'text' }">
+                <input 
+                  type="radio" 
+                  v-model="uploadForm.contentType" 
+                  value="text" 
+                  class="content-type-radio"
+                />
+                <span class="content-type-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <polyline points="10,9 9,9 8,9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  文本
+                </span>
+              </label>
+              <label class="content-type-option" :class="{ active: uploadForm.contentType === 'json' }">
+                <input 
+                  type="radio" 
+                  v-model="uploadForm.contentType" 
+                  value="json" 
+                  class="content-type-radio"
+                />
+                <span class="content-type-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M21 12c-1 0-2-1-2-2s1-2 2-2 2 1 2 2-1 2-2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M3 12c1 0 2-1 2-2s-1-2-2-2-2 1-2 2 1 2 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 3c0 1-1 2-2 2s-2-1-2-2 1-2 2-2 2 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 21c0-1 1-2 2-2s2 1 2 2-1 2-2 2-2-1-2-2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  JSON
+                </span>
+              </label>
+              <label class="content-type-option" :class="{ active: uploadForm.contentType === 'document' }">
+                <input 
+                  type="radio" 
+                  v-model="uploadForm.contentType" 
+                  value="document" 
+                  class="content-type-radio"
+                />
+                <span class="content-type-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <polyline points="10,9 9,9 8,9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  文档
+                </span>
+              </label>
+              <label class="content-type-option" :class="{ active: uploadForm.contentType === 'structured' }">
+                <input 
+                  type="radio" 
+                  v-model="uploadForm.contentType" 
+                  value="structured" 
+                  class="content-type-radio"
+                />
+                <span class="content-type-label">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M3 3h18v18H3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M3 9h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M9 21V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  结构化
+                </span>
+              </label>
+            </div>
+          </div>
+          <div class="edit-field">
             <label class="edit-label">内容标题</label>
             <input 
               v-model="uploadForm.title" 
@@ -335,12 +351,26 @@
           </div>
           <div class="edit-field">
             <label class="edit-label">内容</label>
-            <textarea 
-              v-model="uploadForm.content" 
-              class="edit-textarea content-textarea main-content-textarea ios-input"
-              placeholder="输入要上传的内容"
-              rows="15"
-            ></textarea>
+            <div class="content-input-wrapper">
+              <textarea 
+                v-model="uploadForm.content" 
+                class="edit-textarea content-textarea main-content-textarea ios-input"
+                :placeholder="getContentPlaceholder()"
+                rows="15"
+              ></textarea>
+              <div class="content-type-hint" v-if="uploadForm.contentType !== 'text'">
+                <div class="hint-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <path d="M12 16v-4M12 8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <div class="hint-text">
+                  <strong>{{ getContentTypeLabel() }}</strong>
+                  <span>{{ getContentTypeDescription() }}</span>
+                </div>
+              </div>
+            </div>
           </div>
           <div class="edit-field">
             <label class="edit-label">来源</label>
@@ -376,7 +406,7 @@
     </div>
 
     <!-- 搜索对话框 -->
-    <div v-if="showSearchDialog" class="edit-dialog-overlay" @click="closeSearchDialog">
+    <div v-if="showSearchDialog" class="edit-dialog-overlay">
       <div class="edit-dialog" @click.stop>
         <div class="edit-dialog-header">
           <h3 class="edit-dialog-title">搜索知识库</h3>
@@ -508,7 +538,7 @@
     </div>
 
     <!-- 新增：重排序搜索对话框 -->
-    <div v-if="showRerankDialog" class="edit-dialog-overlay" @click="closeRerankDialog">
+    <div v-if="showRerankDialog" class="edit-dialog-overlay">
       <div class="edit-dialog" @click.stop>
         <div class="edit-dialog-header">
           <h3 class="edit-dialog-title">高级重排序搜索</h3>
@@ -591,7 +621,7 @@
     </div>
 
     <!-- 新增：操作历史对话框 -->
-    <div v-if="showHistoryDialog" class="edit-dialog-overlay" @click="closeHistoryDialog">
+    <div v-if="showHistoryDialog" class="edit-dialog-overlay">
       <div class="edit-dialog" @click.stop>
         <div class="edit-dialog-header">
           <h3 class="edit-dialog-title">操作历史</h3>
@@ -773,6 +803,7 @@ const newCollection = ref({
 
 const uploadForm = ref({
   collectionName: '',
+  contentType: 'text', // 新增：内容类型
   title: '',
   content: '',
   source: ''
@@ -782,9 +813,9 @@ const searchForm = ref({
   query: '',
   collectionName: '',
   limit: 5,
-  includeGraphContext: false,
-  includeReranking: false,
-  includeReasoning: false,
+  includeGraphContext: true, // 默认勾选：包含图上下文
+  includeReranking: true, // 默认勾选：启用重排序
+  includeReasoning: true, // 默认勾选：生成推理合成
   scoreThreshold: 0.0
 })
 
@@ -973,6 +1004,7 @@ const closeUploadDialog = () => {
   showUploadDialog.value = false
   uploadForm.value = {
     collectionName: '',
+    contentType: 'text', // 重置为默认的文本类型
     title: '',
     content: '',
     source: ''
@@ -1076,18 +1108,112 @@ const uploadContent = async () => {
     author: '用户'
   }
 
-  const result = await uploadContentToCollection(
-    uploadForm.value.content,
-    uploadForm.value.collectionName,
-    metadata
-  )
-  
-  if (result.success) {
+  try {
+    isUploading.value = true
+    uploadProgress.value = 0
+    
+    // 模拟上传进度
+    const progressInterval = setInterval(() => {
+      if (uploadProgress.value < 90) {
+        let increment = 0
+        
+        if (uploadProgress.value < 30) {
+          increment = Math.floor(Math.random() * 8) + 8
+        } else if (uploadProgress.value < 70) {
+          increment = Math.floor(Math.random() * 4) + 2
+        } else {
+          increment = Math.floor(Math.random() * 7) + 6
+        }
+        
+        uploadProgress.value = Math.min(uploadProgress.value + increment, 90)
+      }
+    }, 200)
+
+    let result
+    const contentType = uploadForm.value.contentType
+
+    // 根据内容类型调用相应的API方法
+    switch (contentType) {
+      case 'text':
+        result = await knowledgeApi.uploadTextContent(
+          uploadForm.value.content,
+          uploadForm.value.collectionName,
+          metadata,
+          true,
+          false
+        )
+        break
+      case 'json':
+        // 尝试解析JSON内容
+        let jsonContent
+        try {
+          jsonContent = JSON.parse(uploadForm.value.content)
+        } catch (error) {
+          throw new Error('JSON格式不正确，请检查内容格式')
+        }
+        result = await knowledgeApi.uploadJsonContent(
+          jsonContent,
+          uploadForm.value.collectionName,
+          metadata,
+          true,
+          false
+        )
+        break
+      case 'document':
+        result = await knowledgeApi.uploadDocumentContent(
+          uploadForm.value.content,
+          uploadForm.value.collectionName,
+          metadata,
+          true,
+          false
+        )
+        break
+      case 'structured':
+        // 尝试解析结构化内容
+        let structuredContent
+        try {
+          structuredContent = JSON.parse(uploadForm.value.content)
+        } catch (error) {
+          throw new Error('结构化数据格式不正确，请检查内容格式')
+        }
+        result = await knowledgeApi.uploadStructuredContent(
+          structuredContent,
+          uploadForm.value.collectionName,
+          metadata,
+          true,
+          false
+        )
+        break
+      default:
+        throw new Error('不支持的内容类型')
+    }
+    
+    // 完成上传
+    clearInterval(progressInterval)
+    uploadProgress.value = 100
+    
+    // 等待一小段时间显示100%
+    await new Promise(resolve => setTimeout(resolve, 300))
+    
+    console.log('✅ 内容上传成功')
+    
+    // 立即更新集合列表和文档列表
+    try {
+      await loadCollections()
+      await loadDocuments()
+      console.log('✅ 页面数据更新成功')
+    } catch (error) {
+      console.error('❌ 页面数据更新失败:', error)
+    }
+    
     showSuccessNotification('内容上传成功')
     closeUploadDialog()
-    await loadCollections()
-  } else {
-    showSuccessNotification(result.message)
+  } catch (error) {
+    console.error('上传内容失败:', error)
+    showSuccessNotification('上传内容失败: ' + error.message)
+  } finally {
+    isUploading.value = false
+    uploadProgress.value = 0
   }
 }
 
@@ -1098,9 +1224,9 @@ const closeSearchDialog = () => {
     query: '',
     collectionName: '',
     limit: 5,
-    includeGraphContext: false,
-    includeReranking: false,
-    includeReasoning: false,
+    includeGraphContext: true,
+    includeReranking: true,
+    includeReasoning: true,
     scoreThreshold: 0.0
   }
 }
@@ -1193,6 +1319,60 @@ const searchInFirstCollection = async (query, limit = 5) => {
   }
 }
 
+// 新增：便捷的重排序搜索方法
+const rerankSearchInFirstCollection = async (query, limit = 5) => {
+  if (!query || !query.trim()) {
+    console.log('重排序搜索查询为空')
+    return { success: false, message: '重排序搜索查询为空' }
+  }
+
+  try {
+    // 确保集合已加载
+    if (collections.value.length === 0) {
+      await loadCollections()
+    }
+
+    // 获取第一个合集名称
+    const firstCollection = collections.value[0]
+    if (!firstCollection) {
+      console.log('没有可用的合集')
+      return { success: false, message: '没有可用的合集' }
+    }
+
+    console.log(`在合集 "${firstCollection.name}" 中进行重排序搜索: "${query}"`)
+
+    const response = await knowledgeApi.rerankSearch(
+      query.trim(),
+      {
+        limit: limit,
+        collectionName: firstCollection.name,
+        includeExplanation: true,
+        rerankingStrategy: 'cerebras_llm'
+      }
+    )
+    
+    console.log('重排序搜索返回结果:', response)
+    
+    return {
+      success: true,
+      data: response,
+      collectionName: firstCollection.name,
+      query: query.trim(),
+      resultsCount: response.reranked_results?.length || 0,
+      rerankedResults: response.reranked_results || [],
+      detailedAnalysis: response.detailed_analysis,
+      rerankingStats: response.reranking_stats
+    }
+  } catch (error) {
+    console.error('重排序搜索失败:', error)
+    return {
+      success: false,
+      message: error.message,
+      error: error
+    }
+  }
+}
+
 // 查看集合详情
 const openCollectionDetails = (collection) => {
   if (selectedCollection.value && selectedCollection.value.name === collection.name) {
@@ -1261,12 +1441,14 @@ const loadDocuments = async () => {
 const openDocumentDetails = (document) => {
   currentDocument.value = document
   editingDialogDocument.value = {
-    id: getDocId(document),
+    id: getChunkId(document),
     content: document.content || '',
     metadata: {
       title: document.metadata?.title || '',
       source: document.metadata?.source || '',
-      author: document.metadata?.author || ''
+      author: document.metadata?.author || '',
+      chunk_id: document.metadata?.chunk_id || '',
+      descriptive_id: document.metadata?.descriptive_id || ''
     },
     collection_name: document.collection_name
   }
@@ -1305,6 +1487,14 @@ const performRerankSearch = async () => {
   try {
     isReranking.value = true
     
+    console.log('开始重排序搜索:', {
+      query: rerankForm.value.query,
+      limit: rerankForm.value.limit,
+      collectionName: rerankForm.value.collectionName,
+      includeExplanation: rerankForm.value.includeExplanation,
+      rerankingStrategy: rerankForm.value.rerankingStrategy
+    })
+    
     const rerankOptions = {
       limit: rerankForm.value.limit || 5,
       collectionName: rerankForm.value.collectionName || null,
@@ -1313,18 +1503,86 @@ const performRerankSearch = async () => {
     }
 
     const response = await knowledgeApi.rerankSearch(
-      rerankForm.value.query,
+      rerankForm.value.query.trim(),
       rerankOptions
     )
     
-    searchResults.value = response.reranked_results || []
-    showSuccessNotification(`重排序搜索结果: ${searchResults.value.length} 条`)
+    console.log('重排序搜索响应:', response)
+    
+    // 处理响应结果
+    if (response.reranked_results && Array.isArray(response.reranked_results)) {
+      searchResults.value = response.reranked_results
+      showSuccessNotification(`重排序搜索完成: 找到 ${searchResults.value.length} 条结果`)
+      
+      // 如果有详细分析，显示在控制台
+      if (response.detailed_analysis) {
+        console.log('重排序详细分析:', response.detailed_analysis)
+      }
+      
+      // 如果有重排序统计，显示在控制台
+      if (response.reranking_stats) {
+        console.log('重排序统计:', response.reranking_stats)
+      }
+    } else {
+      searchResults.value = []
+      showSuccessNotification('重排序搜索完成，但未找到相关结果')
+    }
+    
     closeRerankDialog()
   } catch (error) {
     console.error('重排序搜索失败:', error)
     showSuccessNotification('重排序搜索失败: ' + error.message)
   } finally {
     isReranking.value = false
+  }
+}
+
+// 内容类型相关辅助方法
+const getContentPlaceholder = () => {
+  const contentType = uploadForm.value.contentType
+  switch (contentType) {
+    case 'text':
+      return '输入要上传的文本内容...'
+    case 'json':
+      return '输入JSON格式的内容，例如：\n{\n  "name": "示例",\n  "value": 123,\n  "items": ["a", "b", "c"]\n}'
+    case 'document':
+      return '输入文档内容，支持富文本格式...'
+    case 'structured':
+      return '输入结构化数据，例如：\n{\n  "type": "product",\n  "attributes": {\n    "name": "产品名称",\n    "price": 99.99\n  }\n}'
+    default:
+      return '输入要上传的内容...'
+  }
+}
+
+const getContentTypeLabel = () => {
+  const contentType = uploadForm.value.contentType
+  switch (contentType) {
+    case 'text':
+      return '文本内容'
+    case 'json':
+      return 'JSON数据'
+    case 'document':
+      return '文档内容'
+    case 'structured':
+      return '结构化数据'
+    default:
+      return '未知类型'
+  }
+}
+
+const getContentTypeDescription = () => {
+  const contentType = uploadForm.value.contentType
+  switch (contentType) {
+    case 'text':
+      return '适用于普通文本、文章、笔记等'
+    case 'json':
+      return '适用于结构化数据、配置信息、API响应等'
+    case 'document':
+      return '适用于正式文档、报告、手册等'
+    case 'structured':
+      return '适用于数据库记录、产品信息、用户数据等'
+    default:
+      return ''
   }
 }
 
@@ -1502,10 +1760,19 @@ function highlightFirstDocument() {
   }, 1500)
 }
 
+  // 获取文档的chunk_id（用于API操作）
+  function getChunkId(doc) {
+    return doc?.metadata?.chunk_id || doc?.id || ""
+  }
+  
+  // 获取文档的descriptive_id（用于编辑器显示）
+  function getDescriptiveId(doc) {
+    return doc?.metadata?.descriptive_id || doc?.metadata?.chunk_id || doc?.id || ""
+  }
+
+// 保持向后兼容的getDocId方法（默认使用chunk_id）
 function getDocId(doc) {
-  return doc.metadata && doc.metadata.chunk_id ? doc.metadata.chunk_id : 
-         (doc.metadata && doc.metadata.descriptive_id ? doc.metadata.descriptive_id : 
-          (doc.id !== undefined ? doc.id : undefined))
+  return getChunkId(doc)
 }
 
 async function highlightDocumentsSequentially(ids = []) {
@@ -1607,7 +1874,7 @@ const selectSuggestion = (suggestion) => {
 // 文档编辑功能
 const handleDocumentClick = (document) => {
   // 如果正在编辑，点击其他地方不退出编辑模式
-  if (editingDocument.value?.id === getDocId(document)) return
+  if (editingDocument.value?.id === getChunkId(document)) return
   
   // 如果正在编辑其他文档，先取消编辑
   if (editingDocument.value) {
@@ -1618,94 +1885,16 @@ const handleDocumentClick = (document) => {
   openDocumentDetails(document)
 }
 
-const startDocumentEdit = (document) => {
-  // 保存原始文档数据
-  originalDocument.value = JSON.parse(JSON.stringify(document))
-  
-  // 创建编辑副本
-  editingDocument.value = {
-    id: getDocId(document),
-    content: document.content || '',
-    metadata: {
-      title: document.metadata?.title || '',
-      source: document.metadata?.source || '',
-      author: document.metadata?.author || ''
-    },
-    collection_name: document.collection_name
-  }
-}
-
 const cancelDocumentEdit = () => {
   editingDocument.value = null
   originalDocument.value = null
-}
-
-const saveDocumentEdit = async (document) => {
-  if (!editingDocument.value) return
-  
-  try {
-    isSaving.value = true
-    
-    // 获取文档的chunk_id
-    const chunkId = getDocId(document)
-    console.log('编辑文档 - 使用的chunk_id:', chunkId)
-    console.log('编辑文档 - 完整文档信息:', document)
-    
-    // 构建 new_metadata，包含 title/source
-    const newMetadata = {
-      version: 2.0,
-      last_updated: new Date().toISOString(),
-      editor: document.metadata?.descriptive_id || document.metadata?.chunk_id || chunkId || document.id || '',
-      title: editingDocument.value.metadata?.title || document.metadata?.title || '',
-      source: editingDocument.value.metadata?.source || document.metadata?.source || ''
-    }
-    
-    // 调用编辑API
-    const response = await knowledgeApi.editChunk(
-      document.collection_name,
-      chunkId,
-      editingDocument.value.content,
-      newMetadata
-    )
-    
-    console.log('编辑API响应:', response)
-    
-    // 检查编辑是否成功
-    if (response.status === 'success') {
-      console.log('编辑成功，operation_id:', response.operation_id)
-      console.log('处理时间:', response.processing_time)
-      
-      // 更新本地文档数据
-      const docIndex = documents.value.findIndex(doc => getDocId(doc) === chunkId)
-      if (docIndex !== -1) {
-        documents.value[docIndex] = {
-          ...documents.value[docIndex],
-          content: editingDocument.value.content,
-          metadata: newMetadata
-        }
-      }
-      
-      showSuccessNotification('文档保存成功')
-      cancelDocumentEdit()
-      
-      // 重新加载文档列表
-      await loadDocuments()
-    } else {
-      throw new Error('编辑失败: ' + (response.message || '未知错误'))
-    }
-  } catch (error) {
-    console.error('保存文档失败:', error)
-    showSuccessNotification('保存文档失败: ' + error.message)
-  } finally {
-    isSaving.value = false
-  }
 }
 
 const deleteDocument = async (document) => {
   if (!confirm(`确定要删除文档 "${document.metadata?.title || '无标题'}" 吗？`)) return
   
   try {
-    const chunkId = getDocId(document)
+    const chunkId = getChunkId(document)
     console.log('删除文档 - 使用的chunk_id:', chunkId)
     console.log('删除文档 - 完整文档信息:', document)
     
@@ -1726,7 +1915,13 @@ const deleteDocument = async (document) => {
 const editingDialogDocument = ref({
   id: '',
   content: '',
-  metadata: { title: '', source: '', author: '' },
+  metadata: { 
+    title: '', 
+    source: '', 
+    author: '',
+    chunk_id: '',
+    descriptive_id: ''
+  },
   collection_name: ''
 });
 
@@ -1737,12 +1932,12 @@ const saveDialogDocumentEdit = async () => {
     isSaving.value = true;
     console.log('弹窗编辑 - 使用的chunk_id:', editingDialogDocument.value.id);
     console.log('弹窗编辑 - 完整文档信息:', editingDialogDocument.value);
-    
+
     // 构建 new_metadata，包含 title/source
     const newMetadata = {
       version: 2.0,
       last_updated: new Date().toISOString(),
-      editor: editingDialogDocument.value.metadata?.descriptive_id || editingDialogDocument.value.id || '',
+      editor: editingDialogDocument.value.metadata.descriptive_id, // 使用descriptive_id作为编辑器标识
       title: editingDialogDocument.value.metadata?.title || '',
       source: editingDialogDocument.value.metadata?.source || ''
     }
@@ -1781,6 +1976,7 @@ defineExpose({
   highlightAllDocuments,
   startSearch,
   searchInFirstCollection,
+  rerankSearchInFirstCollection,
   loadDocuments,
   loadCollections,
   uploadContentToCollection,
@@ -2841,6 +3037,47 @@ defineExpose({
   position: relative;
 }
 
+.search-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-input {
+  flex: 1;
+}
+
+.search-suggestions-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.search-suggestions-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.search-suggestions-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.search-suggestions-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
 .search-suggestions {
   position: absolute;
   top: 100%;
@@ -2991,5 +3228,138 @@ defineExpose({
 .edit-textarea {
   min-height: 90px;
   resize: vertical;
+}
+
+/* 内容类型选择器样式 */
+.content-type-selector {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.content-type-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.content-type-option:hover {
+  border-color: #bfcfff;
+  background: #f5f7ff;
+}
+
+.content-type-option.active {
+  border-color: #6366f1;
+  background: linear-gradient(135deg, #f5f7ff 0%, #eef2ff 100%);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+}
+
+.content-type-radio {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.content-type-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  width: 100%;
+}
+
+.content-type-option.active .content-type-label {
+  color: #6366f1;
+  font-weight: 600;
+}
+
+.content-type-label svg {
+  flex-shrink: 0;
+  color: #9ca3af;
+  transition: color 0.2s;
+}
+
+.content-type-option.active .content-type-label svg {
+  color: #6366f1;
+}
+
+/* 响应式设计 */
+@media (max-width: 640px) {
+  .content-type-selector {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  
+  .content-type-option {
+    padding: 10px 12px;
+  }
+  
+  .content-type-label {
+    font-size: 13px;
+  }
+}
+
+/* 内容输入包装器和提示样式 */
+.content-input-wrapper {
+  position: relative;
+}
+
+.content-type-hint {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+  max-width: 280px;
+  z-index: 5;
+}
+
+.hint-icon {
+  flex-shrink: 0;
+  color: #6366f1;
+  margin-top: 1px;
+}
+
+.hint-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.hint-text strong {
+  color: #6366f1;
+  font-weight: 600;
+}
+
+.hint-text span {
+  color: #6b7280;
+  font-size: 11px;
+}
+
+/* 响应式调整提示框 */
+@media (max-width: 640px) {
+  .content-type-hint {
+    position: static;
+    margin-top: 8px;
+    max-width: none;
+  }
 }
 </style>
