@@ -316,6 +316,58 @@ onMounted(() => {
       }, 1000)
     }
   }
+  
+  // 处理从聊天页面跳转过来的情况
+  if (route.query.fromChat === 'true') {
+    console.log('[PlanView] 检测到从聊天页面跳转')
+    
+    // 处理 planData 跳转
+    if (route.query.planData) {
+      try {
+        const planData = JSON.parse(route.query.planData)
+        userInput.value = planData.description || ''
+        projectCardStore.setProjectCards('', [])
+        if (planData.title) {
+          currentProject.value = { title: planData.title, description: planData.description, cards: [] }
+        }
+        // 生成卡片
+        if (planData.type && planData.title) {
+          const scene = planData.type
+          // 确保 cardTypes 是有效的数组
+          let cardTypes = ['basic-info', 'suggestions', 'resources'] // 默认值
+          if (projectCardStore.projectCards.length > 0) {
+            cardTypes = projectCardStore.projectCards.map(c => c.type)
+          }
+          // 解析用户输入，获取实体信息
+          const context = cardStore.parseUserInput(planData.description || '')
+          const generatedCards = cardStore.generateCardsByScene(scene, cardTypes, context)
+          projectCardStore.setProjectCards('', generatedCards)
+          if (currentProject.value) {
+            currentProject.value.cards = generatedCards
+          }
+        }
+        
+        // 如果需要聚焦输入框，延迟执行
+        if (route.query.focusInput === 'true') {
+          setTimeout(() => {
+            // 通过ref调用PlanInput组件的方法
+            const planInputRef = document.querySelector('[data-plan-input]')
+            if (planInputRef && planInputRef.__vueParentComponent) {
+              const planInputInstance = planInputRef.__vueParentComponent.exposed
+              if (planInputInstance && planInputInstance.focusAndExpand) {
+                planInputInstance.focusAndExpand()
+              }
+            }
+          }, 500)
+        }
+        
+        return
+      } catch (e) {
+        console.warn('planData 解析失败', e)
+      }
+    }
+  }
+  
   // 其次处理 planData 跳转
   if (route.query.planData) {
     try {

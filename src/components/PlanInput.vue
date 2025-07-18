@@ -535,7 +535,15 @@ defineExpose({
   expand,
   collapse,
   toggleFullscreen,
-  clearHistory
+  clearHistory,
+  focusAndExpand: () => {
+    expand()
+    nextTick(() => {
+      if (inputRef.value) {
+        inputRef.value.focus()
+      }
+    })
+  }
 })
 </script>
 

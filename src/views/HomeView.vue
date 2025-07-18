@@ -82,6 +82,10 @@ const examples = ref([
   {
     id: 5,
     text: "个人画像"
+  },
+  {
+    id: 6,
+    text: "聊天场景"
   }
 ])
 
@@ -96,6 +100,12 @@ const handleExample = (text) => {
   // 如果是个人画像，跳转到个人画像页面
   if (text === "个人画像") {
     router.push('/profile')
+    return
+  }
+  
+  // 如果是聊天场景，跳转到聊天页面
+  if (text === "聊天场景") {
+    router.push('/chat')
     return
   }
   
@@ -247,11 +257,5 @@ onMounted(() => {
   color: #666666;
   cursor: pointer;
   transition: all 0.2s;
-}
-
-.clear-all-btn:hover {
-  background: #FEF2F2;
-  border-color: #FECACA;
-  color: #DC2626;
 }
 </style> 
