@@ -37,6 +37,7 @@
         @mic-click="handleMicClick"
       />
     </div>
+
   </div>
 </template>
 
@@ -101,7 +102,7 @@ export default {
       // 处理推荐项点击
       console.log('Recommendation clicked:', recommendation)
       
-      // 跳转到planner页面
+      // 跳转到 planner 页面
       this.$router.push('/planner')
     },
     handleAddClick() {

@@ -22,7 +22,7 @@
           </svg>
           搜索
         </button>
-        <button class="ios-btn rerank-btn" @click="openRerankDialog">
+        <!-- <button class="ios-btn rerank-btn" @click="openRerankDialog">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
             <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
@@ -39,6 +39,12 @@
             <path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
           系统状态
+        </button> -->
+        <button class="ios-btn batch-delete-btn" @click="startBatchDelete" :disabled="isBatchDeleting">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          {{ isBatchDeleting ? '批量删除中...' : '批量删除测试数据' }}
         </button>
         
         <!-- 上传开关和进度条 -->
@@ -63,6 +69,14 @@
             </div>
             <span class="upload-progress-text">{{ uploadProgress }}%</span>
           </div>
+          
+          <!-- 批量删除进度条 -->
+          <div v-if="isBatchDeleting" class="upload-progress-container">
+            <div class="upload-progress-bar">
+              <div class="upload-progress-fill" :style="{ width: batchDeleteProgress + '%' }"></div>
+            </div>
+            <span class="upload-progress-text">{{ batchDeleteProgress }}%</span>
+          </div>
         </div>
       </div>
 
@@ -86,7 +100,16 @@
             <div class="doc-name">{{ collection.name }}</div>
             <div class="collection-stats">
               <span class="stat-item">
-                {{ collection.stats?.vector_stats?.content_types?.document ?? collection.stats?.total_chunks ?? 0 }} 条内容
+                {{ collection.stats?.vector_stats?.content_types?.document ?? 0 }} 文档
+              </span>
+              <span class="stat-item">
+                {{ collection.stats?.vector_stats?.content_types?.json ?? 0 }} JSON
+              </span>
+              <span class="stat-item">
+                {{ collection.stats?.vector_stats?.content_types?.text ?? 0 }} 文本
+              </span>
+              <span class="stat-item">
+                {{ collection.stats?.vector_stats?.content_types?.image ?? 0 }} 图片
               </span>
             </div>
           </div>
@@ -864,6 +887,12 @@ const selectedCollection = ref(null)
 // 测试高亮索引
 const testHighlightIndex = ref(-1)
 
+// 批量删除相关状态
+const isBatchDeleting = ref(false)
+const batchDeleteProgress = ref(0)
+const batchDeleteQueue = ref([])
+const currentBatchDeleteIndex = ref(0)
+
 // 全局扫描状态
 const globalScanState = ref({
   isScanning: false,
@@ -901,6 +930,88 @@ watch(collections, (newCollections) => {
     }
   }
 }, { immediate: true })
+
+// 添加startSearch方法，与highlightAllDocuments效果相同
+function startSearch() {
+  console.log('startSearch called')
+  highlightAllDocuments()
+}
+
+// 批量删除功能
+const startBatchDelete = async () => {
+  if (filteredDocuments.value.length === 0) {
+    showSuccessNotification('当前没有可删除的文档')
+    return
+  }
+  
+  if (!confirm(`确定要批量删除 ${filteredDocuments.value.length} 个文档吗？此操作不可撤销！`)) {
+    return
+  }
+  
+  try {
+    isBatchDeleting.value = true
+    batchDeleteProgress.value = 0
+    batchDeleteQueue.value = [...filteredDocuments.value]
+    currentBatchDeleteIndex.value = 0
+    
+    console.log(`开始批量删除 ${batchDeleteQueue.value.length} 个文档`)
+    
+    // 开始轮询删除
+    await executeBatchDelete()
+    
+  } catch (error) {
+    console.error('批量删除失败:', error)
+    showSuccessNotification('批量删除失败: ' + error.message)
+  } finally {
+    isBatchDeleting.value = false
+    batchDeleteProgress.value = 0
+    batchDeleteQueue.value = []
+    currentBatchDeleteIndex.value = 0
+  }
+}
+
+const executeBatchDelete = async () => {
+  if (currentBatchDeleteIndex.value >= batchDeleteQueue.value.length) {
+    console.log('批量删除完成')
+    showSuccessNotification(`批量删除完成，共删除 ${batchDeleteQueue.value.length} 个文档`)
+    
+    // 重新加载文档列表
+    await loadDocuments()
+    
+    // 刷新统计数据以确保显示最新数据
+    await refreshCollectionStats()
+    return
+  }
+  
+  const currentDoc = batchDeleteQueue.value[currentBatchDeleteIndex.value]
+  
+  try {
+    console.log(`正在删除第 ${currentBatchDeleteIndex.value + 1}/${batchDeleteQueue.value.length} 个文档:`, currentDoc.metadata?.title || '无标题')
+    
+    const chunkId = getChunkId(currentDoc)
+    await knowledgeApi.deleteChunk(currentDoc.collection_name, chunkId)
+    
+    // 更新进度
+    currentBatchDeleteIndex.value++
+    batchDeleteProgress.value = Math.round((currentBatchDeleteIndex.value / batchDeleteQueue.value.length) * 100)
+    
+    // 添加延迟，避免API调用过于频繁
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    // 继续删除下一个
+    await executeBatchDelete()
+    
+  } catch (error) {
+    console.error(`删除文档失败 (${currentBatchDeleteIndex.value + 1}/${batchDeleteQueue.value.length}):`, error)
+    showSuccessNotification(`删除文档失败: ${currentDoc.metadata?.title || '无标题'} - ${error.message}`)
+    
+    // 继续删除下一个，不中断整个流程
+    currentBatchDeleteIndex.value++
+    batchDeleteProgress.value = Math.round((currentBatchDeleteIndex.value / batchDeleteQueue.value.length) * 100)
+    await new Promise(resolve => setTimeout(resolve, 500))
+    await executeBatchDelete()
+  }
+}
 
 // 执行扫描队列
 const executeScanQueue = async () => {
@@ -949,6 +1060,23 @@ onMounted(async () => {
   }, 100)
 })
 
+// 刷新集合统计数据
+const refreshCollectionStats = async () => {
+  try {
+    for (const collection of collections.value) {
+      try {
+        const stats = await knowledgeApi.getCollectionStats(collection.name)
+        collection.stats = stats.statistics
+        console.log(`✅ 集合 ${collection.name} 统计数据已更新:`, stats.statistics)
+      } catch (error) {
+        console.warn(`获取集合 ${collection.name} 统计信息失败:`, error)
+      }
+    }
+  } catch (error) {
+    console.error('刷新集合统计数据失败:', error)
+  }
+}
+
 // 加载集合列表
 const loadCollections = async () => {
   try {
@@ -961,14 +1089,7 @@ const loadCollections = async () => {
     })) || []
     
     // 获取每个集合的统计信息
-    for (const collection of collections.value) {
-      try {
-        const stats = await knowledgeApi.getCollectionStats(collection.name)
-        collection.stats = stats.statistics
-      } catch (error) {
-        console.warn(`获取集合 ${collection.name} 统计信息失败:`, error)
-      }
-    }
+    await refreshCollectionStats()
   } catch (error) {
     console.error('加载集合列表失败:', error)
     showSuccessNotification('加载集合列表失败: ' + error.message)
@@ -1100,6 +1221,9 @@ const uploadContentToCollection = async (content, collectionName, metadata = {})
       console.error('❌ 页面数据更新失败:', error)
     }
     
+    // 刷新统计数据以确保显示最新数据
+    await refreshCollectionStats()
+    
     return { success: true, message: '内容上传成功' }
   } catch (error) {
     console.error('上传内容失败:', error)
@@ -1219,6 +1343,9 @@ const uploadContent = async () => {
     } catch (error) {
       console.error('❌ 页面数据更新失败:', error)
     }
+    
+    // 刷新统计数据以确保显示最新数据
+    await refreshCollectionStats()
     
     showSuccessNotification('内容上传成功')
     closeUploadDialog()
@@ -1852,12 +1979,6 @@ function highlightAllDocuments() {
   }
 }
 
-// 添加startSearch方法，与highlightAllDocuments效果相同
-function startSearch() {
-  console.log('startSearch called')
-  highlightAllDocuments()
-}
-
 // 新增：搜索建议功能
 const searchSuggestions = ref([])
 const isLoadingSuggestions = ref(false)
@@ -1929,6 +2050,9 @@ const deleteDocument = async (document) => {
     
     // 重新加载文档列表
     await loadDocuments()
+    
+    // 刷新统计数据以确保显示最新数据
+    await refreshCollectionStats()
   } catch (error) {
     console.error('删除文档失败:', error)
     showSuccessNotification('删除文档失败: ' + error.message)
@@ -2007,7 +2131,8 @@ defineExpose({
   openRerankDialog,
   openHistoryDialog,
   loadOperationHistory,
-  performHealthCheck
+  performHealthCheck,
+  refreshCollectionStats
 })
 </script>
 
@@ -2925,6 +3050,23 @@ defineExpose({
 
 .upload-toggle-btn.active .toggle-slider {
   left: 18px;
+}
+
+/* 批量删除按钮样式 */
+.batch-delete-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
+.batch-delete-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.batch-delete-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* 高级搜索选项样式 */

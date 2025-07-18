@@ -290,11 +290,12 @@ export default {
 
 .blurred-background {
   transform: scale(0.75);
-  filter: blur(3px);
+  filter: blur(1px);
   pointer-events: none;
-  border-radius: 40px;
+  border-radius: 30px;
   position: relative;
-  box-shadow: 0 0 20px rgba(51, 51, 51, 0.1);
+  box-shadow: 0 0 4px #999999;
+  overflow: hidden;
 }
 
 .blurred-background::after {

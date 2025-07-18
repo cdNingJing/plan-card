@@ -5,7 +5,7 @@
 
 const BASE_URL = 'http://54.68.80.214';
 // 测试环境 ning
-const TOKEN = 'b781774904fb97b75f393cc6caec05869a511cad'
+const TOKEN = 'c77eb8509f7d6bfa3db8af4d152e27dcb2b32c64'
 // huang
 // const TOKEN = '28abe80c479c91d957f6af8df0c981f65bbcba27'
 
