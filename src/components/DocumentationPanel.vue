@@ -327,12 +327,13 @@
                   JSON
                 </span>
               </label>
-              <label class="content-type-option" :class="{ active: uploadForm.contentType === 'document' }">
+              <label class="content-type-option disabled" :class="{ active: uploadForm.contentType === 'document' }">
                 <input 
                   type="radio" 
                   v-model="uploadForm.contentType" 
                   value="document" 
                   class="content-type-radio"
+                  disabled
                 />
                 <span class="content-type-label">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -345,12 +346,13 @@
                   文档
                 </span>
               </label>
-              <label class="content-type-option" :class="{ active: uploadForm.contentType === 'structured' }">
+              <label class="content-type-option disabled" :class="{ active: uploadForm.contentType === 'structured' }">
                 <input 
                   type="radio" 
                   v-model="uploadForm.contentType" 
                   value="structured" 
                   class="content-type-radio"
+                  disabled
                 />
                 <span class="content-type-label">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -373,7 +375,13 @@
             />
           </div>
           <div class="edit-field">
-            <label class="edit-label">内容</label>
+            <div class="content-label-wrapper">
+              <label class="edit-label">内容</label>
+              <div class="token-counter" v-if="uploadForm.content">
+                <span class="token-count">{{ calculateTokenCount() }}</span>
+                <span class="token-label">tokens</span>
+              </div>
+            </div>
             <div class="content-input-wrapper">
               <textarea 
                 v-model="uploadForm.content" 
@@ -746,9 +754,9 @@
 
     <!-- 文档详情对话框（可编辑） -->
     <div v-if="showDocumentDialog" class="edit-dialog-overlay">
-      <div class="edit-dialog" @click.stop>
+      <div class="edit-dialog document-detail-dialog" @click.stop>
         <div class="edit-dialog-header">
-          <h3 class="edit-dialog-title">编辑文档</h3>
+          <h3 class="edit-dialog-title">文档详情</h3>
           <button class="close-btn" @click="closeDocumentDialog" aria-label="关闭">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -756,24 +764,59 @@
           </button>
         </div>
         <div class="edit-dialog-content">
-          <div class="edit-field">
-            <label class="edit-label">标题</label>
-            <input v-model="editingDialogDocument.metadata.title" class="edit-input" placeholder="输入标题" />
-          </div>
-          <div class="edit-field">
-            <label class="edit-label">来源</label>
-            <input v-model="editingDialogDocument.metadata.source" class="edit-input" placeholder="输入来源" />
-          </div>
-          <div class="edit-field">
-            <label class="edit-label">内容</label>
-            <textarea v-model="editingDialogDocument.content" class="edit-textarea" rows="8" placeholder="输入内容"></textarea>
+          <div class="document-detail-grid">
+            <!-- 左侧：文档信息 -->
+            <div class="document-info-section">
+              <div class="edit-field">
+                <label class="edit-label">标题</label>
+                <input v-model="editingDialogDocument.metadata.title" class="edit-input" placeholder="输入标题" disabled />
+              </div>
+              <div class="edit-field">
+                <label class="edit-label">来源</label>
+                <input v-model="editingDialogDocument.metadata.source" class="edit-input" placeholder="输入来源" disabled />
+              </div>
+              <div class="edit-field">
+                <label class="edit-label">内容</label>
+                <textarea v-model="editingDialogDocument.content" class="edit-textarea" rows="12" placeholder="输入内容" disabled></textarea>
+              </div>
+            </div>
+            
+            <!-- 右侧：Analysis 区域 -->
+            <div class="document-analysis-section">
+              <div class="analysis-header">
+                <h4 class="analysis-title">Analysis</h4>
+                <div class="analysis-status">
+                  <span class="status-indicator"></span>
+                  <span class="status-text">已分析</span>
+                </div>
+              </div>
+              <div class="analysis-content">
+                <div class="analysis-item">
+                  <div class="analysis-label">内容类型</div>
+                  <div class="analysis-value">{{ getContentTypeFromDocument() }}</div>
+                </div>
+                <div class="analysis-item">
+                  <div class="analysis-label">集合名称</div>
+                  <div class="analysis-value">{{ editingDialogDocument.collection_name }}</div>
+                </div>
+                <div class="analysis-item">
+                  <div class="analysis-label">文档 ID</div>
+                  <div class="analysis-value">{{ editingDialogDocument.id }}</div>
+                </div>
+                <div class="analysis-item full-width">
+                  <div class="analysis-label">Analysis</div>
+                  <div class="analysis-value metadata-display">
+                    <pre>{{ getAnalysisDisplay() }}</pre>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="edit-dialog-footer">
-          <button class="cancel-btn ios-btn" @click="closeDocumentDialog">取消</button>
-          <button class="save-btn ios-btn" @click="saveDialogDocumentEdit" :disabled="isSaving">
-            <span v-if="!isSaving">确认修改</span>
-            <span v-else>保存中...</span>
+          <button class="cancel-btn ios-btn" @click="closeDocumentDialog">关闭</button>
+          <button class="save-btn ios-btn" disabled>
+            <span>修改功能已禁用</span>
           </button>
         </div>
       </div>
@@ -1581,6 +1624,17 @@ const loadDocuments = async () => {
 
 // 查看文档详情
 const openDocumentDetails = (document) => {
+  console.log('📄 打开文档详情:', {
+    documentId: getChunkId(document),
+    title: document.metadata?.title || '无标题',
+    source: document.metadata?.source || '未知来源',
+    collectionName: document.collection_name,
+    contentLength: document.content?.length || 0,
+    metadata: document.metadata,
+    analysis: document.metadata?.analysis || {},
+    fullDocument: document
+  })
+  
   currentDocument.value = document
   editingDialogDocument.value = {
     id: getChunkId(document),
@@ -1589,6 +1643,7 @@ const openDocumentDetails = (document) => {
       title: document.metadata?.title || '',
       source: document.metadata?.source || '',
       author: document.metadata?.author || '',
+      analysis: document.metadata?.analysis || {},
       chunk_id: document.metadata?.chunk_id || '',
       descriptive_id: document.metadata?.descriptive_id || ''
     },
@@ -1977,6 +2032,95 @@ function highlightAllDocuments() {
   if (filteredDocuments.value.length > 0) {
     executeScanQueue()
   }
+}
+
+// 计算 token 数量
+const calculateTokenCount = () => {
+  if (!uploadForm.value.content) return 0
+  
+  // 简单的 token 估算：按字符数除以4（GPT tokenizer 的大概比例）
+  const charCount = uploadForm.value.content.length
+  const estimatedTokens = Math.ceil(charCount / 4)
+  
+  return estimatedTokens
+}
+
+// 计算文档 token 数量
+const calculateDocumentTokenCount = () => {
+  if (!editingDialogDocument.value?.content) return 0
+  
+  const charCount = editingDialogDocument.value.content.length
+  const estimatedTokens = Math.ceil(charCount / 4)
+  
+  return estimatedTokens
+}
+
+// 获取文档内容类型
+const getContentTypeFromDocument = () => {
+  if (!editingDialogDocument.value) return '未知'
+  
+  const content = editingDialogDocument.value.content
+  if (!content) return '空内容'
+  
+  try {
+    JSON.parse(content)
+    return 'JSON'
+  } catch {
+    return '文本'
+  }
+}
+
+// 获取 Analysis 类型
+const getAnalysisType = () => {
+  if (!editingDialogDocument.value?.metadata?.analysis) return '无分析数据'
+  
+  const analysis = editingDialogDocument.value.metadata.analysis
+  
+  if (typeof analysis === 'string') {
+    return '文本分析'
+  }
+  
+  if (typeof analysis === 'object') {
+    return '对象分析'
+  }
+  
+  return '通用分析'
+}
+
+// 获取 Analysis 显示内容
+const getAnalysisDisplay = () => {
+  const analysis = editingDialogDocument.value?.metadata?.analysis
+  if (!analysis) return '{}'
+  
+  // 如果是字符串，直接返回
+  if (typeof analysis === 'string') {
+    return analysis
+  }
+  
+  // 如果是对象，格式化为 JSON
+  if (typeof analysis === 'object') {
+    return JSON.stringify(analysis, null, 2)
+  }
+  
+  // 其他类型，转换为字符串
+  return String(analysis)
+}
+
+// 获取 Analysis 摘要
+const getAnalysisSummary = () => {
+  if (!editingDialogDocument.value?.metadata?.analysis) return ''
+  
+  const analysis = editingDialogDocument.value.metadata.analysis
+  
+  if (typeof analysis === 'string') {
+    return '文本分析'
+  }
+  
+  if (typeof analysis === 'object') {
+    return '对象分析'
+  }
+  
+  return ''
 }
 
 // 新增：搜索建议功能
@@ -3459,6 +3603,27 @@ defineExpose({
   color: #6366f1;
 }
 
+.content-type-option.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.content-type-option.disabled:hover {
+  border-color: #d1d5db;
+  background: #f3f4f6;
+  transform: none;
+}
+
+.content-type-option.disabled .content-type-label {
+  color: #9ca3af;
+}
+
+.content-type-option.disabled .content-type-label svg {
+  color: #9ca3af;
+}
+
 /* 响应式设计 */
 @media (max-width: 640px) {
   .content-type-selector {
@@ -3520,12 +3685,205 @@ defineExpose({
   font-size: 11px;
 }
 
+/* 内容标签包装器和 token 计数器样式 */
+.content-label-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.token-counter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #6b7280;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.token-count {
+  font-weight: 600;
+  color: #6366f1;
+}
+
+.token-label {
+  color: #9ca3af;
+  font-size: 11px;
+}
+
+/* 文档详情对话框样式 */
+.document-detail-dialog {
+  max-width: 90vw;
+  width: 1200px;
+  height: 80vh;
+}
+
+.document-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 350px;
+  gap: 24px;
+  height: 100%;
+}
+
+.document-info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.document-analysis-section {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  height: fit-content;
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+.analysis-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.analysis-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #22223b;
+  margin: 0;
+}
+
+.analysis-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+}
+
+.status-text {
+  font-size: 12px;
+  color: #10b981;
+  font-weight: 500;
+}
+
+.analysis-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.analysis-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.analysis-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.analysis-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.analysis-value {
+  font-size: 14px;
+  color: #22223b;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.metadata-display {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.metadata-display pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #374151;
+}
+
+.analysis-info {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.analysis-type {
+  font-weight: 600;
+  color: #0369a1;
+  margin-bottom: 6px;
+}
+
+.analysis-summary {
+  color: #0c4a6e;
+  line-height: 1.4;
+}
+
 /* 响应式调整提示框 */
 @media (max-width: 640px) {
   .content-type-hint {
     position: static;
     margin-top: 8px;
     max-width: none;
+  }
+  
+  .content-label-wrapper {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .token-counter {
+    align-self: flex-end;
+  }
+  
+  .document-detail-dialog {
+    max-width: 95vw;
+    width: 95vw;
+    height: 90vh;
+  }
+  
+  .document-detail-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .document-analysis-section {
+    order: -1;
   }
 }
 </style>
