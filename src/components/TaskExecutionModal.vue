@@ -189,7 +189,7 @@ export default {
 
 /* 权限请求区域 */
 .permission-section {
-  background: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.85);
   border-radius: 32px;
   padding: 10px;
   border: 1px solid rgba(255, 255, 255, 0.1);

@@ -16,25 +16,17 @@
           <!-- 左侧地图区域 -->
           <div class="left-section">
             <div class="map-container">
-              <div class="map-background">
-                <div class="map-streets">
-                  <div class="street">Oak St</div>
-                  <div class="street">10th St</div>
-                  <div class="street">12th St</div>
-                  <div class="street">13th St</div>
-                  <div class="street">14th St</div>
-                  <div class="street">Valen</div>
-                  <div class="street">Harris</div>
-                </div>
+              <div class="map-background"></div>
+              <div class="activity-tag">
+                <span class="activity-text">Backyard + Indoor</span>
                 <div class="map-pin">📍</div>
               </div>
-              <div class="activity-tag">Backyard + Indoor</div>
-            </div>
-            <div class="event-info">
-              <h3 class="event-title">Unicorn Adventure</h3>
-              <div class="event-details">
-                <span class="event-date">Sat, July 15th</span>
-                <span class="event-time">2:00 PM - 5:00 PM</span>
+              <div class="event-info">
+                <h3 class="event-title">Unicorn Adventure</h3>
+                <div class="event-details">
+                  <span class="event-date">Sat, July 15th</span>
+                  <span class="event-time">2:00 PM - 5:00 PM</span>
+                </div>
               </div>
             </div>
           </div>
@@ -217,7 +209,7 @@ export default {
           selected: false 
         }
       ],
-      agentWorkCompleted: true
+      agentWorkCompleted: false
     }
   },
   watch: {
@@ -449,85 +441,79 @@ export default {
 
 /* Agent工作结果样式 */
 .agent-results {
-  background: white;
+  background: transparent;
   border-radius: 24px;
-  padding: 32px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  margin-bottom: 24px;
 }
 
 /* 左右布局样式 */
 .results-layout {
   display: flex;
-  gap: 40px;
-  align-items: flex-start;
+  gap: 10px;
+  align-items: stretch;
 }
 
 .left-section {
-  flex: 1;
+  width: 65%;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 0;
+  box-sizing: border-box;
 }
 
 .right-section {
-  flex: 1;
+  width: 35%;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 0;
 }
 
 /* 地图容器样式 */
 .map-container {
   position: relative;
-  background: #f0f0f0;
+  background: white;
   border-radius: 16px;
   padding: 24px;
-  min-height: 160px;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-}
-
-.map-background {
-  position: relative;
-  height: 80px;
-  background: #e0e0e0;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  box-sizing: border-box;
   overflow: hidden;
 }
 
-.map-streets {
+.map-background {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-  padding: 8px;
-  font-size: 10px;
-  color: #888888;
-  font-weight: 500;
+  background-image: url('https://images.unsplash.com/photo-1569336415962-a4bd9f69cd83?w=400&h=300&fit=crop');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: 16px;
+  opacity: 0.3;
 }
 
-.street {
-  text-align: center;
-  font-family: 'Inter', sans-serif;
+.map-background::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(215deg, transparent 0%, #ffffff 60% 50%, rgba(255, 255, 255, 0.8) 100%);
+  border-radius: 16px;
+  pointer-events: none;
 }
 
 .map-pin {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 18px;
+  font-size: 16px;
   z-index: 2;
   color: #ff6b9d;
+  right: -20px;
 }
 
 .activity-tag {
@@ -537,11 +523,30 @@ export default {
   border-radius: 16px;
   font-size: 11px;
   font-weight: 600;
-  align-self: center;
-  margin-top: 12px;
+  align-self: flex-end;
+  margin: 12px 12px 0 0;
   border: 1px solid rgba(0, 0, 0, 0.08);
   font-family: 'Inter', sans-serif;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  max-width: 100%;
+  box-sizing: border-box;
+  word-wrap: break-word;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.activity-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: #333333;
+  font-family: 'Inter', sans-serif;
+}
+
+.activity-icon {
+  font-size: 12px;
 }
 
 /* 活动信息样式 */
@@ -551,81 +556,101 @@ export default {
   border-radius: 0;
   box-shadow: none;
   border: none;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
 }
 
 .event-title {
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   color: #333333;
-  margin: 0 0 8px 0;
+  margin: 0 0 4px 0;
   font-family: 'Inter', sans-serif;
   line-height: 1.2;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .event-details {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .event-date,
 .event-time {
-  font-size: 14px;
-  color: #666666;
+  font-size: 12px;
+  color: #717580;
   font-weight: 500;
   font-family: 'Inter', sans-serif;
-  line-height: 1.4;
+  line-height: 1.2;
 }
 
 /* 右侧区域样式 */
+.right-section {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
 .guest-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
 .guest-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   padding: 0;
 }
 
 .guest-name {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
   color: #333333;
   font-family: 'Inter', sans-serif;
+  line-height: 1.2;
+  margin-bottom: 2px;
 }
 
 .guest-allergy {
-  font-size: 13px;
-  color: #666666;
+  font-size: 12px;
+  color: #717580;
   font-family: 'Inter', sans-serif;
-  font-weight: 400;
+  font-weight: 500;
+  line-height: 1.2;
 }
 
 .rsvp-info {
   border-top: 1px solid #e0e0e0;
-  padding-top: 16px;
+  padding-top: 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .rsvp-count {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
   color: #333333;
   font-family: 'Inter', sans-serif;
+  line-height: 1.2;
+  margin-bottom: 2px;
 }
 
 .age-range {
-  font-size: 13px;
-  color: #666666;
+  font-size: 12px;
+  color: #717580;
   font-family: 'Inter', sans-serif;
-  font-weight: 400;
+  font-weight: 500;
+  line-height: 1.2;
 }
 
 
