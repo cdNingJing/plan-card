@@ -4,6 +4,8 @@ import PlanView from '@/views/PlanView.vue'
 import ProfileView from '@/views/ProfileView.vue'
 import ChatView from '@/views/ChatView.vue'
 import PlannerView from '@/views/PlannerView.vue'
+import SettingsView from '@/views/SettingsView.vue'
+import AboutView from '@/views/AboutView.vue'
 
 const routes = [
   {
@@ -30,6 +32,16 @@ const routes = [
     path: '/planner',
     name: 'Planner',
     component: PlannerView
+  },
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: SettingsView
+  },
+  {
+    path: '/about',
+    name: 'About',
+    component: AboutView
   }
 ]
 

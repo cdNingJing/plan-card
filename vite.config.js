@@ -107,6 +107,23 @@ export default defineConfig({
             console.log('Claude API代理响应:', proxyRes.statusCode, req.url)
           })
         }
+      },
+      '/echarts-svg': {
+        target: 'https://echarts.apache.org',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/echarts-svg/, '/examples'),
+        configure: (proxy, options) => {
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            // 添加必要的headers
+            proxyReq.setHeader('Accept', 'image/svg+xml,text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8');
+            proxyReq.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+            console.log('ECharts SVG代理请求:', req.method, req.url)
+          })
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            console.log('ECharts SVG代理响应:', proxyRes.statusCode, req.url)
+          })
+        }
       }
     }
   }
