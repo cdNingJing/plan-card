@@ -551,13 +551,13 @@
       ]
     },
     {
-      "id": "family",
-      "name": "家庭身份",
+      "id": "life",
+      "name": "生活身份",
       "role": "丈夫/父亲",
-      "type": "family",
+      "type": "life",
       "icon": "Home",
-      "description": "家庭中的核心角色，承担家庭责任",
-      "context": "家庭生活、亲子时光、家庭决策、情感支持",
+      "description": "生活中的核心角色，承担家庭责任和个人生活",
+      "context": "家庭生活、亲子时光、个人兴趣、生活管理",
       "isDefault": true,
       "relationships": [
         { "id": "spouse", "name": "妻子", "type": "配偶", "strength": 0.9, "role": "生活伴侣", "interests": ["旅行", "烹饪", "瑜伽"] },

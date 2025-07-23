@@ -6,6 +6,7 @@ import ChatView from '@/views/ChatView.vue'
 import PlannerView from '@/views/PlannerView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import AboutView from '@/views/AboutView.vue'
+import MetadataView from '@/views/MetadataView.vue'
 
 const routes = [
   {
@@ -42,6 +43,11 @@ const routes = [
     path: '/about',
     name: 'About',
     component: AboutView
+  },
+  {
+    path: '/metadata',
+    name: 'Metadata',
+    component: MetadataView
   }
 ]
 

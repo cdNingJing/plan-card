@@ -64,9 +64,41 @@
         </div>
       </div>
 
-      <IdentityGraphCard></IdentityGraphCard>
-      <IdentityGraphCardV2></IdentityGraphCardV2>
-      <IdentityGraphCardV3></IdentityGraphCardV3>
+      <!-- 身份图谱 -->
+      <div class="card">
+        <div class="card-header">
+          <h2>身份图谱</h2>
+          <span class="card-subtitle">立体身份图谱</span>
+          <div class="toggle-controls">
+            <button 
+              class="toggle-btn" 
+              :class="{ active: currentIdentityGraph === 'v1' }"
+              @click="switchIdentityGraph('v1')"
+            >
+              力导向图
+            </button>
+            <button 
+              class="toggle-btn" 
+              :class="{ active: currentIdentityGraph === 'v2' }"
+              @click="switchIdentityGraph('v2')"
+            >
+              圆形布局
+            </button>
+
+          </div>
+        </div>
+        
+        <div class="identity-graph-content">
+          <IdentityGraphCard 
+            v-if="currentIdentityGraph === 'v1'"
+          ></IdentityGraphCard>
+          <IdentityGraphCardV2 
+            v-if="currentIdentityGraph === 'v2'"
+          ></IdentityGraphCardV2>
+
+        </div>
+      </div>
+      
       <OrganDiagramCard></OrganDiagramCard>
       
       <!-- 个人数据中心 -->
@@ -247,8 +279,9 @@ import {
 } from 'lucide-vue-next'
 import IdentityGraphCard from '@/components/IdentityGraphCard.vue'
 import IdentityGraphCardV2 from '@/components/IdentityGraphCardV2.vue'
-import IdentityGraphCardV3 from '@/components/IdentityGraphCardV3.vue'
+
 import OrganDiagramCard from '@/components/OrganDiagramCard.vue'
+
 import userProfileData from '@/data/userProfile.json'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -276,8 +309,9 @@ export default {
     VChart,
     IdentityGraphCard,
     IdentityGraphCardV2,
-    IdentityGraphCardV3,
+
     OrganDiagramCard,
+
     ChevronLeft,
     Edit,
     Settings,
@@ -327,9 +361,8 @@ export default {
         left: '0px',
         top: '0px'
       },
-      showInterestConnections: true,
-      showCrossConnections: true,
-      showLabels: true,
+      currentIdentityGraph: 'v1', // 默认显示力导向图
+      
 
     }
   },
@@ -340,6 +373,14 @@ export default {
     goBack() {
       this.$router.go(-1)
     },
+    switchIdentityGraph(version) {
+      this.currentIdentityGraph = version
+      console.log('切换到身份图谱版本:', version)
+    },
+    
+
+    
+
     saveChanges() {
       console.log('保存理解系统配置')
       this.hasChanges = false
@@ -358,26 +399,26 @@ export default {
         nodes: [
           { id: 'user', name: '我', group: 'center', size: 20 },
           { id: 'work', name: '工作', group: 'work', size: 15 },
-          { id: 'family', name: '家庭', group: 'family', size: 15 },
+          { id: 'life', name: '生活', group: 'life', size: 15 },
           { id: 'hobby', name: '兴趣', group: 'hobby', size: 15 },
           { id: 'social', name: '社交', group: 'social', size: 15 },
           { id: 'colleague1', name: '同事A', group: 'work', size: 10 },
           { id: 'colleague2', name: '同事B', group: 'work', size: 10 },
-          { id: 'spouse', name: '配偶', group: 'family', size: 12 },
-          { id: 'child', name: '孩子', group: 'family', size: 10 },
+          { id: 'spouse', name: '配偶', group: 'life', size: 12 },
+          { id: 'child', name: '孩子', group: 'life', size: 10 },
           { id: 'friend1', name: '朋友A', group: 'social', size: 10 },
           { id: 'friend2', name: '朋友B', group: 'social', size: 10 },
           { id: 'camera', name: '摄影', group: 'hobby', size: 12 }
         ],
         links: [
           { source: 'user', target: 'work', strength: 0.8 },
-          { source: 'user', target: 'family', strength: 0.9 },
+          { source: 'user', target: 'life', strength: 0.9 },
           { source: 'user', target: 'hobby', strength: 0.6 },
           { source: 'user', target: 'social', strength: 0.7 },
           { source: 'work', target: 'colleague1', strength: 0.5 },
           { source: 'work', target: 'colleague2', strength: 0.5 },
-          { source: 'family', target: 'spouse', strength: 0.9 },
-          { source: 'family', target: 'child', strength: 0.8 },
+          { source: 'life', target: 'spouse', strength: 0.9 },
+          { source: 'life', target: 'child', strength: 0.8 },
           { source: 'social', target: 'friend1', strength: 0.6 },
           { source: 'social', target: 'friend2', strength: 0.6 },
           { source: 'hobby', target: 'camera', strength: 0.7 }
@@ -414,7 +455,7 @@ export default {
         const colors = {
           center: '#007AFF',
           work: '#34C759',
-          family: '#FF9500',
+          life: '#FF9500',
           hobby: '#AF52DE',
           social: '#FF2D55'
         }
@@ -543,7 +584,7 @@ export default {
       console.log('图表点击:', params)
       if (params.dataType === 'node') {
         const node = params.data
-        if (node.id === 'work' || node.id === 'family' || node.id === 'social') {
+        if (node.id === 'work' || node.id === 'life' || node.id === 'social') {
           this.showIdentityDetails(node.id)
         }
       }
@@ -552,7 +593,7 @@ export default {
     onGraphMouseOver(params) {
       if (params.dataType === 'node') {
         const node = params.data
-        if (node.id === 'work' || node.id === 'family' || node.id === 'social') {
+        if (node.id === 'work' || node.id === 'life' || node.id === 'social') {
           this.showCustomTooltipForNode(node, params.event)
         }
       }
@@ -699,10 +740,10 @@ export default {
           symbolSize: 9,
           itemStyle: { color: '#34C759' }
         },
-        // 家庭身份节点
+        // 生活身份节点
         {
-          id: 'family',
-          name: '家庭身份',
+          id: 'life',
+          name: '生活身份',
           category: 2,
           value: 20,
           symbolSize: 22,
@@ -803,7 +844,7 @@ export default {
       const links = [
         // 核心身份连接
         { source: 'me', target: 'work', value: 0.9, lineStyle: { width: 3, color: '#007AFF' } },
-        { source: 'me', target: 'family', value: 0.9, lineStyle: { width: 3, color: '#007AFF' } },
+        { source: 'me', target: 'life', value: 0.9, lineStyle: { width: 3, color: '#007AFF' } },
         { source: 'me', target: 'social', value: 0.8, lineStyle: { width: 2, color: '#007AFF' } },
         
         // 工作身份关系
@@ -814,12 +855,12 @@ export default {
         { source: 'work', target: 'client1', value: 0.5, lineStyle: { color: '#34C759' } },
         { source: 'work', target: 'client2', value: 0.4, lineStyle: { color: '#34C759' } },
         
-        // 家庭身份关系
-        { source: 'family', target: 'spouse', value: 0.9, lineStyle: { color: '#FF9500' } },
-        { source: 'family', target: 'child', value: 0.8, lineStyle: { color: '#FF9500' } },
-        { source: 'family', target: 'parent', value: 0.7, lineStyle: { color: '#FF9500' } },
-        { source: 'family', target: 'sibling', value: 0.6, lineStyle: { color: '#FF9500' } },
-        { source: 'family', target: 'inlaw', value: 0.5, lineStyle: { color: '#FF9500' } },
+        // 生活身份关系
+        { source: 'life', target: 'spouse', value: 0.9, lineStyle: { color: '#FF9500' } },
+        { source: 'life', target: 'child', value: 0.8, lineStyle: { color: '#FF9500' } },
+        { source: 'life', target: 'parent', value: 0.7, lineStyle: { color: '#FF9500' } },
+        { source: 'life', target: 'sibling', value: 0.6, lineStyle: { color: '#FF9500' } },
+        { source: 'life', target: 'inlaw', value: 0.5, lineStyle: { color: '#FF9500' } },
         
         // 社交身份关系
         { source: 'social', target: 'friend1', value: 0.8, lineStyle: { color: '#AF52DE' } },
@@ -836,11 +877,11 @@ export default {
           { source: 'colleague1', target: 'friend1', value: 0.4, lineStyle: { color: '#34C759' } },
           { source: 'colleague2', target: 'friend2', value: 0.3, lineStyle: { color: '#34C759' } },
           
-          // 跨身份关系 - 家庭与社交
+          // 跨身份关系 - 生活身份与社交
           { source: 'spouse', target: 'friend1', value: 0.5, lineStyle: { color: '#FF9500' } },
           { source: 'child', target: 'neighbor', value: 0.3, lineStyle: { color: '#FF9500' } },
           
-          // 跨身份关系 - 工作与家庭
+          // 跨身份关系 - 工作与生活身份
           { source: 'boss', target: 'spouse', value: 0.2, lineStyle: { color: '#34C759' } },
           { source: 'mentor', target: 'parent', value: 0.3, lineStyle: { color: '#34C759' } }
         )
@@ -1041,231 +1082,7 @@ export default {
       })
     },
     
-    // V2版本的方法
-    getGraphNodesV2() {
-      return [
-        // 核心身份节点
-        {
-          id: 'me',
-          name: '用户',
-          category: 0,
-          value: 25,
-          symbolSize: 30,
-          itemStyle: { color: '#007AFF' }
-        },
-        // 工作身份节点
-        {
-          id: 'work',
-          name: '工作身份',
-          category: 1,
-          value: 20,
-          symbolSize: 22,
-          itemStyle: { color: '#34C759' }
-        },
-        {
-          id: 'colleague1',
-          name: '张明',
-          category: 1,
-          value: 12,
-          symbolSize: 14,
-          itemStyle: { color: '#34C759' }
-        },
-        {
-          id: 'colleague2',
-          name: '李华',
-          category: 1,
-          value: 11,
-          symbolSize: 13,
-          itemStyle: { color: '#34C759' }
-        },
-        {
-          id: 'boss',
-          name: '王总',
-          category: 1,
-          value: 15,
-          symbolSize: 16,
-          itemStyle: { color: '#34C759' }
-        },
-        {
-          id: 'mentor',
-          name: '陈导师',
-          category: 1,
-          value: 14,
-          symbolSize: 15,
-          itemStyle: { color: '#34C759' }
-        },
-        {
-          id: 'client1',
-          name: '客户A',
-          category: 1,
-          value: 8,
-          symbolSize: 10,
-          itemStyle: { color: '#34C759' }
-        },
-        {
-          id: 'client2',
-          name: '客户B',
-          category: 1,
-          value: 7,
-          symbolSize: 9,
-          itemStyle: { color: '#34C759' }
-        },
-        // 家庭身份节点
-        {
-          id: 'family',
-          name: '家庭身份',
-          category: 2,
-          value: 20,
-          symbolSize: 22,
-          itemStyle: { color: '#FF9500' }
-        },
-        {
-          id: 'spouse',
-          name: '妻子',
-          category: 2,
-          value: 18,
-          symbolSize: 18,
-          itemStyle: { color: '#FF9500' }
-        },
-        {
-          id: 'child',
-          name: '小明',
-          category: 2,
-          value: 15,
-          symbolSize: 16,
-          itemStyle: { color: '#FF9500' }
-        },
-        {
-          id: 'parent',
-          name: '父母',
-          category: 2,
-          value: 14,
-          symbolSize: 15,
-          itemStyle: { color: '#FF9500' }
-        },
-        {
-          id: 'sibling',
-          name: '兄弟姐妹',
-          category: 2,
-          value: 10,
-          symbolSize: 12,
-          itemStyle: { color: '#FF9500' }
-        },
-        {
-          id: 'inlaw',
-          name: '岳父母',
-          category: 2,
-          value: 9,
-          symbolSize: 11,
-          itemStyle: { color: '#FF9500' }
-        },
-        // 社交身份节点
-        {
-          id: 'social',
-          name: '社交身份',
-          category: 3,
-          value: 18,
-          symbolSize: 20,
-          itemStyle: { color: '#AF52DE' }
-        },
-        {
-          id: 'friend1',
-          name: '老友A',
-          category: 3,
-          value: 13,
-          symbolSize: 15,
-          itemStyle: { color: '#AF52DE' }
-        },
-        {
-          id: 'friend2',
-          name: '老友B',
-          category: 3,
-          value: 12,
-          symbolSize: 14,
-          itemStyle: { color: '#AF52DE' }
-        },
-        {
-          id: 'classmate',
-          name: '同学',
-          category: 3,
-          value: 8,
-          symbolSize: 10,
-          itemStyle: { color: '#AF52DE' }
-        },
-        {
-          id: 'neighbor',
-          name: '邻居',
-          category: 3,
-          value: 6,
-          symbolSize: 8,
-          itemStyle: { color: '#AF52DE' }
-        },
-        {
-          id: 'online_friend',
-          name: '网友',
-          category: 3,
-          value: 5,
-          symbolSize: 7,
-          itemStyle: { color: '#AF52DE' }
-        }
-      ]
-    },
-    
-    getGraphLinksV2() {
-      const links = [
-        // 核心身份连接
-        { source: 'me', target: 'work', value: 0.9, lineStyle: { width: 3, color: '#007AFF' } },
-        { source: 'me', target: 'family', value: 0.9, lineStyle: { width: 3, color: '#007AFF' } },
-        { source: 'me', target: 'social', value: 0.8, lineStyle: { width: 2, color: '#007AFF' } },
-        
-        // 工作身份关系
-        { source: 'work', target: 'colleague1', value: 0.7, lineStyle: { color: '#34C759' } },
-        { source: 'work', target: 'colleague2', value: 0.6, lineStyle: { color: '#34C759' } },
-        { source: 'work', target: 'boss', value: 0.8, lineStyle: { color: '#34C759' } },
-        { source: 'work', target: 'mentor', value: 0.9, lineStyle: { color: '#34C759' } },
-        { source: 'work', target: 'client1', value: 0.5, lineStyle: { color: '#34C759' } },
-        { source: 'work', target: 'client2', value: 0.4, lineStyle: { color: '#34C759' } },
-        
-        // 家庭身份关系
-        { source: 'family', target: 'spouse', value: 0.9, lineStyle: { color: '#FF9500' } },
-        { source: 'family', target: 'child', value: 0.8, lineStyle: { color: '#FF9500' } },
-        { source: 'family', target: 'parent', value: 0.7, lineStyle: { color: '#FF9500' } },
-        { source: 'family', target: 'sibling', value: 0.6, lineStyle: { color: '#FF9500' } },
-        { source: 'family', target: 'inlaw', value: 0.5, lineStyle: { color: '#FF9500' } },
-        
-        // 社交身份关系
-        { source: 'social', target: 'friend1', value: 0.8, lineStyle: { color: '#AF52DE' } },
-        { source: 'social', target: 'friend2', value: 0.7, lineStyle: { color: '#AF52DE' } },
-        { source: 'social', target: 'classmate', value: 0.5, lineStyle: { color: '#AF52DE' } },
-        { source: 'social', target: 'neighbor', value: 0.4, lineStyle: { color: '#AF52DE' } },
-        { source: 'social', target: 'online_friend', value: 0.3, lineStyle: { color: '#AF52DE' } }
-      ]
-      
-      // 根据控制面板状态添加跨身份连接
-      if (this.showCrossConnectionsV2) {
-        links.push(
-          // 跨身份关系 - 工作与社交
-          { source: 'colleague1', target: 'friend1', value: 0.4, lineStyle: { color: '#34C759' } },
-          { source: 'colleague2', target: 'friend2', value: 0.3, lineStyle: { color: '#34C759' } },
-          
-          // 跨身份关系 - 家庭与社交
-          { source: 'spouse', target: 'friend1', value: 0.5, lineStyle: { color: '#FF9500' } },
-          { source: 'child', target: 'neighbor', value: 0.3, lineStyle: { color: '#FF9500' } },
-          
-          // 跨身份关系 - 工作与家庭
-          { source: 'boss', target: 'spouse', value: 0.2, lineStyle: { color: '#34C759' } },
-          { source: 'mentor', target: 'parent', value: 0.3, lineStyle: { color: '#34C759' } }
-        )
-      }
-      
-      // 根据控制面板状态添加基于共同兴趣的连接
-      if (this.showInterestConnectionsV2) {
-        const interestLinks = this.getInterestBasedLinks()
-        links.push(...interestLinks)
-      }
-      
-      return links
-    },
+
     
 
   }
@@ -1364,12 +1181,14 @@ export default {
   flex-direction: column;
   gap: 4px;
   border-bottom: 0.5px solid rgba(0, 0, 0, 0.1);
+  position: relative;
 }
 
 .card-header h2 {
   font-size: 17px;
   font-weight: 600;
   margin: 0;
+            padding-right: 200px;
 }
 
 .card-subtitle {
@@ -1953,4 +1772,46 @@ export default {
   width: 14px;
   height: 14px;
 }
+
+
+
+
+
+.toggle-controls {
+  display: flex;
+  gap: 6px;
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.toggle-btn {
+  background: none;
+  border: 1px solid rgba(0, 122, 255, 0.3);
+  padding: 6px 12px;
+  border-radius: 8px;
+  color: #007AFF;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toggle-btn:hover {
+  background: rgba(0, 122, 255, 0.1);
+  border-color: #007AFF;
+}
+
+.toggle-btn.active {
+  background: #007AFF;
+  color: white;
+  border-color: #007AFF;
+}
+
+.identity-graph-content {
+  padding: 16px;
+  height: 600px;
+}
+
+
 </style>

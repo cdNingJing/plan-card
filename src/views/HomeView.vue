@@ -86,6 +86,10 @@ const examples = ref([
   {
     id: 6,
     text: "聊天场景"
+  },
+  {
+    id: 7,
+    text: "用户元数据"
   }
 ])
 
@@ -106,6 +110,12 @@ const handleExample = (text) => {
   // 如果是聊天场景，跳转到聊天页面
   if (text === "聊天场景") {
     router.push('/chat')
+    return
+  }
+  
+  // 如果是用户元数据，跳转到元数据页面
+  if (text === "用户元数据") {
+    router.push('/metadata')
     return
   }
   
