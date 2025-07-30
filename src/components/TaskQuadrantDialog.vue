@@ -665,7 +665,7 @@ export default {
   padding: 10px;
   margin: 0;
   border-radius: 16px 16px 0 0;
-  height: 30%;
+  height: 10%;
   min-height: 120px;
   display: flex;
   flex-direction: column;
@@ -801,7 +801,7 @@ export default {
 
 .dialog-content {
   overflow: hidden;
-  height: 70%;
+  height: 90%;
   background: #f8f9fa;
   display: flex;
   flex-direction: column;

@@ -480,14 +480,11 @@ Content-Type: application/json
 **Request Body**:
 ```json
 {
-  "collection_name":"understanding-system","chunk_id":"1000bc6b-9231-4503-b8a1-b2e9b5782b00",
   "new_content": "Updated AI performance metrics show 96% accuracy with improved TensorFlow deployment...",
   "new_metadata": {
     "version": "2.0",
     "last_updated": "2024-01-15T10:30:00Z",
-    "editor": "user_123",
-    "title":"忌口清单",
-    "source":"用户上传"
+    "editor": "user_123"
   }
 }
 ```

@@ -7,6 +7,7 @@ import PlannerView from '@/views/PlannerView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import AboutView from '@/views/AboutView.vue'
 import MetadataView from '@/views/MetadataView.vue'
+import GroupChatView from '@/views/GroupChatView.vue'
 
 const routes = [
   {
@@ -48,6 +49,11 @@ const routes = [
     path: '/metadata',
     name: 'Metadata',
     component: MetadataView
+  },
+  {
+    path: '/group-chat',
+    name: 'GroupChat',
+    component: GroupChatView
   }
 ]
 

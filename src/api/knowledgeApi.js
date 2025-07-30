@@ -4,6 +4,8 @@
  */
 
 const BASE_URL = 'http://54.68.80.214';
+// yue 环境
+// const TOKEN = 'f04d823b1122ce4bd87f9911e64093aa3269c5ef'
 // 测试环境 ning
 const TOKEN = 'b781774904fb97b75f393cc6caec05869a511cad'
 // huang

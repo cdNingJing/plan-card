@@ -636,10 +636,11 @@ const handleSubmit = async () => {
                 // 将所有匹配文档保存为数组
                 bestMatch = sortedResults.map(result => ({
                   id: result.id || result.metadata?.descriptive_id,
-                  title: result.metadata?.title || result.metadata?.source || '无标题',
-                  score: result.score,
-                  content: result.content,
-                  metadata: result.metadata
+                  content: result.content
+                  // title: result.metadata?.title || result.metadata?.source || '无标题',
+                  // score: result.score,
+                  // content: result.content,
+                  // metadata: result.metadata
                 }))
                 console.log(`找到 ${filteredResults.length} 个相关度大于30%的文档，内容已组合`)
               } else {
@@ -758,6 +759,8 @@ const handleSubmit = async () => {
             
             // 处理长期数据和短期记忆
             if (parsedData.longTermData && parsedData.longTermData.trim()) {
+              console.log('🔍 停止 检测到长期记忆数据:', parsedData.longTermData)
+              return;
               try {
                 console.log('🔍 检测到长期记忆数据:', parsedData.longTermData)
                 
@@ -770,7 +773,7 @@ const handleSubmit = async () => {
                     author: 'AI Assistant',
                     type: 'long_term_memory',
                     timestamp: new Date().toISOString(),
-                    category: 'user_understanding'
+                    category: 'collection_user_8490'
                   }
 
                   if (docPanelRef.value && docPanelRef.value.uploadContentToCollection) {

@@ -868,7 +868,7 @@ const newCollection = ref({
 })
 
 const uploadForm = ref({
-  collectionName: '',
+  collectionName: 'collection_user_8490',
   contentType: 'text', // 新增：内容类型
   title: '',
   content: '',
@@ -1181,8 +1181,8 @@ const closeCreateDialog = () => {
 const closeUploadDialog = () => {
   showUploadDialog.value = false
   uploadForm.value = {
-    collectionName: '',
-    contentType: 'text', // 重置为默认的文本类型
+    collectionName: 'collection_user_8490',
+    contentType: 'text', // 新增：内容类型
     title: '',
     content: '',
     source: ''
@@ -1899,6 +1899,7 @@ const formatDate = (dateString) => {
 // 查看搜索结果详情
 const openResultDetails = (result) => {
   // 这里可以实现查看搜索结果详情的功能
+  console.log('查看搜索结果详情', result)
   showSuccessNotification(`查看结果: ${result.metadata?.title || '无标题'}`)
 }
 
