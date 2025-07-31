@@ -8,6 +8,7 @@ import SettingsView from '@/views/SettingsView.vue'
 import AboutView from '@/views/AboutView.vue'
 import MetadataView from '@/views/MetadataView.vue'
 import GroupChatView from '@/views/GroupChatView.vue'
+import UnderstandingSystemView from '@/views/UnderstandingSystemView.vue'
 
 const routes = [
   {
@@ -54,6 +55,11 @@ const routes = [
     path: '/group-chat',
     name: 'GroupChat',
     component: GroupChatView
+  },
+  {
+    path: '/understanding-system',
+    name: 'UnderstandingSystem',
+    component: UnderstandingSystemView
   }
 ]
 

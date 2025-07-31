@@ -105,7 +105,7 @@ import { useDocumentScanStore } from '@/stores/documentScanStore.js'
 import { useRestaurantStore } from '@/stores/restaurantStore'
 import { useUserInfoStore } from '@/stores/userInfoStore.js'
 import { useScenarioStore } from '@/stores/scenarioStore'
-import claudeApiService from '@/api/claudeApi.js'
+import aiApiService from '@/api/aiApi.js'
 import knowledgeApi from '@/api/knowledgeApi.js'
 import { SCENARIOS } from '@/config/scenarios.js'
 import documentInfoService from '@/services/documentInfoService.js'
@@ -706,12 +706,17 @@ const handleSubmit = async () => {
       console.log('整合的知识库上下文:', knowledgeContext)
 
       
-      // 第一步：使用 Claude API 进行基础对话
-      const claudeResponse = await claudeApiService.multiTurnChat(enhancedConversationHistory, knowledgeContext)
+      // 第一步：使用 AI API 进行基础对话
+      const claudeResponse = await aiApiService.chatCompletion(
+        enhancedConversationHistory.map(msg => ({
+          role: msg.role,
+          content: msg.content + (msg.role === 'system' ? `\n\n知识库上下文：${knowledgeContext}` : '')
+        }))
+      )
       
       if (claudeResponse.success) {
-        // 处理 Claude 回复
-        const aiContent = claudeResponse?.data?.content?.[0]?.text || claudeResponse?.data?.content || ''
+        // 处理 AI 回复
+        const aiContent = claudeResponse?.data?.choices?.[0]?.message?.content || ''
 
         // 使用公共方法解析AI响应
         const parsedData = parseAIResponse(aiContent)

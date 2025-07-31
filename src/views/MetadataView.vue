@@ -157,7 +157,7 @@
 <script>
 import { userMetadata } from '@/data/userMetadata.js'
 import knowledgeApi from '@/api/knowledgeApi.js'
-import claudeApiService from '@/api/claudeApi.js'
+import aiApiService from '@/api/aiApi.js'
 import taskAgentApiService from '@/api/taskAgentApi.js'
 import TaskQuadrantDialog from '@/components/TaskQuadrantDialog.vue'
 
@@ -589,11 +589,16 @@ export default {
         const knowledgeContext = this.buildKnowledgeContext(bestMatch)
         console.log('知识库上下文:', knowledgeContext)
         
-        // 使用Claude API进行对话
-        const claudeResponse = await claudeApiService.multiTurnChat(conversationHistory, knowledgeContext)
+        // 使用 AI API 进行对话
+        const claudeResponse = await aiApiService.chatCompletion(
+          conversationHistory.map(msg => ({
+            role: msg.role,
+            content: msg.content + (msg.role === 'system' ? `\n\n知识库上下文：${knowledgeContext}` : '')
+          }))
+        )
         
         if (claudeResponse.success) {
-          const aiContent = claudeResponse?.data?.content?.[0]?.text || claudeResponse?.data?.content || '抱歉，我现在无法回答您的问题，请稍后再试。'
+          const aiContent = claudeResponse?.data?.choices?.[0]?.message?.content || '抱歉，我现在无法回答您的问题，请稍后再试。'
           
           // 解析JSON格式的响应
           const parsedData = this.parseAIResponse(aiContent)
