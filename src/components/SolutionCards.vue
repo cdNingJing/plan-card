@@ -3,14 +3,82 @@
     <!-- 简化的页面头部 -->
     <div class="step-header">
       <div class="header-content">
-        <h2>个性化解决方案</h2>
-        <p class="header-subtitle">基于您的选择，为您定制的行动方案</p>
+        <h2>行动计划书</h2>
+        <p class="header-subtitle">为您定制的行动方案</p>
       </div>
     </div>
 
     <!-- 移动端优化的卡片展示 -->
     <div class="solutions-container">
+      <!-- 骨架屏显示 -->
+      <div v-if="isLoading" class="skeleton-container">
+        <div 
+          v-for="index in 3" 
+          :key="`skeleton-${index}`"
+          class="skeleton-card"
+          :style="{ animationDelay: `${index * 100}ms` }"
+        >
+          <!-- 骨架屏头部 -->
+          <div class="skeleton-header">
+            <div class="skeleton-icon"></div>
+            <div class="skeleton-header-text">
+              <div class="skeleton-title"></div>
+              <div class="skeleton-badge"></div>
+            </div>
+          </div>
+
+          <!-- 骨架屏内容 -->
+          <div class="skeleton-content">
+            <!-- 5年后愿景骨架 -->
+            <div class="skeleton-section">
+              <div class="skeleton-section-title"></div>
+              <div class="skeleton-vision-box">
+                <div class="skeleton-line long"></div>
+                <div class="skeleton-line medium"></div>
+                <div class="skeleton-line long"></div>
+                <div class="skeleton-line short"></div>
+              </div>
+            </div>
+
+            <!-- 明天行动骨架 -->
+            <div class="skeleton-section">
+              <div class="skeleton-section-title"></div>
+              <div class="skeleton-action-box">
+                <div class="skeleton-line medium"></div>
+                <div class="skeleton-line long"></div>
+                <div class="skeleton-line short"></div>
+              </div>
+            </div>
+
+            <!-- 执行计划骨架 -->
+            <div class="skeleton-section">
+              <div class="skeleton-section-title"></div>
+              <div class="skeleton-plan">
+                <div v-for="planIndex in 4" :key="planIndex" class="skeleton-plan-item">
+                  <div class="skeleton-timeline"></div>
+                  <div class="skeleton-plan-content">
+                    <div class="skeleton-line medium"></div>
+                    <div class="skeleton-line short"></div>
+                    <div class="skeleton-line long"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 成功指标骨架 -->
+            <div class="skeleton-section">
+              <div class="skeleton-section-title"></div>
+              <div class="skeleton-metrics">
+                <div v-for="metricIndex in 5" :key="metricIndex" class="skeleton-metric"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 实际内容 -->
       <div 
+        v-else
         v-for="(solution, index) in solutions"
         :key="solution.id"
         class="solution-card"
@@ -28,8 +96,121 @@
           </div>
         </div>
 
+        <!-- 计划结局类型的详细内容 -->
+        <div v-if="solution.type === 'plan_ending'" class="plan-ending-content">
+          
+          <!-- 5年后愿景 -->
+          <div class="vision-section">
+            <div class="section-header">
+              <h4><StarIcon class="inline w-5 h-5 mr-2" />你的5年后</h4>
+            </div>
+            <div class="vision-box">
+              <p class="vision-text">{{ solution.planEndingData?.futureVision || solution.futureVision }}</p>
+            </div>
+          </div>
+
+          <!-- 立即行动计划 -->
+          <div class="action-section">
+            <div class="section-header">
+              <h4><BoltIcon class="inline w-5 h-5 mr-2" />立即开始行动</h4>
+            </div>
+            <div class="action-box">
+              <div 
+                v-for="action in (solution.planEndingData?.immediateActions || solution.immediateActions || [])"
+                :key="action"
+                class="immediate-action-item"
+              >
+                {{ action }}
+              </div>
+            </div>
+          </div>
+
+          <!-- 关键里程碑 -->
+          <div class="milestones-section">
+            <div class="section-header">
+              <h4><ClipboardDocumentListIcon class="inline w-5 h-5 mr-2" />关键里程碑</h4>
+            </div>
+            <div class="milestones-content">
+              <div 
+                v-for="(milestone, index) in (solution.planEndingData?.keyMilestones || solution.keyMilestones || [])"
+                :key="index"
+                class="milestone-item"
+              >
+                <div class="milestone-timeline">{{ milestone.timeframe }}</div>
+                <div class="milestone-content">
+                  <div class="milestone-title">{{ milestone.title }}</div>
+                  <div class="milestone-description">{{ milestone.description }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 核心发展方向 -->
+          <div class="development-section">
+            <div class="section-header">
+              <h4><TrophyIcon class="inline w-5 h-5 mr-2" />核心发展方向</h4>
+            </div>
+            <div class="development-content">
+              <div 
+                v-for="area in (solution.planEndingData?.developmentAreas || solution.developmentAreas || [])"
+                :key="area.title"
+                class="development-item"
+                :class="`priority-${area.priority}`"
+              >
+                <div class="development-title">{{ area.title }}</div>
+                <div class="development-description">{{ area.description }}</div>
+                <div class="priority-badge" :class="`badge-${area.priority}`">
+                  {{ getPriorityText(area.priority) }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 其他场景类型的内容 -->
+        <div v-else-if="solution.type && solution.type.includes('_')" class="scenario-content">
+          
+          <!-- 愿景区域 -->
+          <div class="vision-section">
+            <div class="section-header">
+              <h4><StarIcon class="inline w-5 h-5 mr-2" />愿景目标</h4>
+            </div>
+            <div class="vision-box">
+              <p class="vision-text">{{ solution.futureVision || getDetailedVision(solution.title) }}</p>
+            </div>
+          </div>
+
+          <!-- 立即行动 -->
+          <div class="action-section">
+            <div class="section-header">
+              <h4><BoltIcon class="inline w-5 h-5 mr-2" />立即开始</h4>
+            </div>
+            <div class="action-box">
+              <p class="action-text">{{ solution.todayAction || getDetailedAction(solution.title) }}</p>
+            </div>
+          </div>
+
+          <!-- 里程碑 -->
+          <div class="milestones-section" v-if="solution.milestones && solution.milestones.length > 0">
+            <div class="section-header">
+              <h4><ClipboardDocumentListIcon class="inline w-5 h-5 mr-2" />关键里程碑</h4>
+            </div>
+            <div class="milestones-content">
+              <div 
+                v-for="(milestone, index) in solution.milestones"
+                :key="index"
+                class="milestone-item simple"
+              >
+                {{ milestone }}
+              </div>
+            </div>
+          </div>
+
+        </div>
+
         <!-- 未来愿景类型的详细内容 -->
-        <div v-if="solution.type === 'future_action'" class="future-content">
+        <div v-else-if="solution.type === 'future_action'" class="future-content">
           
           <!-- 5年后的你 -->
           <div class="vision-section">
@@ -37,7 +218,7 @@
               <h4><StarIcon class="inline w-5 h-5 mr-2" />你的5年后</h4>
             </div>
             <div class="vision-box">
-              <p class="vision-text">{{ getDetailedVision(solution.title) }}</p>
+              <p class="vision-text">{{ solution.futureVision || getDetailedVision(solution.title) }}</p>
             </div>
           </div>
 
@@ -47,7 +228,7 @@
               <h4><BoltIcon class="inline w-5 h-5 mr-2" />明天开始</h4>
             </div>
             <div class="action-box">
-              <p class="action-text">{{ getDetailedAction(solution.title) }}</p>
+              <p class="action-text">{{ solution.todayAction || getDetailedAction(solution.title) }}</p>
             </div>
           </div>
 
@@ -58,7 +239,7 @@
             </div>
             <div class="plan-content">
               <div 
-                v-for="(step, stepIndex) in getExecutionPlan(solution.title)"
+                v-for="(step, stepIndex) in (solution.executionPlan || getExecutionPlan(solution.title))"
                 :key="stepIndex"
                 class="plan-step"
               >
@@ -87,7 +268,7 @@
             </div>
             <div class="metrics-content">
               <div 
-                v-for="metric in getSuccessMetrics(solution.title)"
+                v-for="metric in (solution.successMetrics || getSuccessMetrics(solution.title))"
                 :key="metric"
                 class="metric-item"
               >
@@ -183,6 +364,14 @@ const props = defineProps({
   currentQuery: {
     type: String,
     default: ''
+  },
+  isLoading: {
+    type: Boolean,
+    default: false
+  },
+  possibilityCardsOrder: {
+    type: Array,
+    default: () => []
   }
 })
 
@@ -198,6 +387,7 @@ const emit = defineEmits([
 // 获取类型名称
 const getTypeName = (type) => {
   const typeNames = {
+    plan_ending: '计划结局',
     future_action: '未来规划',
     dynamic: '动态解决',
     allergy: '饮食管理',
@@ -207,6 +397,16 @@ const getTypeName = (type) => {
     medical: '医疗建议'
   }
   return typeNames[type] || '未知类型'
+}
+
+// 获取优先级文本
+const getPriorityText = (priority) => {
+  const priorityTexts = {
+    high: '高优先级',
+    medium: '中优先级',  
+    low: '低优先级'
+  }
+  return priorityTexts[priority] || '中优先级'
 }
 
 // 获取解决方案图标
@@ -241,13 +441,13 @@ const getDetailedVision = (title) => {
 // 获取详细的明天行动（写死的内容）
 const getDetailedAction = (title) => {
   const actions = {
-    'Python编程': '明天下载并安装Python 3.9+和PyCharm IDE，注册GitHub账号，完成第一个"Hello World"程序。花30分钟学习Python基础语法：变量、数据类型、条件语句。加入3个Python学习群，关注5个技术博主，下载《Python编程从入门到实践》电子书。',
-    '写技术博客': '明天选择博客平台（推荐掘金+个人博客），注册账号并完善个人资料。写下第一篇300字的技术总结，可以是今天学到的任何技术点。制定写作计划：每周2篇文章，每篇不少于800字。关注10个优秀技术博主，分析他们的写作风格。',
-    '学设计软件': '明天下载Adobe Creative Suite试用版或Figma免费版，观看3个入门教程视频。完成第一个简单设计：制作个人名片或海报。加入5个设计师社群，关注Dribbble和Behance平台，收藏100个优秀设计作品作为灵感库。',
-    '读心理学书': '明天去书店或网上购买《心理学与生活》和《社会心理学》两本入门书籍。制定读书计划：每天读10页，做读书笔记。下载心理学相关APP，关注3个心理学博主，加入心理学爱好者群组。',
-    '练英语口语': '明天下载英语学习APP（推荐多邻国+扇贝），完成第一个15分钟的口语练习。选择一个英语播客节目开始收听，购买《赖世雄美语音标》教材。找到1个英语学习伙伴或加入英语角活动群。'
+    'Python编程': '明天立即开始编程实践：打开PyCharm，创建第一个Python文件，写出你的第一个程序。每天坚持写代码1小时，从变量声明开始，逐步掌握函数、循环和条件语句。专注于实际编写代码，而不是观看教程。',
+    '写技术博客': '明天就开始写作：选定一个技术话题，写出第一篇800字的技术文章。每周固定发布2篇高质量文章，建立稳定的写作节奏。专注于分享实际的技术经验和解决方案，持续输出有价值的内容。',
+    '学设计软件': '明天开始动手设计：打开Figma或Photoshop，创建第一个设计项目。每天练习设计2小时，从临摹优秀作品开始，逐步形成自己的设计风格。专注于大量的实际练习，不断提升设计技能。',
+    '读心理学书': '明天开始系统阅读：每天固定阅读心理学书籍30分钟，做详细的读书笔记。将理论知识应用到日常生活中，观察和分析身边的人际关系。坚持每天学习，建立扎实的心理学知识基础。',
+    '练英语口语': '明天开始大声说英语：每天进行30分钟的口语练习，从朗读英文文章开始。坚持用英语进行日常思考，逐步提升语言表达能力。专注于实际的口语输出，而不是被动的听力输入。'
   }
-  return actions[title] || `明天开始制定${title}的学习计划，搜集相关资源，完成第一个小目标。`
+  return actions[title] || `明天立即开始${title}的实践，每天坚持练习，专注于技能的实际应用和提升。`
 }
 
 // 获取执行计划（写死的内容）
@@ -256,61 +456,61 @@ const getExecutionPlan = (title) => {
     'Python编程': [
       {
         time: '第1个月',
-        title: '基础语法掌握',
-        description: '掌握Python核心语法和编程思维',
-        actions: ['每天1小时学习', '完成100道练习题', '制作第一个计算器程序', '学习Git基础操作']
+        title: '编程基础建立',
+        description: '掌握Python核心语法，养成编程习惯',
+        actions: ['每天写代码1小时，无例外', '完成100个基础练习', '构建第一个计算器程序', '掌握Git版本控制']
       },
       {
         time: '第3个月',
-        title: '项目实战',
-        description: '通过实际项目巩固所学知识',
-        actions: ['完成爬虫项目', '制作个人网站', '学习数据库操作', '参与开源项目']
+        title: '项目实战开始',
+        description: '通过真实项目验证技能水平',
+        actions: ['独立完成网络爬虫项目', '构建个人作品网站', '熟练操作数据库', '为开源项目贡献代码']
       },
       {
         time: '第6个月',
-        title: '框架学习',
-        description: '学习主流框架，提升开发效率',
-        actions: ['掌握Django基础', '学习前端技术', '部署第一个Web应用', '建立技术博客']
+        title: '框架技能提升',
+        description: '掌握主流框架，提升开发效率',
+        actions: ['精通Django Web开发', '学会前后端协作', '部署线上Web应用', '开始写技术博客']
       },
       {
         time: '第1年',
-        title: '专业能力',
-        description: '达到初级工程师水平',
-        actions: ['完成5个完整项目', '参加技术会议', '开始求职准备', '贡献开源代码']
+        title: '专业水平达成',
+        description: '达到初级工程师标准，开始职业发展',
+        actions: ['完成5个完整商业项目', '参与技术大会演讲', '通过技术面试', '持续贡献开源社区']
       }
     ],
     '写技术博客': [
       {
         time: '第1个月',
-        title: '写作习惯养成',
-        description: '建立稳定的写作节奏',
-        actions: ['每周发布2篇文章', '建立写作素材库', '学习SEO优化', '互动回复读者']
+        title: '写作习惯确立',
+        description: '建立稳定高质量的写作输出',
+        actions: ['每周必发2篇技术文章', '建立个人写作工作流', '优化文章SEO表现', '积极回复读者评论']
       },
       {
         time: '第3个月',
-        title: '内容质量提升',
-        description: '提高文章质量和影响力',
-        actions: ['深度技术文章', '制作技术教程', '参与技术讨论', '建立读者群体']
+        title: '内容深度突破',
+        description: '提升文章质量和技术深度',
+        actions: ['专注深度技术解析', '制作系列教程内容', '主导技术话题讨论', '培养忠实读者群体']
       },
       {
         time: '第6个月',
-        title: '影响力扩大',
-        description: '扩大在技术社区的影响力',
-        actions: ['跨平台发布', '参与技术会议', '开设专栏', '合作其他博主']
+        title: '影响力快速扩大',
+        description: '在技术社区建立个人品牌',
+        actions: ['多平台同步发布内容', '受邀参与技术会议', '开设个人技术专栏', '与知名博主深度合作']
       },
       {
         time: '第1年',
-        title: '商业化探索',
-        description: '开始探索内容变现',
-        actions: ['推出付费课程', '接受商业合作', '出版技术书籍', '建立个人品牌']
+        title: '商业价值实现',
+        description: '将技术影响力转化为商业收益',
+        actions: ['推出高价值付费课程', '接受优质商业合作', '出版个人技术书籍', '建立完整个人品牌']
       }
     ]
   }
   return plans[title] || [
-    { time: '第1个月', title: '入门阶段', description: '建立基础', actions: ['制定学习计划', '搜集学习资源'] },
-    { time: '第3个月', title: '进步阶段', description: '深入学习', actions: ['实践练习', '总结经验'] },
-    { time: '第6个月', title: '提升阶段', description: '技能提升', actions: ['项目实战', '经验分享'] },
-    { time: '第1年', title: '专业阶段', description: '达到专业水平', actions: ['持续优化', '帮助他人'] }
+    { time: '第1个月', title: '技能基础建立', description: '掌握核心技能', actions: ['每天坚持练习', '建立学习习惯'] },
+    { time: '第3个月', title: '实战能力提升', description: '应用所学技能', actions: ['完成实际项目', '积累实战经验'] },
+    { time: '第6个月', title: '专业技能突破', description: '达到专业标准', actions: ['掌握高级技能', '建立个人作品'] },
+    { time: '第1年', title: '专业地位确立', description: '成为领域专家', actions: ['持续技能提升', '分享经验帮助他人'] }
   ]
 }
 
@@ -318,47 +518,47 @@ const getExecutionPlan = (title) => {
 const getSuccessMetrics = (title) => {
   const metrics = {
     'Python编程': [
-      '能独立完成中等复杂度的项目开发',
-      'GitHub上有20+个优质项目',
-      '掌握3个以上主流框架',
-      '月薪达到15K以上',
-      '在技术社区有一定影响力'
+      '您将独立开发复杂的企业级应用程序',
+      'GitHub展示30+个高质量开源项目',
+      '精通Django、Flask、FastAPI等主流框架',
+      '年薪突破30万，成为高级开发工程师',
+      '在技术社区拥有数千名关注者'
     ],
     '写技术博客': [
-      '月访问量超过5万',
-      '拥有1万+忠实读者',
-      '文章被主流平台推荐',
-      '月收入超过5000元',
-      '建立个人技术品牌'
+      '每月博客访问量稳定超过10万',
+      '培养3万+忠实技术读者群体',
+      '文章频繁被各大技术平台推荐首页',
+      '通过内容创作月收入超过2万元',
+      '确立个人技术意见领袖地位'
     ],
     '学设计软件': [
-      '熟练使用5个以上设计工具',
-      '完成50+个设计项目',
-      '建立个人设计作品集',
-      '获得客户好评率95%以上',
-      '月收入超过8000元'
+      '精通Photoshop、Illustrator、Figma等8款设计工具',
+      '设计作品集展示100+优秀项目案例',
+      '建立完整的个人设计品牌体系',
+      '客户满意度保持99%以上',
+      '设计服务月收入稳定超过1.5万元'
     ],
     '读心理学书': [
-      '阅读100+本心理学书籍',
-      '获得心理咨询师证书',
-      '帮助50+人解决问题',
-      '开设个人成长课程',
-      '成为企业心理顾问'
+      '深度阅读200+本心理学专业书籍',
+      '获得国家二级心理咨询师资格证书',
+      '成功帮助100+人解决心理困扰',
+      '开设个人心理成长工作坊',
+      '担任多家企业心理健康顾问'
     ],
     '练英语口语': [
-      '雅思口语7分以上',
-      '能流利进行商务对话',
-      '参与国际会议发言',
-      '获得海外工作机会',
-      '成为双语专业人士'
+      '雅思口语达到8分专业水平',
+      '与外国客户无障碍商务沟通',
+      '受邀在国际会议上英语演讲',
+      '获得跨国公司海外工作机会',
+      '成为企业内部英语培训专家'
     ]
   }
   return metrics[title] || [
-    `在${title}领域达到专业水平`,
-    '获得相关资格认证',
-    '建立个人品牌影响力',
-    '实现收入增长',
-    '帮助他人成长'
+    `您将在${title}领域达到专业水平`,
+    '获得权威资格认证',
+    '建立强大的个人品牌影响力',
+    '实现显著的收入增长',
+    '成为能够指导他人成长的专家'
   ]
 }
 
@@ -430,6 +630,11 @@ const openMedicalAdvice = () => {
   animation: slideInUp 0.6s ease forwards;
   opacity: 0;
   transform: translateY(20px);
+}
+
+.solution-plan_ending {
+  border-left: 4px solid #722ed1;
+  background: linear-gradient(135deg, #fff 0%, #f9f0ff 100%);
 }
 
 .solution-future_action {
@@ -706,6 +911,187 @@ const openMedicalAdvice = () => {
   }
 }
 
+/* 骨架屏样式 */
+.skeleton-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.skeleton-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-left: 4px solid #f0f0f0;
+  animation: skeletonFadeIn 0.6s ease forwards;
+  opacity: 0;
+}
+
+.skeleton-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.skeleton-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 8px;
+  animation: shimmer 1.5s infinite;
+}
+
+.skeleton-header-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-title {
+  width: 120px;
+  height: 20px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 4px;
+  animation: shimmer 1.5s infinite;
+}
+
+.skeleton-badge {
+  width: 80px;
+  height: 16px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 12px;
+  animation: shimmer 1.5s infinite;
+}
+
+.skeleton-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.skeleton-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton-section-title {
+  width: 100px;
+  height: 18px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 4px;
+  animation: shimmer 1.5s infinite;
+}
+
+.skeleton-vision-box {
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-action-box {
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-line {
+  height: 16px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 4px;
+  animation: shimmer 1.5s infinite;
+}
+
+.skeleton-line.long {
+  width: 100%;
+}
+
+.skeleton-line.medium {
+  width: 75%;
+}
+
+.skeleton-line.short {
+  width: 50%;
+}
+
+.skeleton-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.skeleton-plan-item {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+}
+
+.skeleton-timeline {
+  width: 80px;
+  height: 24px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 4px;
+  flex-shrink: 0;
+  animation: shimmer 1.5s infinite;
+}
+
+.skeleton-plan-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skeleton-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-metric {
+  height: 32px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 6px;
+  animation: shimmer 1.5s infinite;
+}
+
+/* 骨架屏动画 */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes skeletonFadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
 /* 移动端优化 */
 @media (max-width: 768px) {
   .solutions-step {
@@ -743,6 +1129,26 @@ const openMedicalAdvice = () => {
     width: auto;
     align-self: flex-start;
   }
+  
+  /* 骨架屏移动端优化 */
+  .skeleton-card {
+    padding: 16px;
+  }
+  
+  .skeleton-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .skeleton-plan-item {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .skeleton-timeline {
+    width: auto;
+    align-self: flex-start;
+  }
 }
 
 @media (max-width: 480px) {
@@ -775,5 +1181,245 @@ const openMedicalAdvice = () => {
     width: 18px;
     height: 18px;
   }
+  
+  /* 骨架屏小屏幕优化 */
+  .skeleton-card {
+    padding: 12px;
+  }
+  
+  .skeleton-icon {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .skeleton-vision-box,
+  .skeleton-action-box {
+    padding: 12px;
+  }
+  
+  .skeleton-plan-item {
+    padding: 12px;
+  }
+}
+
+/* 计划结局专用样式 */
+.plan-ending-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* 立即行动项样式 */
+.immediate-action-item {
+  padding: 8px 12px;
+  background: #e6f7ff;
+  border: 1px solid #91d5ff;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #0958d9;
+  margin-bottom: 8px;
+  position: relative;
+  padding-left: 24px;
+}
+
+.immediate-action-item::before {
+  content: '⚡';
+  position: absolute;
+  left: 8px;
+  color: #1890ff;
+  font-weight: bold;
+}
+
+/* 里程碑项样式 */
+.milestones-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.milestone-item {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: #f6f6f6;
+  border-radius: 8px;
+  border-left: 3px solid #722ed1;
+}
+
+.milestone-timeline {
+  flex-shrink: 0;
+  width: 80px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #722ed1;
+  background: #f9f0ff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.milestone-content {
+  flex: 1;
+}
+
+.milestone-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.milestone-description {
+  font-size: 13px;
+  color: #666;
+}
+
+/* 发展方向样式 */
+.development-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.development-item {
+  padding: 12px 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #e5e5e5;
+  position: relative;
+}
+
+.development-item.priority-high {
+  border-left: 3px solid #ff4d4f;
+  background: #fff2f0;
+}
+
+.development-item.priority-medium {
+  border-left: 3px solid #fa8c16;
+  background: #fff7e6;
+}
+
+.development-item.priority-low {
+  border-left: 3px solid #52c41a;
+  background: #f6ffed;
+}
+
+.development-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.development-description {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.priority-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.priority-badge.badge-high {
+  background: #ffebee;
+  color: #d32f2f;
+}
+
+.priority-badge.badge-medium {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.priority-badge.badge-low {
+  background: #e8f5e8;
+  color: #388e3c;
+}
+
+/* 移动端计划结局样式优化 */
+@media (max-width: 768px) {
+  .milestone-item {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .milestone-timeline {
+    width: auto;
+    align-self: flex-start;
+  }
+  
+  .development-item {
+    padding: 10px 12px;
+  }
+  
+  .priority-badge {
+    position: static;
+    margin-top: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .plan-ending-content {
+    gap: 20px;
+  }
+  
+  .immediate-action-item {
+    font-size: 12px;
+    padding: 6px 10px 6px 20px;
+  }
+  
+  .milestone-item {
+    padding: 12px;
+  }
+  
+  .milestone-title {
+    font-size: 13px;
+  }
+  
+  .milestone-description {
+    font-size: 12px;
+  }
+  
+  .development-title {
+    font-size: 13px;
+  }
+  
+  .development-description {
+    font-size: 12px;
+  }
+}
+
+/* 场景内容样式 */
+.scenario-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* 简单里程碑样式 */
+.milestone-item.simple {
+  padding: 8px 12px;
+  background: #f0f9ff;
+  border: 1px solid #bae7ff;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #0958d9;
+  position: relative;
+  padding-left: 24px;
+}
+
+.milestone-item.simple::before {
+  content: '🎯';
+  position: absolute;
+  left: 8px;
+  color: #1890ff;
+  font-weight: bold;
 }
 </style>

@@ -38,7 +38,7 @@
                 </div>
                 
                 <!-- 示例问题 -->
-                <div class="example-questions" v-if="!userQuery">
+                <div class="example-questions">
                   <h3>试试这些问题</h3>
                   <div class="example-list">
                     <button 
@@ -76,6 +76,7 @@
                 :selected-tags="selectedTagsObjects"
                 :current-query="userQuery"
                 @generate-solutions="generateSolutions"
+                @cards-order-finalized="handleCardsOrderFinalized"
               />
             </section>
 
@@ -87,6 +88,8 @@
                 :allergy-foods="allergyFoods"
                 :current-mood="currentMood"
                 :current-query="userQuery"
+                :is-loading="isLoading"
+                :possibility-cards-order="possibilityCardsOrder"
                 @reset-flow="resetFlow"
                 @toggle-food-allergy="toggleFoodAllergy"
                 @log-activity="logActivity"
@@ -149,6 +152,182 @@ const currentMood = ref('')
 const dynamicTagTitles = ref({})
 const isGeneratingTags = ref(false)
 const aiGeneratedTagData = ref(null)
+const detectedScenario = ref(null) // 检测到的场景类型
+const possibilityCardsOrder = ref([]) // 存储可能性卡片的最终顺序
+
+// 场景类型定义
+const SCENARIO_TYPES = {
+  PLAN_ENDING: 'plan_ending',     // 计划结局（未来规划类）
+  COGNITIVE_BREAKTHROUGH: 'cognitive_breakthrough', // 认知突破
+  PERCEPTION_EXPANSION: 'perception_expansion',     // 感知扩张  
+  PERSONALITY_RESHAPE: 'personality_reshape',       // 人格重塑
+  MEMORY_RECONSTRUCTION: 'memory_reconstruction',   // 记忆重构
+  SOUL_CONNECTION: 'soul_connection',               // 灵魂连接
+  GENERAL_ANALYSIS: 'general_analysis'              // 通用分析
+}
+
+// 增强的场景分析函数
+const analyzeScenario = (query) => {
+  if (!query || !query.trim()) return SCENARIO_TYPES.GENERAL_ANALYSIS
+  
+  const queryLower = query.toLowerCase()
+  console.log('🔍 正在分析问题场景:', query)
+  
+  // 多维度场景检测权重系统
+  const scenarioScores = {
+    [SCENARIO_TYPES.PLAN_ENDING]: 0,
+    [SCENARIO_TYPES.COGNITIVE_BREAKTHROUGH]: 0,
+    [SCENARIO_TYPES.PERCEPTION_EXPANSION]: 0,
+    [SCENARIO_TYPES.PERSONALITY_RESHAPE]: 0,
+    [SCENARIO_TYPES.MEMORY_RECONSTRUCTION]: 0,
+    [SCENARIO_TYPES.SOUL_CONNECTION]: 0
+  }
+  
+  // 1. 计划结局场景关键词匹配
+  const planEndingKeywords = [
+    { word: '5年', weight: 3 }, { word: '年后', weight: 3 }, { word: '未来', weight: 2 },
+    { word: '将来', weight: 2 }, { word: '以后', weight: 2 }, { word: '规划', weight: 2 },
+    { word: '愿景', weight: 2 }, { word: '目标', weight: 1 }, { word: '梦想', weight: 2 },
+    { word: '想象', weight: 1 }, { word: '设想', weight: 1 }, { word: '展望', weight: 2 }
+  ]
+  
+  // 2. 认知突破场景关键词匹配
+  const cognitiveKeywords = [
+    { word: '困住', weight: 3 }, { word: '阻碍', weight: 3 }, { word: '难以推进', weight: 4 },
+    { word: '创业计划', weight: 2 }, { word: '瓶颈', weight: 2 }, { word: '障碍', weight: 2 },
+    { word: '卡住', weight: 2 }, { word: '进展缓慢', weight: 2 }, { word: '停滞', weight: 2 },
+    { word: '突破', weight: 1 }, { word: '困惑', weight: 1 }
+  ]
+  
+  // 3. 感知扩张场景关键词匹配
+  const perceptionKeywords = [
+    { word: '观察力', weight: 4 }, { word: '发现', weight: 2 }, { word: '生活的美', weight: 4 },
+    { word: '重新发现', weight: 3 }, { word: '感受力', weight: 2 }, { word: '美感', weight: 2 },
+    { word: '敏感度', weight: 2 }, { word: '洞察', weight: 2 }, { word: '细节', weight: 1 },
+    { word: '审美', weight: 2 }, { word: '体验', weight: 1 }
+  ]
+  
+  // 4. 人格重塑场景关键词匹配
+  const personalityKeywords = [
+    { word: '自律', weight: 3 }, { word: '果断', weight: 3 }, { word: '领导力', weight: 3 },
+    { word: '成为一个', weight: 2 }, { word: '改变自己', weight: 2 }, { word: '提升自己', weight: 2 },
+    { word: '性格', weight: 2 }, { word: '品格', weight: 2 }, { word: '习惯', weight: 1 },
+    { word: '自控', weight: 2 }, { word: '意志力', weight: 2 }, { word: '执行力', weight: 2 }
+  ]
+  
+  // 5. 记忆重构场景关键词匹配
+  const memoryKeywords = [
+    { word: '回忆', weight: 3 }, { word: '出不来', weight: 4 }, { word: '活在', weight: 3 },
+    { word: '某段', weight: 2 }, { word: '过去', weight: 2 }, { word: '往事', weight: 2 },
+    { word: '纠结', weight: 2 }, { word: '放不下', weight: 3 }, { word: '忘不了', weight: 3 },
+    { word: '释怀', weight: 2 }, { word: '痛苦', weight: 1 }
+  ]
+  
+  // 6. 灵魂连接场景关键词匹配
+  const connectionKeywords = [
+    { word: '共振', weight: 4 }, { word: '同频', weight: 4 }, { word: '内心', weight: 2 },
+    { word: '连接', weight: 2 }, { word: '灵魂', weight: 3 }, { word: '知音', weight: 3 },
+    { word: '理解我', weight: 2 }, { word: '懂我', weight: 2 }, { word: '共鸣', weight: 3 },
+    { word: '深度交流', weight: 2 }, { word: '精神伙伴', weight: 3 }
+  ]
+  
+  // 计算各场景得分
+  const keywordSets = [
+    { keywords: planEndingKeywords, scenario: SCENARIO_TYPES.PLAN_ENDING },
+    { keywords: cognitiveKeywords, scenario: SCENARIO_TYPES.COGNITIVE_BREAKTHROUGH },
+    { keywords: perceptionKeywords, scenario: SCENARIO_TYPES.PERCEPTION_EXPANSION },
+    { keywords: personalityKeywords, scenario: SCENARIO_TYPES.PERSONALITY_RESHAPE },
+    { keywords: memoryKeywords, scenario: SCENARIO_TYPES.MEMORY_RECONSTRUCTION },
+    { keywords: connectionKeywords, scenario: SCENARIO_TYPES.SOUL_CONNECTION }
+  ]
+  
+  keywordSets.forEach(({ keywords, scenario }) => {
+    keywords.forEach(({ word, weight }) => {
+      if (queryLower.includes(word)) {
+        scenarioScores[scenario] += weight
+        console.log(`🎯 关键词匹配: "${word}" -> ${scenario} (+${weight})`)
+      }
+    })
+  })
+  
+  // 找出得分最高的场景
+  const maxScore = Math.max(...Object.values(scenarioScores))
+  if (maxScore > 0) {
+    const detectedScenario = Object.keys(scenarioScores).find(
+      scenario => scenarioScores[scenario] === maxScore
+    )
+    console.log('✅ 场景分析结果:', scenarioScores)
+    console.log('🏆 最终检测场景:', detectedScenario, '(得分:', maxScore, ')')
+    return detectedScenario
+  }
+  
+  // 如果没有匹配到特定场景，返回通用分析
+  console.log('✅ 检测到场景: 通用分析')
+  return SCENARIO_TYPES.GENERAL_ANALYSIS
+}
+
+// 根据场景类型生成对应的系统行为描述
+const getScenarioSystemBehavior = (scenarioType) => {
+  const behaviors = {
+    [SCENARIO_TYPES.PLAN_ENDING]: `
+## 🎯 未来愿景·计划结局引擎
+作为时间线规划系统，我将：
+1. **构建详细未来蓝图**：基于你的问题描绘5年后的具体生活场景和专业状态
+2. **逆向分解行动路径**：从目标终点开始，精确设计每个关键节点的行动计划
+3. **即时行动启动器**：提供明天就能开始执行的具体第一步行动
+4. **进度里程碑设计**：建立可量化的成功指标和阶段性检查点`,
+
+    [SCENARIO_TYPES.COGNITIVE_BREAKTHROUGH]: `
+## 🔍 认知思维盲区检测仪
+作为深度心理分析系统，我需要：
+1. **识别隐藏性信念障碍**：分析你的语言模式、情绪表达、行为习惯，识别潜意识中的自我设限信念
+2. **揭示未意识到的内在障碍**：可能是"我配不上成功"、"我不够聪明"、"成功会带来负担"等深层信念
+3. **提供突破性洞察**：不是告诉你该怎么做，而是让你看见连自己都没意识到的思维模式
+4. **重构认知框架**：帮你建立支持成功的新信念系统`,
+
+    [SCENARIO_TYPES.PERCEPTION_EXPANSION]: `
+## 👁️ 感知扩张训练师
+作为感知力提升系统，我将：
+1. **重新训练观察模式**：引导你以诗意+科学双重视角重新观看日常事物
+2. **激活感受力**：发现街道建筑中的文化密码、情绪氛围、隐藏之美
+3. **扩展感知维度**：从视觉到听觉、触觉、直觉的全方位感知训练
+4. **重燃生活热情**：让你重新爱上世界，发现平凡中的不平凡`,
+
+    [SCENARIO_TYPES.PERSONALITY_RESHAPE]: `
+## 🏆 人格镜像·勇气引擎
+作为人格重塑系统，我将：
+1. **精准分析性格短板**：识别当前人格与目标人格之间的具体差距
+2. **设计微习惯重构**：制定带有反馈机制的行为改变日程
+3. **激活内在勇气**：通过渐进式挑战唤醒你的潜在领导力
+4. **建立新身份认同**：帮你从"想成为"转变为"我就是"的身份转换`,
+
+    [SCENARIO_TYPES.MEMORY_RECONSTRUCTION]: `
+## 🎬 记忆裁缝
+作为记忆重构系统，我将：
+1. **识别情绪锚点**：分析该回忆中的核心情绪触发点（被否定、被遗弃、被伤害）
+2. **重写记忆叙述**：从不同角度重新解读那段经历，发现其中的成长意义
+3. **情感释放疗愈**：通过新的叙述版本，让你以旁观者视角重新审视过去
+4. **重构身份认知**：修复"你是谁"的源代码，建立更健康的自我认知`,
+
+    [SCENARIO_TYPES.SOUL_CONNECTION]: `
+## 🌐 共鸣网络·灵魂连接器
+作为情感共鸣系统，我将：
+1. **深度人格画像**：基于价值观、兴趣、情绪状态构建你的内在映射
+2. **共鸣匹配算法**：识别与你内心频率一致的灵魂伙伴特征
+3. **建立连接桥梁**：提供与同频者交流的话题、方式和平台建议
+4. **创造深度对话**：打破表面社交，直达心灵深处的真实连接`,
+
+    [SCENARIO_TYPES.GENERAL_ANALYSIS]: `
+## 🧠 智能分析系统
+作为通用问题分析系统，我将：
+1. **多角度问题解构**：从不同维度深入分析你的问题本质
+2. **个性化解决方案**：基于你的具体情况提供针对性建议
+3. **系统性思维框架**：帮你建立解决问题的完整思维模型
+4. **可执行行动计划**：将分析结果转化为具体可行的改进方案`
+  }
+  
+  return behaviors[scenarioType] || behaviors[SCENARIO_TYPES.GENERAL_ANALYSIS]
+}
 
 // 固定的可能性数据
 const FIXED_POSSIBILITIES = [
@@ -269,19 +448,16 @@ const selectedTagsObjects = computed(() => {
   return []
 })
 
-// 用户流程系统提示词
-const USER_FLOW_SYSTEM_PROMPT = `
-你是用户流程系统，一个专业的问题理解和分析系统。你的任务是根据用户的问题和他们的记忆日志，生成相关的理解维度标签。
+// 标签生成系统提示词
+const TAG_GENERATION_SYSTEM_PROMPT = `
+你是标签生成系统，专门负责理解用户问题并生成相关的分析维度标签。
 
-作为用户流程系统，你具有以下特点：
-- 能够深入理解用户的个人情况和历史记录
-- 基于用户的记忆日志来提供个性化的分析角度
-- 关注用户的成长轨迹和变化趋势
-- 结合用户的实际经历来生成更有针对性的标签
+## 核心职责
+根据用户的问题和记忆日志，生成3-6个简洁明确的理解维度标签，用于后续的深度分析。
 
-你的能力范围包括：
+## 分析能力范围
 1. 情绪与心理健康管理
-2. 精力与时间管理
+2. 精力与时间管理  
 3. 目标设定与执行
 4. 人际关系与社交技巧
 5. 学习与成长方法
@@ -293,33 +469,15 @@ const USER_FLOW_SYSTEM_PROMPT = `
 11. 知识管理与思维框架
 12. 个人价值与意义探索
 
-分析指导原则：
-- 优先考虑用户记忆日志中提到的具体情况和问题
-- 根据用户的历史记录找出反复出现的主题和模式
-- 结合用户的实际经历来生成更有针对性的标签
-- 考虑用户的成长变化和发展趋势
+## 标签生成原则
+- 每个标签4-8个字，简洁明确
+- 直接关联用户的核心问题
+- 基于用户的记忆日志提供个性化角度
+- 避免抽象概念，使用具体表述
+- 让用户一看就明白分析维度
 
-请根据用户的问题和记忆日志，生成简洁清晰的内容。重要原则：
-
-**内容要求：**
-- 所有文字都要简洁明了，避免冗长复杂的表述
-- 发展目标使用动词开头，4-8个字
-- 已有技能/习惯用简短词汇，4-6个字
-- 标签简洁明确，4-8个字
-- 直接关联用户的问题和实际情况
-- 体现个性化和针对性
-
-**风格示例：**
-- ✅ 具体明确：学Python编程、写技术博客、练英语口语、做副业项目
-- ❌ 抽象模糊：探索跨学科知识、提升沟通力、构建知识框架
-- ❌ 过于冗长：在未来2年内通过系统性学习成为全栈架构师并获得相关认证
-
-**关键原则：**
-- 用具体的技能、工具、行动代替抽象概念
-- 让用户一看就知道要学什么、做什么
-- 每个目标都应该是可立即执行的
-
-请以JSON格式返回，格式如下：
+## 输出格式
+请以JSON格式返回：
 {
   "tags": [
     {
@@ -328,6 +486,58 @@ const USER_FLOW_SYSTEM_PROMPT = `
     }
   ]
 }
+`
+
+// 解决方案生成系统提示词
+const SOLUTION_GENERATION_SYSTEM_PROMPT = `
+你是解决方案生成系统，专业的个人发展规划师和深度心理分析师。你的任务是为用户制定坚定、具体、可执行的行动计划。
+
+## 核心能力
+- 深度心理分析和认知重构
+- 个人发展路径规划
+- 具体行动方案设计
+- 成功指标设定
+
+## 分析方法
+1. 基于用户问题识别核心需求
+2. 结合记忆日志了解个人背景
+3. 考虑可能性卡片的重要性顺序
+4. 制定递进式发展计划
+
+## 输出要求
+为每个发展方向生成包含以下4个部分的详细行动计划：
+
+### 1. 5年后愿景 (futureVision)
+- 描述具体的专业水平和成就
+- 包含具体的数字指标（收入、影响力、项目数量等）
+- 使用确定性语言："你将成为..."而不是"你可能..."
+- 长度：100-150字
+
+### 2. 明天行动 (todayAction)  
+- 必须是明天就能立即执行的具体行动
+- 强调"立即开始"、"马上行动"等坚定语气
+- 避免"收集资源"类建议，直接说要做什么
+- 使用行动导向的动词：创建、写出、打开、练习
+- 长度：80-120字
+
+### 3. 执行计划 (executionPlan)
+时间节点：第1个月、第3个月、第6个月、第1年
+每个阶段包含：
+- title: 阶段核心目标，使用坚定语气
+- description: 该阶段要达成的具体成果
+- actions: 4个具体的行动项，使用"完成"、"掌握"、"建立"等确定性动词
+
+### 4. 成功指标 (successMetrics)
+- 5个可量化、可验证的成果指标
+- 使用"您将..."开头，给用户确定感
+- 包含具体数字和专业水平描述
+- 体现真实的职业价值和个人成长
+
+## 语调要求
+- 坚定、确信的语气，不用"可能"、"建议"等词汇
+- 直接告诉用户要做什么，而不是建议收集什么
+- 使用第二人称"您"、"你"，增强针对性
+- 强调持续行动和专业成长
 `
 
 // 根据ID获取标签标题的辅助函数
@@ -346,6 +556,26 @@ const exampleQuestions = [
   {
     id: 1,
     text: "我想看看5年后的自己会是什么样"
+  },
+  {
+    id: 2,
+    text: "我连续写创业计划，但始终难以推进，感觉被什么困住了"
+  },
+  {
+    id: 3,
+    text: "我总觉得我的观察力不够，想重新发现生活的美"
+  },
+  {
+    id: 4,
+    text: "我想成为一个自律、果断、有领导力的人"
+  },
+  {
+    id: 5,
+    text: "我一直活在某段回忆里出不来"
+  },
+  {
+    id: 6,
+    text: "我想找到和我内心共振的人"
   }
 ]
 
@@ -415,14 +645,20 @@ const loadMemoriesFromStorage = () => {
   }
 }
 
-// 构建包含记忆日志的系统提示词
-const buildSystemPromptWithMemories = () => {
-  let prompt = USER_FLOW_SYSTEM_PROMPT
+// 构建标签生成的专用提示词
+const buildTagGenerationPrompt = (query, scenarioType = null) => {
+  let prompt = TAG_GENERATION_SYSTEM_PROMPT
+  
+  // 如果检测到特定场景，添加场景专用的分析角度
+  if (scenarioType && scenarioType !== SCENARIO_TYPES.GENERAL_ANALYSIS) {
+    const scenarioBehavior = getScenarioSystemBehavior(scenarioType)
+    prompt += `\n\n## 场景特化分析\n基于问题场景类型"${scenarioType}"，请从以下角度生成标签：\n${scenarioBehavior}`
+  }
   
   // 如果有记忆日志，添加到上下文中
   if (memories.value && memories.value.length > 0) {
     prompt += `\n\n## 用户记忆日志上下文\n`
-    prompt += `以下是用户的历史记忆和思考记录，请结合这些信息来生成更个性化和相关的理解维度标签：\n\n`
+    prompt += `以下是用户的历史记忆和思考记录，请结合这些信息来生成更个性化的理解维度标签：\n\n`
     
     // 按时间倒序排列，最新的记录优先
     const sortedMemories = [...memories.value]
@@ -434,8 +670,10 @@ const buildSystemPromptWithMemories = () => {
       prompt += `${index + 1}. [${date}] ${memory.content}\n`
     })
     
-    prompt += `\n基于以上用户的个人记录和思考历史，请生成更贴合用户实际情况的理解维度标签。`
+    prompt += `\n请基于以上用户的个人记录生成贴合实际情况的分析标签。`
   }
+  
+  prompt += `\n\n用户问题："${query}"\n\n请生成3-6个理解维度标签。`
   
   return prompt
 }
@@ -448,18 +686,15 @@ const generateDynamicTags = async (query) => {
     isGeneratingTags.value = true
     console.log('🚀 开始生成动态标签为:', query)
     console.log('📝 包含记忆日志数量:', memories.value.length)
+    console.log('🎯 当前场景类型:', detectedScenario.value)
     
-    const systemPrompt = buildSystemPromptWithMemories()
+    // 使用专门的标签生成提示词
+    const tagPrompt = buildTagGenerationPrompt(query, detectedScenario.value)
     
     // 构建完整的提示词，同时生成标签标题和发展维度数据
-    const fullPrompt = `${systemPrompt}
+    const fullPrompt = `${tagPrompt}
 
-用户问题："${query}"
-
-请同时生成两部分内容：
-
-1. 理解维度标签（供标签选择界面使用）
-2. 发展维度分析（供卡片内容使用）
+同时请生成发展维度分析数据（供后续界面使用）：
 
 返回格式为JSON对象：
 {
@@ -592,6 +827,12 @@ const handleTagSelection = (tags) => {
   proceedToAnalysis()
 }
 
+// 处理可能性卡片顺序确定
+const handleCardsOrderFinalized = (orderedCards) => {
+  console.log('收到最终可能性卡片顺序:', orderedCards)
+  possibilityCardsOrder.value = orderedCards
+}
+
 // 处理标签选择超时
 const handleTagTimeout = (tags) => {
   console.log('标签选择超时，收到结果:', tags)
@@ -624,19 +865,30 @@ const togglePossibility = (id) => {
 }
 
 // 基于用户问题类型和选择标签生成个性化解决方案
-const generateDynamicSolutions = () => {
-  const dynamicSolutions = []
-  const icons = ['🎯', '📚', '💪', '🧠', '❤️', '⚡', '🌟', '🚀', '💡', '🔧']
+const generateDynamicSolutions = async () => {
+  console.log('🎯 开始生成解决方案，场景类型:', detectedScenario.value)
   
-  // 检测问题类型
-  const questionType = detectQuestionType(userQuery.value)
+  // 对于计划结局场景，生成特殊的计划结局解决方案
+  if (detectedScenario.value === SCENARIO_TYPES.PLAN_ENDING) {
+    console.log('🚀 生成计划结局类型解决方案')
+    return await generatePlanEndingSolutions()
+  }
   
-  selectedTagsObjects.value.forEach((tag, index) => {
-    const solution = generatePersonalizedSolution(tag, questionType, index, icons)
-    dynamicSolutions.push(solution)
-  })
+  // 优先尝试使用AI生成动态内容
+  const aiSolutions = await generateDynamicSolutionsFromAI(
+    userQuery.value, 
+    selectedTagsObjects.value, 
+    memories.value
+  )
   
-  return dynamicSolutions
+  if (aiSolutions && aiSolutions.length > 0) {
+    console.log('✅ 使用AI生成的动态解决方案')
+    return aiSolutions
+  }
+  
+  // AI失败时使用基于场景的静态方案
+  console.log('📋 使用基于场景的静态解决方案')
+  return generateScenarioBasedSolutions()
 }
 
 // 检测用户问题类型
@@ -655,16 +907,34 @@ const detectQuestionType = (query) => {
 }
 
 // 生成个性化解决方案
-const generatePersonalizedSolution = (tag, questionType, index, icons) => {
-  const templates = getSolutionTemplates(questionType)
+const generatePersonalizedSolution = (tag, scenarioType, index, icons) => {
+  // 根据场景类型获取对应的解决方案类型
+  let solutionType = 'future_action'
+  
+  if (scenarioType === SCENARIO_TYPES.PLAN_ENDING) {
+    solutionType = 'plan_ending'
+  } else if (scenarioType === SCENARIO_TYPES.COGNITIVE_BREAKTHROUGH) {
+    solutionType = 'cognitive_breakthrough'
+  } else if (scenarioType === SCENARIO_TYPES.PERCEPTION_EXPANSION) {
+    solutionType = 'perception_expansion'
+  } else if (scenarioType === SCENARIO_TYPES.PERSONALITY_RESHAPE) {
+    solutionType = 'personality_reshape'
+  } else if (scenarioType === SCENARIO_TYPES.MEMORY_RECONSTRUCTION) {
+    solutionType = 'memory_reconstruction' 
+  } else if (scenarioType === SCENARIO_TYPES.SOUL_CONNECTION) {
+    solutionType = 'soul_connection'
+  }
+  
+  // 获取场景对应的模板
+  const templates = getSolutionTemplates(scenarioType)
   const template = templates[tag.title] || templates.default
   
   return {
     id: tag.id,
-    type: 'future_action',
+    type: solutionType,
     icon: icons[index % icons.length],
     title: tag.title,
-    questionType: questionType,
+    scenarioType: scenarioType,
     futureVision: template.futureVision.replace('{tag}', tag.title),
     todayAction: template.todayAction.replace('{tag}', tag.title),
     milestones: template.milestones || [],
@@ -674,9 +944,447 @@ const generatePersonalizedSolution = (tag, questionType, index, icons) => {
   }
 }
 
-// 获取不同问题类型的解决方案模板
-const getSolutionTemplates = (questionType) => {
+// 构建解决方案生成的专用提示词
+const buildSolutionGenerationPrompt = (userQuery, selectedTags, userMemories) => {
+  let prompt = SOLUTION_GENERATION_SYSTEM_PROMPT
+  
+  // 使用场景分析系统获取系统行为
+  const scenarioType = detectedScenario.value || analyzeScenario(userQuery)
+  if (scenarioType && scenarioType !== SCENARIO_TYPES.GENERAL_ANALYSIS) {
+    const specialSystemBehavior = getScenarioSystemBehavior(scenarioType)
+    prompt += `\n\n## 场景特化分析\n基于问题场景类型"${scenarioType}"，请采用以下专业分析方式：\n${specialSystemBehavior}`
+  }
+  
+  // 添加用户背景信息
+  if (userMemories && userMemories.length > 0) {
+    prompt += `\n\n## 用户背景信息\n`
+    userMemories.slice(0, 5).forEach((memory, index) => {
+      prompt += `${index + 1}. ${memory.content}\n`
+    })
+  }
+  
+  // 添加可能性卡片顺序信息
+  if (possibilityCardsOrder.value && possibilityCardsOrder.value.length > 0) {
+    prompt += `\n\n## 可能性展示卡片的最终顺序（按重要性排列）\n`
+    possibilityCardsOrder.value.forEach((card, index) => {
+      prompt += `${index + 1}. ${card.title} - ${card.description}\n`
+    })
+    prompt += `\n请按照此顺序的重要性来安排解决方案的优先级和详细程度。`
+  }
+  
+  prompt += `\n\n## 任务要求\n用户问题：${userQuery}\n用户选择的发展方向：${selectedTags.map(tag => tag.title).join('、')}`
+  
+  return prompt
+}
+
+// 调用AI接口生成动态解决方案
+const generateDynamicSolutionsFromAI = async (userQuery, selectedTags, userMemories) => {
+  try {
+    console.log('🤖 开始调用AI生成动态解决方案')
+    
+    const basePrompt = buildSolutionGenerationPrompt(userQuery, selectedTags, userMemories)
+    
+    // 添加具体的输出格式要求
+    const fullPrompt = `${basePrompt}
+
+## 输出格式要求
+为每个发展方向生成JSON格式的数据：
+
+\`\`\`json
+{
+  "solutions": [
+    {
+      "title": "发展方向名称",
+      "futureVision": "5年后详细愿景描述",
+      "todayAction": "明天立即开始的具体行动",
+      "executionPlan": [
+        {
+          "time": "第1个月",
+          "title": "阶段标题",
+          "description": "阶段描述",
+          "actions": ["具体行动1", "具体行动2", "具体行动3", "具体行动4"]
+        }
+      ],
+      "successMetrics": [
+        "您将达成的具体成果1",
+        "您将达成的具体成果2",
+        "您将达成的具体成果3",
+        "您将达成的具体成果4",
+        "您将达成的具体成果5"
+      ]
+    }
+  ]
+}
+\`\`\`
+
+请严格按照JSON格式输出，确保数据结构完整。`
+    
+    const response = await aiApiService.sendMessage(fullPrompt)
+    
+    if (response.success && response.data?.choices?.[0]?.message?.content) {
+      const content = response.data.choices[0].message.content
+      
+      // 提取JSON数据
+      const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        const parsedData = JSON.parse(jsonMatch[1] || jsonMatch[0])
+        
+        if (parsedData.solutions && Array.isArray(parsedData.solutions)) {
+          // 转换为组件需要的格式
+          return parsedData.solutions.map((solution, index) => ({
+            id: `ai-solution-${index}`,
+            type: 'future_action',
+            icon: ['🎯', '📚', '💪', '🧠', '❤️', '⚡', '🌟', '🚀', '💡', '🔧'][index % 10],
+            title: solution.title,
+            futureVision: solution.futureVision,
+            todayAction: solution.todayAction,
+            executionPlan: solution.executionPlan,
+            successMetrics: solution.successMetrics,
+            timeframe: '5年后',
+            actionPeriod: '明天开始'
+          }))
+        }
+      }
+    }
+    
+    console.warn('⚠️ AI响应解析失败，使用默认方案')
+    return null
+    
+  } catch (error) {
+    console.error('❌ AI接口调用失败:', error)
+    return null
+  }
+}
+
+// 生成计划结局内容的专门函数
+const generatePlanEndingContent = async (query) => {
+  try {
+    isLoading.value = true
+    console.log('🎯 开始生成计划结局内容:', query)
+    
+    // 使用专门的解决方案生成提示词构建
+    const basePrompt = buildSolutionGenerationPrompt(query, [], memories.value)
+    
+    const planEndingPrompt = `${basePrompt}
+
+## 特别要求：计划结局场景分析
+请为用户的未来规划问题生成详细的计划结局内容，包含以下部分：
+
+1. **5年后愿景描述**：具体描绘用户5年后的生活状态、专业成就和个人成长
+2. **关键里程碑**：从现在到5年后的重要节点和标志性成就
+3. **立即行动计划**：明天就能开始的具体行动步骤
+4. **核心发展方向**：3-5个主要的发展领域和技能点
+
+返回格式为JSON：
+{
+  "planEnding": {
+    "futureVision": "详细的5年后愿景描述",
+    "keyMilestones": [
+      {
+        "timeframe": "时间节点",
+        "title": "里程碑标题", 
+        "description": "具体描述"
+      }
+    ],
+    "immediateActions": [
+      "立即可执行的行动1",
+      "立即可执行的行动2",
+      "立即可执行的行动3"
+    ],
+    "developmentAreas": [
+      {
+        "title": "发展方向名称",
+        "priority": "high/medium/low",
+        "description": "发展方向描述"
+      }
+    ]
+  }
+}
+
+要求：
+- 内容要具体、可操作、有针对性
+- 5年愿景要包含具体的数字和成就指标
+- 立即行动必须是明天就能开始的具体事项
+- 发展方向要与用户问题高度相关`
+    
+    const response = await aiApiService.sendMessage(planEndingPrompt)
+    
+    if (response.success && response.data?.choices?.[0]?.message?.content) {
+      const content = response.data.choices[0].message.content
+      
+      try {
+        const jsonMatch = content.match(/\{[\s\S]*\}/)
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0])
+          
+          if (parsed.planEnding) {
+            // 将计划结局数据存储到solutions中，以便在SolutionCards中显示
+            solutions.value = [{
+              id: 'plan-ending-1',
+              type: 'plan_ending',
+              title: '你的未来愿景',
+              planEndingData: parsed.planEnding,
+              futureVision: parsed.planEnding.futureVision,
+              immediateActions: parsed.planEnding.immediateActions,
+              keyMilestones: parsed.planEnding.keyMilestones,
+              developmentAreas: parsed.planEnding.developmentAreas
+            }]
+            
+            console.log('✅ 计划结局内容生成成功:', parsed.planEnding)
+            // 直接跳转到solutions显示
+            currentStep.value = 'solutions'
+            return
+          }
+        }
+      } catch (parseError) {
+        console.warn('⚠️ 计划结局JSON解析失败:', parseError)
+      }
+    }
+    
+    // 如果AI生成失败，使用默认的计划结局内容
+    console.log('📋 使用默认计划结局内容')
+    solutions.value = [{
+      id: 'plan-ending-default',
+      type: 'plan_ending', 
+      title: '你的未来愿景',
+      planEndingData: {
+        futureVision: '5年后，你将成为一个更加成熟、自信和有影响力的人。你将在自己选择的领域达到专业水平，拥有清晰的人生方向和强大的执行能力。',
+        keyMilestones: [
+          {
+            timeframe: '第1年',
+            title: '基础建设期',
+            description: '确立核心目标，建立学习和成长的基础框架'
+          },
+          {
+            timeframe: '第3年', 
+            title: '能力突破期',
+            description: '在关键领域取得显著进展，建立个人品牌和影响力'
+          },
+          {
+            timeframe: '第5年',
+            title: '愿景实现期', 
+            description: '达成核心目标，成为该领域的专家和引领者'
+          }
+        ],
+        immediateActions: [
+          '明天开始制定详细的5年规划',
+          '确定3个最重要的发展方向',
+          '建立每日学习和成长的习惯'
+        ],
+        developmentAreas: [
+          {
+            title: '专业技能提升',
+            priority: 'high',
+            description: '在核心专业领域达到专家水平'
+          },
+          {
+            title: '个人品牌建设',
+            priority: 'medium', 
+            description: '建立个人影响力和专业声誉'
+          },
+          {
+            title: '综合素质发展',
+            priority: 'medium',
+            description: '提升领导力、沟通力等综合能力'
+          }
+        ]
+      }
+    }]
+    
+    currentStep.value = 'solutions'
+    
+  } catch (error) {
+    console.error('❌ 生成计划结局内容失败:', error)
+    // 发生错误时回退到标准流程
+    currentStep.value = 'tags'
+    await generateDynamicTags(query)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// 生成计划结局类型的解决方案
+const generatePlanEndingSolutions = async () => {
+  // 复用之前的计划结局生成逻辑，但格式化为标准解决方案格式
+  try {
+    const query = userQuery.value
+    
+    // 使用专门的解决方案生成提示词
+    const basePrompt = buildSolutionGenerationPrompt(query, selectedTagsObjects.value, memories.value)
+    
+    const planEndingPrompt = `${basePrompt}
+
+## 特别要求：计划结局场景
+请为每个发展方向生成计划结局内容，返回格式为JSON：
+{
+  "solutions": [
+    {
+      "title": "发展方向名称",
+      "futureVision": "5年后的具体愿景",
+      "immediateActions": ["立即行动1", "立即行动2", "立即行动3"],
+      "keyMilestones": [
+        {
+          "timeframe": "时间节点",
+          "title": "里程碑标题",
+          "description": "具体描述"
+        }
+      ],
+      "developmentAreas": [
+        {
+          "title": "发展方向",
+          "priority": "high/medium/low", 
+          "description": "描述"
+        }
+      ]
+    }
+  ]
+}`
+    
+    const response = await aiApiService.sendMessage(planEndingPrompt)
+    
+    if (response.success && response.data?.choices?.[0]?.message?.content) {
+      const content = response.data.choices[0].message.content
+      
+      try {
+        const jsonMatch = content.match(/\{[\s\S]*\}/)
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0])
+          
+          if (parsed.solutions && Array.isArray(parsed.solutions)) {
+            return parsed.solutions.map((solution, index) => ({
+              id: `plan-ending-${index}`,
+              type: 'plan_ending',
+              icon: ['🎯', '📚', '💪', '🧠', '❤️', '⚡', '🌟', '🚀'][index % 8],
+              title: solution.title,
+              planEndingData: {
+                futureVision: solution.futureVision,
+                immediateActions: solution.immediateActions,
+                keyMilestones: solution.keyMilestones,
+                developmentAreas: solution.developmentAreas
+              },
+              futureVision: solution.futureVision,
+              immediateActions: solution.immediateActions,
+              keyMilestones: solution.keyMilestones,
+              developmentAreas: solution.developmentAreas
+            }))
+          }
+        }
+      } catch (parseError) {
+        console.warn('⚠️ 计划结局解析失败:', parseError)
+      }
+    }
+  } catch (error) {
+    console.error('❌ 计划结局AI生成失败:', error)
+  }
+  
+  // 使用默认的计划结局解决方案
+  return selectedTagsObjects.value.map((tag, index) => ({
+    id: `plan-ending-default-${index}`,
+    type: 'plan_ending',
+    icon: ['🎯', '📚', '💪', '🧠', '❤️', '⚡', '🌟', '🚀'][index % 8],
+    title: tag.title,
+    planEndingData: {
+      futureVision: `5年后，你将在${tag.title}领域成为专家，拥有深厚的专业知识和丰富的实践经验。`,
+      immediateActions: [
+        `明天开始制定${tag.title}的学习计划`,
+        `寻找${tag.title}相关的优质资源`,
+        `每天投入固定时间练习${tag.title}`
+      ],
+      keyMilestones: [
+        {
+          timeframe: '第1年',
+          title: '基础建设期',
+          description: `在${tag.title}领域建立扎实的基础知识和技能`
+        },
+        {
+          timeframe: '第3年',
+          title: '能力突破期',
+          description: `在${tag.title}方面取得显著进展，建立个人优势`
+        },
+        {
+          timeframe: '第5年',
+          title: '专家水平',
+          description: `成为${tag.title}领域的专家，具备指导他人的能力`
+        }
+      ],
+      developmentAreas: [
+        {
+          title: `${tag.title}核心技能`,
+          priority: 'high',
+          description: `深度掌握${tag.title}的核心知识和技能`
+        },
+        {
+          title: '实践应用能力',
+          priority: 'medium',
+          description: `将理论知识转化为实际应用能力`
+        }
+      ]
+    }
+  }))
+}
+
+// 生成基于场景的静态解决方案
+const generateScenarioBasedSolutions = () => {
+  const icons = ['🎯', '📚', '💪', '🧠', '❤️', '⚡', '🌟', '🚀', '💡', '🔧']
+  
+  return selectedTagsObjects.value.map((tag, index) => {
+    const solution = generatePersonalizedSolution(tag, detectedScenario.value, index, icons)
+    return solution
+  })
+}
+
+// 获取不同场景类型的解决方案模板（保留作为备用）
+const getSolutionTemplates = (scenarioType) => {
   const templates = {
+    [SCENARIO_TYPES.PLAN_ENDING]: {
+      // 计划结局场景模板
+      default: {
+        futureVision: '5年后，你将在{tag}领域达到专业水平，成为这个领域的专家和引领者',
+        todayAction: '明天开始制定{tag}的详细发展计划，每天投入至少1小时专注学习',
+        milestones: ['3个月建立基础', '1年达到入门水平', '3年获得专业能力', '5年成为领域专家']
+      }
+    },
+    [SCENARIO_TYPES.COGNITIVE_BREAKTHROUGH]: {
+      // 认知突破场景模板
+      default: {
+        futureVision: '通过识别和突破{tag}相关的认知盲区，你将获得全新的思维框架和行动能力',
+        todayAction: '明天开始反思{tag}中的思维模式，记录阻碍你的内在信念',
+        milestones: ['识别认知障碍', '重构思维框架', '建立新行为模式', '实现突破性进展']
+      }
+    },
+    [SCENARIO_TYPES.PERCEPTION_EXPANSION]: {
+      // 感知扩张场景模板
+      default: {
+        futureVision: '你将拥有敏锐的{tag}能力，能够发现生活中被忽视的美好和深层意义',
+        todayAction: '明天开始进行{tag}相关的观察练习，每天记录3个新发现',
+        milestones: ['建立观察习惯', '提升感知敏锐度', '发现隐藏之美', '重燃生活热情']
+      }
+    },
+    [SCENARIO_TYPES.PERSONALITY_RESHAPE]: {
+      // 人格重塑场景模板
+      default: {
+        futureVision: '你将成为一个具备{tag}特质的人，拥有强大的内在力量和领导魅力',
+        todayAction: '明天开始实践{tag}相关的微习惯，每天完成一个小挑战',
+        milestones: ['建立新习惯', '强化意志力', '塑造新身份', '展现领导力']
+      }
+    },
+    [SCENARIO_TYPES.MEMORY_RECONSTRUCTION]: {
+      // 记忆重构场景模板
+      default: {
+        futureVision: '你将从{tag}的困扰中解脱，建立健康的自我认知和情感模式',
+        todayAction: '明天开始写下关于{tag}的新叙述，从成长的角度重新解读过去',
+        milestones: ['识别情绪锚点', '重写记忆叙述', '释放负面情感', '建立新的自我认知']
+      }
+    },
+    [SCENARIO_TYPES.SOUL_CONNECTION]: {
+      // 灵魂连接场景模板
+      default: {
+        futureVision: '你将找到与你{tag}的灵魂伙伴，建立深度而有意义的人际连接',
+        todayAction: '明天开始主动寻找{tag}相关的社群和平台，开始真实的自我表达',
+        milestones: ['明确内在需求', '找到合适平台', '建立真实连接', '形成深度关系']
+      }
+    },
+    // 保留原有的future_vision模板作为备用
     future_vision: {
       // 针对"5年后的自己"类型问题的模板
       'Python编程': {
@@ -733,7 +1441,7 @@ const getSolutionTemplates = (questionType) => {
     }
   }
   
-  return templates[questionType] || templates.general
+  return templates[scenarioType] || templates.general
 }
 
 // 生成解决方案
@@ -741,10 +1449,15 @@ const generateSolutions = async () => {
   isLoading.value = true
   currentStep.value = 'solutions'
   
-  await new Promise(resolve => setTimeout(resolve, 1500))
-  
-  // 使用基于用户标签的动态解决方案数据
-  solutions.value = generateDynamicSolutions()
+  // 调用AI生成解决方案（或使用备用方案）
+  try {
+    solutions.value = await generateDynamicSolutions()
+    console.log('✅ 解决方案生成完成:', solutions.value.length, '个方案')
+  } catch (error) {
+    console.error('❌ 生成解决方案失败:', error)
+    // 确保有备用数据
+    solutions.value = []
+  }
   
   isLoading.value = false
 }
@@ -802,10 +1515,16 @@ const getInputState = () => {
 const handleQuerySubmit = async (query) => {
   userQuery.value = query
   
-  // 进入标签选择阶段
+  // 🔍 第一步：分析问题场景（但保持统一流程）
+  detectedScenario.value = analyzeScenario(query)
+  console.log('📝 用户问题:', query)
+  console.log('🎯 检测到的场景类型:', detectedScenario.value)
+  
+  // 所有问题都走标准流程：标签选择 → 可能性展示 → 解决方案
+  console.log('📋 进入标准三步骤流程')
   currentStep.value = 'tags'
   
-  // 立即开始生成AI数据
+  // 立即开始生成AI数据（会根据场景类型生成不同的标签和内容）
   await generateDynamicTags(query)
 }
 
@@ -816,10 +1535,16 @@ const handleEditQuery = () => {
 const setExampleQuery = async (text) => {
   userQuery.value = text
   
-  // 进入标签选择阶段
+  // 🔍 第一步：分析问题场景（但保持统一流程）
+  detectedScenario.value = analyzeScenario(text)
+  console.log('📝 示例问题:', text)
+  console.log('🎯 检测到的场景类型:', detectedScenario.value)
+  
+  // 所有问题都走标准流程：标签选择 → 可能性展示 → 解决方案
+  console.log('📋 进入标准三步骤流程')
   currentStep.value = 'tags'
   
-  // 立即开始生成AI数据
+  // 立即开始生成AI数据（会根据场景类型生成不同的标签和内容）
   await generateDynamicTags(text)
 }
 
@@ -836,6 +1561,7 @@ const resetFlow = () => {
   dynamicTagTitles.value = {}
   aiGeneratedTagData.value = null
   isGeneratingTags.value = false
+  possibilityCardsOrder.value = []
 }
 
 // 生命周期
