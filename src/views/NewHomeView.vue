@@ -590,7 +590,7 @@ export default {
     
     .cards-area {
       flex: 1;
-      padding: 0 1rem 1rem;
+      padding: .5rem 1rem 1rem;
       overflow-y: auto;
     }
   }
@@ -687,7 +687,6 @@ export default {
   .cards-area {
     position: relative;
     z-index: 2;
-    margin-top: 1rem;
   }
 }
 

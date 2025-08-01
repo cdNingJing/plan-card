@@ -231,14 +231,58 @@
                   :key="`resource-${index}`"
                   class="state-item"
                 >
-                  <div class="item-content">
+                  <div class="item-content" v-if="editingResource !== resource.id">
                     <span class="item-type">{{ resource.type }}</span>
                     <span class="item-value">{{ resource.value }}</span>
                     <span class="item-status" :class="resource.status">{{ getStatusText(resource.status) }}</span>
                   </div>
-                  <button class="edit-btn" @click="editResource(index)">
-                    <Edit3 :size="12" />
-                  </button>
+                  <div class="item-content editing" v-else>
+                    <input 
+                      v-model="resource.type" 
+                      class="edit-input edit-type"
+                      @keyup.enter="saveResourceEdit(index, 'type', resource.type)"
+                      @keyup.escape="cancelResourceEdit()"
+                      placeholder="资源类型"
+                    />
+                    <input 
+                      v-model="resource.value" 
+                      class="edit-input edit-value"
+                      @keyup.enter="saveResourceEdit(index, 'value', resource.value)"
+                      @keyup.escape="cancelResourceEdit()"
+                      placeholder="资源数值"
+                    />
+                    <select 
+                      v-model="resource.status" 
+                      class="edit-select edit-status"
+                      @change="saveResourceEdit(index, 'status', resource.status)"
+                    >
+                      <option value="available">可用</option>
+                      <option value="limited">有限</option>
+                      <option value="unavailable">不可用</option>
+                    </select>
+                  </div>
+                  <div class="item-actions">
+                    <template v-if="editingResource !== resource.id">
+                      <button class="edit-btn" @click="editResource(index)">
+                        <Edit3 :size="12" />
+                      </button>
+                      <button 
+                        v-if="isResourceDeletable(resource)"
+                        class="delete-btn" 
+                        @click="deleteResource(resource.id)"
+                      >
+                        <Trash2 :size="12" />
+                      </button>
+                    </template>
+                    <template v-else>
+                      <button class="save-btn" @click="saveResourceEdit(index, 'type', resource.type)">
+                        <CheckCircle :size="12" />
+                      </button>
+                      <button class="cancel-btn" @click="cancelResourceEdit()">
+                        <Circle :size="12" />
+                      </button>
+                    </template>
+                  </div>
                 </div>
               </div>
             </div>
@@ -260,7 +304,7 @@
                   :key="`capability-${index}`"
                   class="state-item"
                 >
-                  <div class="item-content">
+                  <div class="item-content" v-if="editingCapability !== capability.id">
                     <span class="item-title">{{ capability.skill }}</span>
                     <div class="skill-level">
                       <div class="level-bar">
@@ -272,9 +316,57 @@
                       <span class="level-text">{{ capability.level }}%</span>
                     </div>
                   </div>
-                  <button class="edit-btn" @click="editCapability(index)">
-                    <Edit3 :size="12" />
-                  </button>
+                  <div class="item-content editing" v-else>
+                    <input 
+                      v-model="capability.skill" 
+                      class="edit-input edit-skill"
+                      @keyup.enter="saveCapabilityEdit(index, 'skill', capability.skill)"
+                      @keyup.escape="cancelCapabilityEdit()"
+                      placeholder="技能名称"
+                    />
+                    <div class="skill-level editing">
+                      <input 
+                        v-model.number="capability.level" 
+                        type="range"
+                        min="0" 
+                        max="100" 
+                        class="level-slider"
+                        @change="saveCapabilityEdit(index, 'level', capability.level)"
+                      />
+                      <input 
+                        v-model.number="capability.level" 
+                        type="number"
+                        min="0" 
+                        max="100" 
+                        class="level-input"
+                        @keyup.enter="saveCapabilityEdit(index, 'level', capability.level)"
+                        @keyup.escape="cancelCapabilityEdit()"
+                      />
+                      <span class="level-text">%</span>
+                    </div>
+                  </div>
+                  <div class="item-actions">
+                    <template v-if="editingCapability !== capability.id">
+                      <button class="edit-btn" @click="editCapability(index)">
+                        <Edit3 :size="12" />
+                      </button>
+                      <button 
+                        v-if="isCapabilityDeletable(capability)"
+                        class="delete-btn" 
+                        @click="deleteCapability(capability.id)"
+                      >
+                        <Trash2 :size="12" />
+                      </button>
+                    </template>
+                    <template v-else>
+                      <button class="save-btn" @click="saveCapabilityEdit(index, 'skill', capability.skill)">
+                        <CheckCircle :size="12" />
+                      </button>
+                      <button class="cancel-btn" @click="cancelCapabilityEdit()">
+                        <Circle :size="12" />
+                      </button>
+                    </template>
+                  </div>
                 </div>
               </div>
             </div>
@@ -296,14 +388,59 @@
                   :key="`goal-${index}`"
                   class="state-item"
                 >
-                  <div class="item-content">
+                  <div class="item-content" v-if="editingGoal !== goal.id">
                     <span class="item-title">{{ goal.target }}</span>
                     <span class="item-priority" :class="goal.priority">{{ getPriorityText(goal.priority) }}</span>
                     <span class="item-timeline">{{ goal.timeline }}</span>
                   </div>
-                  <button class="edit-btn" @click="editGoal(index)">
-                    <Edit3 :size="12" />
-                  </button>
+                  <div class="item-content editing" v-else>
+                    <input 
+                      v-model="goal.target" 
+                      class="edit-input edit-target"
+                      @keyup.enter="saveGoalEdit(index, 'target', goal.target)"
+                      @keyup.escape="cancelGoalEdit()"
+                      placeholder="目标名称"
+                    />
+                    <select 
+                      v-model="goal.priority" 
+                      class="edit-select edit-priority"
+                      @change="saveGoalEdit(index, 'priority', goal.priority)"
+                    >
+                      <option value="low">低优先级</option>
+                      <option value="medium">中优先级</option>
+                      <option value="high">高优先级</option>
+                      <option value="critical">紧急</option>
+                    </select>
+                    <input 
+                      v-model="goal.timeline" 
+                      class="edit-input edit-timeline"
+                      @keyup.enter="saveGoalEdit(index, 'timeline', goal.timeline)"
+                      @keyup.escape="cancelGoalEdit()"
+                      placeholder="时间规划"
+                    />
+                  </div>
+                  <div class="item-actions">
+                    <template v-if="editingGoal !== goal.id">
+                      <button class="edit-btn" @click="editGoal(index)">
+                        <Edit3 :size="12" />
+                      </button>
+                      <button 
+                        v-if="isGoalDeletable(goal)"
+                        class="delete-btn" 
+                        @click="deleteGoal(goal.id)"
+                      >
+                        <Trash2 :size="12" />
+                      </button>
+                    </template>
+                    <template v-else>
+                      <button class="save-btn" @click="saveGoalEdit(index, 'target', goal.target)">
+                        <CheckCircle :size="12" />
+                      </button>
+                      <button class="cancel-btn" @click="cancelGoalEdit()">
+                        <Circle :size="12" />
+                      </button>
+                    </template>
+                  </div>
                 </div>
               </div>
             </div>
@@ -514,7 +651,8 @@ import {
   AlertTriangle,
   CheckCircle,
   Circle,
-  Calendar
+  Calendar,
+  Trash2
 } from 'lucide-vue-next'
 
 export default {
@@ -534,7 +672,8 @@ export default {
     AlertTriangle,
     CheckCircle,
     Circle,
-    Calendar
+    Calendar,
+    Trash2
   },
   props: {
     dream: {
@@ -558,32 +697,69 @@ export default {
     const starryBackground = ref(null)
     const stars = ref([])
     
-    // 当前状态数据
-    const currentResources = ref([
-      { type: '时间', value: '每天2小时', status: 'available' },
-      { type: '资金', value: '月预算5000元', status: 'limited' },
-      { type: '人脉', value: '教育行业朋友', status: 'available' },
-      { type: '学习资料', value: '在线课程账号', status: 'available' },
-      { type: '专业指导', value: '缺乏专业导师', status: 'scarce' },
-      { type: '实践机会', value: '缺少实际应用场景', status: 'scarce' }
-    ])
+    // 编辑状态管理
+    const editingResource = ref(null)
+    const editingCapability = ref(null)
+    const editingGoal = ref(null)
     
-    const currentCapabilities = ref([
-      { skill: '时间管理', level: 75 },
-      { skill: '学习指导', level: 85 },
-      { skill: '财务规划', level: 60 },
-      { skill: '沟通协调', level: 80 },
-      { skill: '项目管理', level: 70 },
-      { skill: '压力管理', level: 45 },
-      { skill: '网络营销', level: 35 }
-    ])
+    // 本地存储键名
+    const STORAGE_KEYS = {
+      RESOURCES: 'hypertime_current_resources',
+      CAPABILITIES: 'hypertime_current_capabilities',
+      GOALS: 'hypertime_current_goals'
+    }
     
-    const currentGoals = ref([
-      { target: '提升孩子SAT成绩到1550+', priority: 'high', timeline: '6个月内' },
-      { target: '建立完整学习计划', priority: 'high', timeline: '1个月内' },
-      { target: '联系哈佛校友mentor', priority: 'medium', timeline: '3个月内' },
-      { target: '准备申请文书', priority: 'medium', timeline: '9个月内' }
-    ])
+    // 从本地存储加载数据的工具函数
+    const loadFromStorage = (key, defaultData) => {
+      try {
+        const stored = localStorage.getItem(key)
+        return stored ? JSON.parse(stored) : defaultData
+      } catch (error) {
+        console.error('Failed to load from localStorage:', error)
+        return defaultData
+      }
+    }
+    
+    // 保存数据到本地存储的工具函数
+    const saveToStorage = (key, data) => {
+      try {
+        localStorage.setItem(key, JSON.stringify(data))
+      } catch (error) {
+        console.error('Failed to save to localStorage:', error)
+      }
+    }
+    
+    // 默认数据
+    const defaultResources = [
+      { id: '1', type: '时间', value: '每天2小时', status: 'available', createdAt: new Date().toISOString() },
+      { id: '2', type: '资金', value: '月预算5000元', status: 'limited', createdAt: new Date().toISOString() },
+      { id: '3', type: '人脉', value: '教育行业朋友', status: 'available', createdAt: new Date().toISOString() },
+      { id: '4', type: '学习资料', value: '在线课程账号', status: 'available', createdAt: new Date().toISOString() },
+      { id: '5', type: '专业指导', value: '缺乏专业导师', status: 'scarce', createdAt: new Date().toISOString() },
+      { id: '6', type: '实践机会', value: '缺少实际应用场景', status: 'scarce', createdAt: new Date().toISOString() }
+    ]
+    
+    const defaultCapabilities = [
+      { id: '1', skill: '时间管理', level: 75, createdAt: new Date().toISOString() },
+      { id: '2', skill: '学习指导', level: 85, createdAt: new Date().toISOString() },
+      { id: '3', skill: '财务规划', level: 60, createdAt: new Date().toISOString() },
+      { id: '4', skill: '沟通协调', level: 80, createdAt: new Date().toISOString() },
+      { id: '5', skill: '项目管理', level: 70, createdAt: new Date().toISOString() },
+      { id: '6', skill: '压力管理', level: 45, createdAt: new Date().toISOString() },
+      { id: '7', skill: '网络营销', level: 35, createdAt: new Date().toISOString() }
+    ]
+    
+    const defaultGoals = [
+      { id: '1', target: '提升孩子SAT成绩到1550+', priority: 'high', timeline: '6个月内', createdAt: new Date().toISOString() },
+      { id: '2', target: '建立完整学习计划', priority: 'high', timeline: '1个月内', createdAt: new Date().toISOString() },
+      { id: '3', target: '联系哈佛校友mentor', priority: 'medium', timeline: '3个月内', createdAt: new Date().toISOString() },
+      { id: '4', target: '准备申请文书', priority: 'medium', timeline: '9个月内', createdAt: new Date().toISOString() }
+    ]
+    
+    // 当前状态数据（从本地存储加载）
+    const currentResources = ref(loadFromStorage(STORAGE_KEYS.RESOURCES, defaultResources))
+    const currentCapabilities = ref(loadFromStorage(STORAGE_KEYS.CAPABILITIES, defaultCapabilities))
+    const currentGoals = ref(loadFromStorage(STORAGE_KEYS.GOALS, defaultGoals))
     
     const timelineTabs = [
       { key: 'history', label: '历史', icon: Clock },
@@ -934,35 +1110,252 @@ export default {
       return priorityMap[priority] || priority
     }
     
-    // 添加和编辑功能
-    const addResource = () => {
-      // TODO: 打开资源添加弹窗
-      console.log('Add resource')
+    // 判断项目是否可删除的函数
+    const isResourceDeletable = (resource) => {
+      // 所有资源都可以删除
+      return true
+    }
+    
+    const isCapabilityDeletable = (capability) => {
+      // 所有能力都可以删除
+      return true
+    }
+    
+    const isGoalDeletable = (goal) => {
+      // 只有用户新添加的目标才能删除（id > 4 的项目，因为默认有4个）
+      const defaultGoalIds = ['1', '2', '3', '4']
+      return !defaultGoalIds.includes(goal.id)
+    }
+    
+    // 生成唯一ID的工具函数
+    const generateId = () => {
+      return Date.now().toString(36) + Math.random().toString(36).substr(2)
+    }
+    
+    // 资源管理方法
+    const addResource = (resourceData = null) => {
+      const newResource = resourceData || {
+        id: generateId(),
+        type: '新资源',
+        value: '请编辑描述',
+        status: 'available',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+      
+      currentResources.value.push(newResource)
+      saveToStorage(STORAGE_KEYS.RESOURCES, currentResources.value)
+      console.log('Added resource:', newResource)
+      return newResource
+    }
+    
+    const updateResource = (id, updates) => {
+      const index = currentResources.value.findIndex(r => r.id === id)
+      if (index !== -1) {
+        currentResources.value[index] = {
+          ...currentResources.value[index],
+          ...updates,
+          updatedAt: new Date().toISOString()
+        }
+        saveToStorage(STORAGE_KEYS.RESOURCES, currentResources.value)
+        console.log('Updated resource:', currentResources.value[index])
+        return currentResources.value[index]
+      }
+      return null
+    }
+    
+    const deleteResource = (id) => {
+      const index = currentResources.value.findIndex(r => r.id === id)
+      if (index !== -1) {
+        const deleted = currentResources.value.splice(index, 1)[0]
+        saveToStorage(STORAGE_KEYS.RESOURCES, currentResources.value)
+        console.log('Deleted resource:', deleted)
+        return deleted
+      }
+      return null
     }
     
     const editResource = (index) => {
-      // TODO: 打开资源编辑弹窗
-      console.log('Edit resource', index)
+      const resource = currentResources.value[index]
+      console.log('Edit resource:', resource)
+      editingResource.value = resource.id
+      return resource
     }
     
-    const addCapability = () => {
-      // TODO: 打开能力添加弹窗
-      console.log('Add capability')
+    const saveResourceEdit = (index, field, value) => {
+      const resource = currentResources.value[index]
+      if (resource && resource.id) {
+        updateResource(resource.id, { [field]: value })
+      }
+      editingResource.value = null
+    }
+    
+    const cancelResourceEdit = () => {
+      editingResource.value = null
+    }
+    
+    // 能力管理方法
+    const addCapability = (capabilityData = null) => {
+      const newCapability = capabilityData || {
+        id: generateId(),
+        skill: '新技能',
+        level: 50,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+      
+      currentCapabilities.value.push(newCapability)
+      saveToStorage(STORAGE_KEYS.CAPABILITIES, currentCapabilities.value)
+      console.log('Added capability:', newCapability)
+      return newCapability
+    }
+    
+    const updateCapability = (id, updates) => {
+      const index = currentCapabilities.value.findIndex(c => c.id === id)
+      if (index !== -1) {
+        currentCapabilities.value[index] = {
+          ...currentCapabilities.value[index],
+          ...updates,
+          updatedAt: new Date().toISOString()
+        }
+        saveToStorage(STORAGE_KEYS.CAPABILITIES, currentCapabilities.value)
+        console.log('Updated capability:', currentCapabilities.value[index])
+        return currentCapabilities.value[index]
+      }
+      return null
+    }
+    
+    const deleteCapability = (id) => {
+      const index = currentCapabilities.value.findIndex(c => c.id === id)
+      if (index !== -1) {
+        const deleted = currentCapabilities.value.splice(index, 1)[0]
+        saveToStorage(STORAGE_KEYS.CAPABILITIES, currentCapabilities.value)
+        console.log('Deleted capability:', deleted)
+        return deleted
+      }
+      return null
     }
     
     const editCapability = (index) => {
-      // TODO: 打开能力编辑弹窗
-      console.log('Edit capability', index)
+      const capability = currentCapabilities.value[index]
+      console.log('Edit capability:', capability)
+      editingCapability.value = capability.id
+      return capability
     }
     
-    const addGoal = () => {
-      // TODO: 打开目标添加弹窗
-      console.log('Add goal')
+    const saveCapabilityEdit = (index, field, value) => {
+      const capability = currentCapabilities.value[index]
+      if (capability && capability.id) {
+        // 如果是level字段，确保是数字类型
+        const finalValue = field === 'level' ? Math.max(0, Math.min(100, parseInt(value) || 0)) : value
+        updateCapability(capability.id, { [field]: finalValue })
+      }
+      editingCapability.value = null
+    }
+    
+    const cancelCapabilityEdit = () => {
+      editingCapability.value = null
+    }
+    
+    // 目标管理方法
+    const addGoal = (goalData = null) => {
+      const newGoal = goalData || {
+        id: generateId(),
+        target: '新目标',
+        priority: 'medium',
+        timeline: '待定',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+      
+      currentGoals.value.push(newGoal)
+      saveToStorage(STORAGE_KEYS.GOALS, currentGoals.value)
+      console.log('Added goal:', newGoal)
+      return newGoal
+    }
+    
+    const updateGoal = (id, updates) => {
+      const index = currentGoals.value.findIndex(g => g.id === id)
+      if (index !== -1) {
+        currentGoals.value[index] = {
+          ...currentGoals.value[index],
+          ...updates,
+          updatedAt: new Date().toISOString()
+        }
+        saveToStorage(STORAGE_KEYS.GOALS, currentGoals.value)
+        console.log('Updated goal:', currentGoals.value[index])
+        return currentGoals.value[index]
+      }
+      return null
+    }
+    
+    const deleteGoal = (id) => {
+      const index = currentGoals.value.findIndex(g => g.id === id)
+      if (index !== -1) {
+        const deleted = currentGoals.value.splice(index, 1)[0]
+        saveToStorage(STORAGE_KEYS.GOALS, currentGoals.value)
+        console.log('Deleted goal:', deleted)
+        return deleted
+      }
+      return null
     }
     
     const editGoal = (index) => {
-      // TODO: 打开目标编辑弹窗
-      console.log('Edit goal', index)
+      const goal = currentGoals.value[index]
+      console.log('Edit goal:', goal)
+      editingGoal.value = goal.id
+      return goal
+    }
+    
+    const saveGoalEdit = (index, field, value) => {
+      const goal = currentGoals.value[index]
+      if (goal && goal.id) {
+        updateGoal(goal.id, { [field]: value })
+      }
+      editingGoal.value = null
+    }
+    
+    const cancelGoalEdit = () => {
+      editingGoal.value = null
+    }
+    
+    // 批量操作方法
+    const resetAllData = () => {
+      currentResources.value = [...defaultResources]
+      currentCapabilities.value = [...defaultCapabilities]
+      currentGoals.value = [...defaultGoals]
+      
+      saveToStorage(STORAGE_KEYS.RESOURCES, currentResources.value)
+      saveToStorage(STORAGE_KEYS.CAPABILITIES, currentCapabilities.value)
+      saveToStorage(STORAGE_KEYS.GOALS, currentGoals.value)
+      
+      console.log('Reset all data to defaults')
+    }
+    
+    const exportData = () => {
+      const data = {
+        resources: currentResources.value,
+        capabilities: currentCapabilities.value,
+        goals: currentGoals.value,
+        exportedAt: new Date().toISOString()
+      }
+      return data
+    }
+    
+    const importData = (data) => {
+      if (data.resources) {
+        currentResources.value = data.resources
+        saveToStorage(STORAGE_KEYS.RESOURCES, currentResources.value)
+      }
+      if (data.capabilities) {
+        currentCapabilities.value = data.capabilities
+        saveToStorage(STORAGE_KEYS.CAPABILITIES, currentCapabilities.value)
+      }
+      if (data.goals) {
+        currentGoals.value = data.goals
+        saveToStorage(STORAGE_KEYS.GOALS, currentGoals.value)
+      }
+      console.log('Imported data successfully')
     }
     
     // 影响分析方法
@@ -1316,9 +1709,76 @@ export default {
       activeTab.value = 'analysis'
     })
     
-    // 初始化星星
+    // 全局数据变化监听
+    const setupDataWatchers = () => {
+      // 监听资源数据变化
+      watch(currentResources, (newResources, oldResources) => {
+        console.log('Resources changed:', {
+          old: oldResources?.length || 0,
+          new: newResources.length,
+          data: newResources
+        })
+        // 触发自定义事件，可供外部监听
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('hypertime:resources-changed', {
+            detail: { resources: newResources }
+          }))
+        }
+      }, { deep: true })
+      
+      // 监听能力数据变化
+      watch(currentCapabilities, (newCapabilities, oldCapabilities) => {
+        console.log('Capabilities changed:', {
+          old: oldCapabilities?.length || 0,
+          new: newCapabilities.length,
+          data: newCapabilities
+        })
+        // 触发自定义事件
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('hypertime:capabilities-changed', {
+            detail: { capabilities: newCapabilities }
+          }))
+        }
+      }, { deep: true })
+      
+      // 监听目标数据变化
+      watch(currentGoals, (newGoals, oldGoals) => {
+        console.log('Goals changed:', {
+          old: oldGoals?.length || 0,
+          new: newGoals.length,
+          data: newGoals
+        })
+        // 触发自定义事件
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('hypertime:goals-changed', {
+            detail: { goals: newGoals }
+          }))
+        }
+      }, { deep: true })
+      
+      // 监听所有数据的综合变化
+      watch([currentResources, currentCapabilities, currentGoals], ([resources, capabilities, goals]) => {
+        const allData = {
+          resources,
+          capabilities,
+          goals,
+          timestamp: new Date().toISOString()
+        }
+        console.log('All current state data changed:', allData)
+        
+        // 触发综合数据变化事件
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('hypertime:state-changed', {
+            detail: allData
+          }))
+        }
+      }, { deep: true })
+    }
+    
+    // 初始化星星和数据监听
     onMounted(() => {
       generateStars()
+      setupDataWatchers()
     })
     
     return {
@@ -1339,16 +1799,44 @@ export default {
       currentResources,
       currentCapabilities,
       currentGoals,
+      // 编辑状态
+      editingResource,
+      editingCapability,
+      editingGoal,
       // 状态管理方法
       getCurrentStage,
       getStatusText,
       getPriorityText,
+      // 删除判断方法
+      isResourceDeletable,
+      isCapabilityDeletable,
+      isGoalDeletable,
+      // 资源管理
       addResource,
+      updateResource,
+      deleteResource,
       editResource,
+      saveResourceEdit,
+      cancelResourceEdit,
+      // 能力管理
       addCapability,
+      updateCapability,
+      deleteCapability,
       editCapability,
+      saveCapabilityEdit,
+      cancelCapabilityEdit,
+      // 目标管理
       addGoal,
+      updateGoal,
+      deleteGoal,
       editGoal,
+      saveGoalEdit,
+      cancelGoalEdit,
+      // 批量操作
+      resetAllData,
+      exportData,
+      importData,
+      setupDataWatchers,
       getPositiveFactors,
       getNeutralFactors,
       getNegativeFactors,
@@ -2024,6 +2512,7 @@ export default {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
+                gap: 0.75rem;
                 padding: 0.75rem;
                 margin-bottom: 0.5rem;
                 background: rgba(255, 255, 255, 0.08);
@@ -2121,22 +2610,143 @@ export default {
                   }
                 }
                 
-                .edit-btn {
-                  width: 1.5rem;
-                  height: 1.5rem;
-                  border-radius: 0.25rem;
-                  border: none;
-                  background: rgba(255, 255, 255, 0.1);
-                  color: rgba(255, 255, 255, 0.6);
+                .item-actions {
                   display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  cursor: pointer;
-                  transition: all 0.2s ease;
+                  gap: 0.25rem;
                   
-                  &:hover {
-                    background: rgba(255, 255, 255, 0.2);
-                    color: rgba(255, 255, 255, 0.8);
+                  .edit-btn,
+                  .save-btn,
+                  .cancel-btn,
+                  .delete-btn {
+                    width: 1.5rem;
+                    height: 1.5rem;
+                    border-radius: 0.25rem;
+                    border: none;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                  }
+                  
+                  .edit-btn {
+                    background: rgba(255, 255, 255, 0.1);
+                    color: rgba(255, 255, 255, 0.6);
+                    
+                    &:hover {
+                      background: rgba(255, 255, 255, 0.2);
+                      color: rgba(255, 255, 255, 0.8);
+                    }
+                  }
+                  
+                  .save-btn {
+                    background: rgba(76, 175, 80, 0.2);
+                    color: #4caf50;
+                    
+                    &:hover {
+                      background: rgba(76, 175, 80, 0.3);
+                      color: #66bb6a;
+                    }
+                  }
+                  
+                  .cancel-btn {
+                    background: rgba(244, 67, 54, 0.2);
+                    color: #f44336;
+                    
+                    &:hover {
+                      background: rgba(244, 67, 54, 0.3);
+                      color: #ef5350;
+                    }
+                  }
+                  
+                  .delete-btn {
+                    background: rgba(255, 87, 34, 0.2);
+                    color: #ff5722;
+                    
+                    &:hover {
+                      background: rgba(255, 87, 34, 0.3);
+                      color: #ff6633;
+                      transform: scale(1.05);
+                    }
+                  }
+                }
+                
+                .item-content.editing {
+                  flex: 1;
+                  display: flex;
+                  flex-direction: column;
+                  gap: 0.5rem;
+                  
+                  .edit-input,
+                  .edit-select {
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 0.25rem;
+                    padding: 0.25rem 0.5rem;
+                    color: #fff;
+                    font-size: 0.75rem;
+                    outline: none;
+                    transition: all 0.2s ease;
+                    
+                    &:focus {
+                      border-color: rgba(33, 150, 243, 0.5);
+                      background: rgba(255, 255, 255, 0.15);
+                    }
+                    
+                    &::placeholder {
+                      color: rgba(255, 255, 255, 0.4);
+                    }
+                  }
+                  
+                  .edit-select {
+                    option {
+                      background: #1a1a2e;
+                      color: #fff;
+                    }
+                  }
+                  
+                  .skill-level.editing {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    
+                    .level-slider {
+                      flex: 1;
+                      height: 0.25rem;
+                      background: rgba(255, 255, 255, 0.1);
+                      border-radius: 0.125rem;
+                      outline: none;
+                      -webkit-appearance: none;
+                      
+                      &::-webkit-slider-thumb {
+                        -webkit-appearance: none;
+                        width: 0.75rem;
+                        height: 0.75rem;
+                        border-radius: 50%;
+                        background: #4caf50;
+                        cursor: pointer;
+                      }
+                      
+                      &::-moz-range-thumb {
+                        width: 0.75rem;
+                        height: 0.75rem;
+                        border-radius: 50%;
+                        background: #4caf50;
+                        cursor: pointer;
+                        border: none;
+                      }
+                    }
+                    
+                    .level-input {
+                      width: 3rem;
+                      text-align: center;
+                    }
+                    
+                    .level-text {
+                      font-size: 0.75rem;
+                      color: rgba(255, 255, 255, 0.6);
+                      min-width: 1rem;
+                    }
                   }
                 }
               }

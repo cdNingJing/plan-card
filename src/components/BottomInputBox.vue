@@ -274,7 +274,7 @@ export default {
     align-items: center;
     padding: 0.75rem 1rem;
     gap: 0.75rem;
-    background: #fff;
+    background: #fdfdfd;
     transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
     
     .voice-actions {
