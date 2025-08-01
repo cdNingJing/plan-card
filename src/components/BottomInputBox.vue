@@ -1,5 +1,8 @@
 <template>
-  <div class="bottom-input-box" :class="{ 'hyper-time-mode': isHyperTimeExpanded }">
+  <div class="bottom-input-box" :class="{ 
+    'hyper-time-mode': isHyperTimeExpanded,
+    'gesture-dark-mode': gestureProgress > 0.7 && !isHyperTimeExpanded
+  }">
     <div class="input-container">
       <!-- 语音按钮 -->
       <div class="voice-actions">
@@ -69,6 +72,10 @@ export default {
     isHyperTimeExpanded: {
       type: Boolean,
       default: false
+    },
+    gestureProgress: {
+      type: Number,
+      default: 0
     }
   },
   emits: ['voice-command', 'text-command', 'input-focus', 'input-blur'],
@@ -386,7 +393,55 @@ export default {
     }
   }
   
-  // 超时间模式样式
+  // 手势暗色模式样式 - 仅在手势过程中生效
+  &.gesture-dark-mode {
+    .input-container {
+      background: #1a1a2e; // 简单的暗色背景，不是渐变
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      transition: background-color 0.3s ease;
+      
+      .voice-actions .voice-button {
+        background: rgba(255, 255, 255, 0.1);
+        color: #e0e0e0;
+        
+        &:hover {
+          background: rgba(255, 255, 255, 0.15);
+        }
+        
+        &.listening {
+          background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+          color: white;
+        }
+      }
+      
+      .input-area .input-field {
+        background: rgba(255, 255, 255, 0.1);
+        color: #e0e0e0;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        
+        &:focus {
+          background: rgba(255, 255, 255, 0.15);
+          border-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        &::placeholder {
+          color: rgba(224, 224, 224, 0.6);
+        }
+      }
+      
+      .right-actions .send-button {
+        background: rgba(255, 255, 255, 0.1);
+        color: rgba(224, 224, 224, 0.6);
+        
+        &.has-content {
+          background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+          color: white;
+        }
+      }
+    }
+  }
+
+  // 超时间模式样式 - 当下滑内容显示后生效
   &.hyper-time-mode {
     .input-container {
       background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);

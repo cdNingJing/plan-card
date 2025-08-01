@@ -212,12 +212,27 @@ export default {
         const threshold = blockWidth.value / 3
         let newIndex = currentIndex.value
         
-        // 根据拖拽距离和速度判断是否切换（无限循环）
+        // 计算跳跃的项目数量，支持多项跳跃
+        const blockWidthWithGap = blockWidth.value + blockGap.value
+        let jumpCount = 0
+        
+        // 根据拖拽距离计算跳跃数量
+        if (Math.abs(deltaX) > threshold) {
+          jumpCount = Math.round(Math.abs(deltaX) / blockWidthWithGap)
+          jumpCount = Math.max(1, jumpCount) // 至少跳跃1个
+        }
+        
+        // 根据速度增加跳跃数量（快速滑动可以跳更多）
+        if (Math.abs(velocity) > 1.0) {
+          jumpCount += Math.floor(Math.abs(velocity))
+        }
+        
+        // 根据方向和跳跃数量确定新索引
         if (Math.abs(deltaX) > threshold || Math.abs(velocity) > 0.5) {
           if (deltaX > 0) {
-            newIndex = currentIndex.value - 1 // 向右拖拽，到上一个
+            newIndex = currentIndex.value - jumpCount // 向右拖拽，向前跳跃
           } else if (deltaX < 0) {
-            newIndex = currentIndex.value + 1 // 向左拖拽，到下一个
+            newIndex = currentIndex.value + jumpCount // 向左拖拽，向后跳跃
           }
         }
         
@@ -306,8 +321,11 @@ export default {
 .dream-block-slider {
   width: 100%;
   position: relative;
-  background: linear-gradient(135deg, #d4a574 0%, #b8956a 100%); // 暖棕色渐变
   padding: 2rem 1rem 1.5rem; // 增加左右内边距
+  
+  // 禁用移动端点击高亮
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
   
   .slider-container {
     width: 100%;
@@ -571,6 +589,7 @@ export default {
             }
           }
         }
+        
         
         // 非激活状态的进度条颜色
         &:not(.active) .dream-progress .progress-indicator {
