@@ -1,325 +1,509 @@
 <template>
-  <div class="bottom-input-container">
-    <!-- 状态1: 默认输入框 -->
-    <div v-if="currentState === 'input'" class="input-state">
-      <div class="input-wrapper">
-        <input
-          ref="inputRef"
-          v-model="localQuery"
-          type="text"
-          placeholder="输入您想要深入理解的问题..."
-          class="main-input"
-          @keydown.enter="handleSubmit"
-          @input="handleInput"
-        />
+  <div class="bottom-input-box">
+    <div class="input-container">
+      <!-- 左侧功能按钮 -->
+      <div class="left-actions">
         <button 
-          v-if="localQuery.trim()" 
-          @click="handleSubmit" 
-          class="send-button"
+          class="action-button"
+          @click="toggleVoiceInput"
+          :class="{ 'active': isVoiceMode }"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M8 1l7 7-7 7M15 8H1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <i :class="isVoiceMode ? 'icon-mic-off' : 'icon-mic'"></i>
+        </button>
+      </div>
+      
+      <!-- 输入区域 -->
+      <div class="input-area">
+        <div v-if="isVoiceMode" class="voice-input">
+          <div class="voice-indicator" :class="{ 'listening': isListening }">
+            <div class="voice-waves">
+              <span v-for="i in 4" :key="i" class="wave"></span>
+            </div>
+            <div class="voice-text">
+              {{ isListening ? '正在聆听...' : '点击开始语音输入' }}
+            </div>
+          </div>
+        </div>
+        
+        <div v-else class="text-input">
+          <input
+            ref="textInput"
+            v-model="inputText"
+            type="text"
+            :placeholder="placeholder"
+            @keyup.enter="handleSubmit"
+            @focus="handleInputFocus"
+            @blur="handleInputBlur"
+            class="input-field"
+          />
+        </div>
+      </div>
+      
+      <!-- 右侧功能按钮 -->
+      <div class="right-actions">
+        <button 
+          class="action-button send-button"
+          @click="handleSubmit"
+          :disabled="!canSubmit"
+          :class="{ 'has-content': canSubmit }"
+        >
+          <i class="icon-send"></i>
+        </button>
+        
+        <button 
+          class="action-button"
+          @click="toggleInputMode"
+        >
+          <i :class="isVoiceMode ? 'icon-keyboard' : 'icon-mic'"></i>
         </button>
       </div>
     </div>
-
-    <!-- 状态2: 显示问题文本 -->
-    <div v-if="currentState === 'display'" class="display-state">
-      <div class="question-display" :class="{ 'simple-display': isTagsMode }">
-        <div class="question-text">{{ displayText }}</div>
-        <button v-if="!isTagsMode" @click="handleEdit" class="edit-button">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M8.5 1.5l2 2-6 6H2.5v-2l6-6z" stroke="currentColor" stroke-width="1"/>
-          </svg>
-        </button>
+    
+    <!-- 快捷指令提示 -->
+    <div v-if="showSuggestions" class="suggestions-panel">
+      <div class="suggestions-content">
+        <div class="suggestion-title">常用指令</div>
+        <div class="suggestion-list">
+          <button
+            v-for="suggestion in suggestions"
+            :key="suggestion.id"
+            class="suggestion-item"
+            @click="selectSuggestion(suggestion)"
+          >
+            <i :class="suggestion.icon"></i>
+            <span>{{ suggestion.text }}</span>
+          </button>
+        </div>
       </div>
-    </div>
-
-    <!-- 状态3: 下一步按钮 -->
-    <div v-if="currentState === 'next'" class="next-state">
-      <div class="selection-summary">
-        <span class="selected-count">已选择 {{ selectedCount }} 个关联</span>
-      </div>
-      <button @click="handleNext" class="next-button" :disabled="selectedCount === 0">
-        <span>生成解决方案</span>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <path d="M8 1l7 7-7 7M15 8H1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
     </div>
   </div>
 </template>
 
-<script setup>
-import { ref, watch, nextTick, defineProps, defineEmits } from 'vue'
+<script>
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 
-const props = defineProps({
-  currentState: {
-    type: String,
-    default: 'input', // 'input', 'display', 'next'
-    validator: (value) => ['input', 'display', 'next'].includes(value)
-  },
-  query: {
-    type: String,
-    default: ''
-  },
-  displayText: {
-    type: String,
-    default: ''
-  },
-  selectedCount: {
-    type: Number,
-    default: 0
-  },
-  isTagsMode: {
-    type: Boolean,
-    default: false
+export default {
+  name: 'BottomInputBox',
+  emits: ['voice-command', 'text-command', 'input-focus', 'input-blur'],
+  setup(props, { emit }) {
+    const inputText = ref('')
+    const isVoiceMode = ref(false)
+    const isListening = ref(false)
+    const isFocused = ref(false)
+    const showSuggestions = ref(false)
+    const textInput = ref(null)
+    
+    // 语音识别相关
+    let recognition = null
+    let recognitionTimeout = null
+    
+    // 快捷指令
+    const suggestions = ref([
+      { id: 1, text: '把闹钟改成7:50', icon: 'icon-clock' },
+      { id: 2, text: '今天天气怎么样', icon: 'icon-cloud' },
+      { id: 3, text: '添加新的梦想', icon: 'icon-plus' },
+      { id: 4, text: '查看学习进度', icon: 'icon-book' },
+      { id: 5, text: '设置提醒事项', icon: 'icon-bell' }
+    ])
+    
+    const placeholder = computed(() => {
+      return isVoiceMode.value ? '点击麦克风开始语音输入...' : '输入指令或问题...'
+    })
+    
+    const canSubmit = computed(() => {
+      return inputText.value.trim().length > 0 || (isVoiceMode.value && isListening.value)
+    })
+    
+    // 初始化语音识别
+    const initSpeechRecognition = () => {
+      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+        recognition = new SpeechRecognition()
+        recognition.continuous = false
+        recognition.interimResults = true
+        recognition.lang = 'zh-CN'
+        
+        recognition.onstart = () => {
+          isListening.value = true
+        }
+        
+        recognition.onresult = (event) => {
+          let interimTranscript = ''
+          let finalTranscript = ''
+          
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript
+            } else {
+              interimTranscript += transcript
+            }
+          }
+          
+          if (finalTranscript) {
+            inputText.value = finalTranscript
+            handleVoiceResult(finalTranscript)
+          }
+        }
+        
+        recognition.onerror = (event) => {
+          console.error('语音识别错误:', event.error)
+          isListening.value = false
+        }
+        
+        recognition.onend = () => {
+          isListening.value = false
+        }
+      }
+    }
+    
+    // 切换语音输入模式
+    const toggleVoiceInput = () => {
+      if (!recognition) {
+        console.warn('浏览器不支持语音识别')
+        return
+      }
+      
+      if (isListening.value) {
+        recognition.stop()
+      } else {
+        recognition.start()
+      }
+    }
+    
+    // 切换输入模式
+    const toggleInputMode = () => {
+      isVoiceMode.value = !isVoiceMode.value
+      if (!isVoiceMode.value && isListening.value) {
+        recognition?.stop()
+      }
+      
+      if (!isVoiceMode.value) {
+        nextTick(() => {
+          textInput.value?.focus()
+        })
+      }
+    }
+    
+    // 处理语音结果
+    const handleVoiceResult = (transcript) => {
+      emit('voice-command', transcript)
+      inputText.value = ''
+      isVoiceMode.value = false
+    }
+    
+    // 处理提交
+    const handleSubmit = () => {
+      const text = inputText.value.trim()
+      if (!text) return
+      
+      if (isVoiceMode.value) {
+        emit('voice-command', text)
+      } else {
+        emit('text-command', text)
+      }
+      
+      inputText.value = ''
+      showSuggestions.value = false
+    }
+    
+    // 输入框焦点事件
+    const handleInputFocus = () => {
+      isFocused.value = true
+      showSuggestions.value = true
+      emit('input-focus')
+    }
+    
+    const handleInputBlur = () => {
+      isFocused.value = false
+      // 延迟隐藏建议，允许点击建议项
+      setTimeout(() => {
+        showSuggestions.value = false
+      }, 200)
+      emit('input-blur')
+    }
+    
+    // 选择建议
+    const selectSuggestion = (suggestion) => {
+      inputText.value = suggestion.text
+      showSuggestions.value = false
+      handleSubmit()
+    }
+    
+    // 键盘事件处理
+    const handleKeydown = (event) => {
+      if (event.key === 'Escape') {
+        showSuggestions.value = false
+        textInput.value?.blur()
+      }
+    }
+    
+    onMounted(() => {
+      initSpeechRecognition()
+      document.addEventListener('keydown', handleKeydown)
+    })
+    
+    onUnmounted(() => {
+      if (recognition) {
+        recognition.stop()
+      }
+      if (recognitionTimeout) {
+        clearTimeout(recognitionTimeout)
+      }
+      document.removeEventListener('keydown', handleKeydown)
+    })
+    
+    return {
+      inputText,
+      isVoiceMode,
+      isListening,
+      isFocused,
+      showSuggestions,
+      textInput,
+      suggestions,
+      placeholder,
+      canSubmit,
+      toggleVoiceInput,
+      toggleInputMode,
+      handleSubmit,
+      handleInputFocus,
+      handleInputBlur,
+      selectSuggestion
+    }
   }
-})
-
-const emit = defineEmits(['update:query', 'submit', 'edit', 'next'])
-
-const localQuery = ref(props.query)
-const inputRef = ref(null)
-
-const handleInput = () => {
-  emit('update:query', localQuery.value)
 }
-
-const handleSubmit = () => {
-  if (localQuery.value.trim()) {
-    emit('submit', localQuery.value.trim())
-  }
-}
-
-const handleEdit = () => {
-  emit('edit')
-}
-
-const handleNext = () => {
-  if (props.selectedCount > 0) {
-    emit('next')
-  }
-}
-
-// 监听状态变化，自动聚焦输入框
-watch(() => props.currentState, async (newState) => {
-  if (newState === 'input') {
-    await nextTick()
-    inputRef.value?.focus()
-  }
-})
-
-// 监听查询变化
-watch(() => props.query, (newQuery) => {
-  localQuery.value = newQuery
-})
 </script>
 
-<style scoped>
-.bottom-input-container {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 500;
-}
-
-/* 状态1: 输入框 */
-.input-state {
-  padding: 16px 24px 24px;
-}
-
-.input-wrapper {
+<style lang="scss" scoped>
+.bottom-input-box {
   position: relative;
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.main-input {
   width: 100%;
-  padding: 16px 20px;
-  padding-right: 60px;
-  border: 2px solid #e5e5e5;
-  border-radius: 12px;
-  font-size: 16px;
-  font-family: inherit;
-  background: #fafafa;
-  color: #111111;
-  transition: all 0.2s ease;
-  box-sizing: border-box;
-}
-
-.main-input:focus {
-  outline: none;
-  border-color: #2563eb;
-  background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-
-.main-input::placeholder {
-  color: #9ca3af;
-}
-
-.send-button {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 40px;
-  height: 40px;
-  background: #111111;
-  color: #ffffff;
-  border: none;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.send-button:hover {
-  background: #000000;
-  transform: translateY(-50%) scale(1.05);
-}
-
-/* 状态2: 显示问题 */
-.display-state {
-  padding: 12px 16px;
-}
-
-.question-display {
-  max-width: 800px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 16px;
-  background: #f9f9f9;
-  border: 1px solid #e5e5e5;
-  border-radius: 12px;
-}
-
-.question-display.simple-display {
-  background: transparent;
-  border: none;
-  padding: 8px 20px;
-  justify-content: center;
-}
-
-.question-text {
-  flex: 1;
-  color: #111111;
-  font-size: 16px;
-  line-height: 1.5;
-}
-
-.edit-button {
-  background: none;
-  border: none;
-  padding: 8px;
-  border-radius: 6px;
-  color: #6b7280;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.edit-button:hover {
-  background: #f3f4f6;
-  color: #374151;
-}
-
-/* 状态3: 下一步按钮 */
-.next-state {
-  padding: 16px 24px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.selection-summary {
-  display: flex;
-  align-items: center;
-}
-
-.selected-count {
-  color: #6b7280;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.next-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  background: #111111;
-  color: #ffffff;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.next-button:hover:not(:disabled) {
-  background: #000000;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.next-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .input-state,
-  .display-state {
-    padding: 12px 16px 20px;
+  background: #fff;
+  border-top: 1px solid #e0e0e0;
+  
+  .input-container {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    gap: 0.75rem;
+    
+    .left-actions,
+    .right-actions {
+      display: flex;
+      gap: 0.5rem;
+      
+      .action-button {
+        width: 2.5rem;
+        height: 2.5rem;
+        border: none;
+        border-radius: 50%;
+        background: #f5f5f5;
+        color: #666;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        
+        &:hover {
+          background: #e0e0e0;
+          color: #333;
+        }
+        
+        &.active {
+          background: #667eea;
+          color: white;
+        }
+        
+        &.send-button {
+          background: #e0e0e0;
+          color: #999;
+          
+          &.has-content {
+            background: #667eea;
+            color: white;
+            
+            &:hover {
+              background: #5a6fd8;
+            }
+          }
+          
+          &:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+          }
+        }
+        
+        i {
+          font-size: 1.125rem;
+        }
+      }
+    }
+    
+    .input-area {
+      flex: 1;
+      
+      .text-input {
+        .input-field {
+          width: 100%;
+          padding: 0.75rem 1rem;
+          border: 1px solid #e0e0e0;
+          border-radius: 1.5rem;
+          background: #f8f9fa;
+          font-size: 1rem;
+          outline: none;
+          transition: all 0.3s ease;
+          
+          &:focus {
+            border-color: #667eea;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+          }
+          
+          &::placeholder {
+            color: #999;
+          }
+        }
+      }
+      
+      .voice-input {
+        .voice-indicator {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 1rem;
+          background: #f8f9fa;
+          border-radius: 1.5rem;
+          border: 1px solid #e0e0e0;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          
+          &.listening {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+            
+            .voice-waves .wave {
+              background: white;
+            }
+          }
+          
+          .voice-waves {
+            display: flex;
+            gap: 0.25rem;
+            margin-bottom: 0.5rem;
+            
+            .wave {
+              width: 0.25rem;
+              height: 1rem;
+              background: #667eea;
+              border-radius: 0.125rem;
+              animation: wave 1.2s infinite ease-in-out;
+              
+              &:nth-child(2) { animation-delay: 0.1s; }
+              &:nth-child(3) { animation-delay: 0.2s; }
+              &:nth-child(4) { animation-delay: 0.3s; }
+            }
+          }
+          
+          .voice-text {
+            font-size: 0.875rem;
+            opacity: 0.8;
+          }
+        }
+      }
+    }
   }
   
-  .next-state {
-    padding: 12px 16px 20px;
-    flex-direction: column;
-    gap: 12px;
-    align-items: stretch;
-  }
-  
-  .next-button {
-    justify-content: center;
+  .suggestions-panel {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-bottom: none;
+    border-radius: 0.75rem 0.75rem 0 0;
+    box-shadow: 0 -0.25rem 1rem rgba(0, 0, 0, 0.1);
+    max-height: 12rem;
+    overflow-y: auto;
+    
+    .suggestions-content {
+      padding: 1rem;
+      
+      .suggestion-title {
+        font-size: 0.75rem;
+        color: #666;
+        margin-bottom: 0.75rem;
+        font-weight: 600;
+      }
+      
+      .suggestion-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        
+        .suggestion-item {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          padding: 0.75rem;
+          background: #f8f9fa;
+          border: none;
+          border-radius: 0.5rem;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          text-align: left;
+          
+          &:hover {
+            background: #e9ecef;
+            transform: translateY(-1px);
+          }
+          
+          i {
+            font-size: 1rem;
+            color: #667eea;
+            width: 1.25rem;
+            text-align: center;
+          }
+          
+          span {
+            font-size: 0.875rem;
+            color: #333;
+          }
+        }
+      }
+    }
   }
 }
 
-@media (max-width: 480px) {
-  .main-input {
-    font-size: 14px;
-    padding: 14px 16px;
-    padding-right: 56px;
+@keyframes wave {
+  0%, 40%, 100% {
+    transform: scaleY(0.4);
   }
-  
-  .send-button {
-    width: 36px;
-    height: 36px;
+  20% {
+    transform: scaleY(1);
   }
-  
-  .question-text {
-    font-size: 14px;
-  }
-  
-  .next-button {
-    padding: 10px 16px;
-    font-size: 13px;
+}
+
+// 响应式调整
+@media (max-width: 375px) {
+  .bottom-input-box .input-container {
+    padding: 0.5rem 0.75rem;
+    gap: 0.5rem;
+    
+    .left-actions,
+    .right-actions {
+      .action-button {
+        width: 2rem;
+        height: 2rem;
+        
+        i {
+          font-size: 1rem;
+        }
+      }
+    }
   }
 }
 </style>

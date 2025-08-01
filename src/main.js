@@ -3,6 +3,9 @@ import { createPinia } from 'pinia'
 import router from './router'
 import AppRouter from './AppRouter.vue'
 
+// 导入图标样式
+import './assets/icons.css'
+
 // 导入Element Plus
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'

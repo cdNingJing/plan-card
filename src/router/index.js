@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '@/views/HomeView.vue'
+import NewHomeView from '@/views/NewHomeView.vue'
+import DreamDetailView from '@/views/DreamDetailView.vue'
 import PlanView from '@/views/PlanView.vue'
 import ProfileView from '@/views/ProfileView.vue'
 import ChatView from '@/views/ChatView.vue'
@@ -15,6 +17,25 @@ const routes = [
     path: '/',
     name: 'Home',
     component: HomeView
+  },
+  {
+    path: '/new-home',
+    name: 'NewHome',
+    component: NewHomeView,
+    meta: {
+      title: '新首页',
+      keepAlive: true
+    }
+  },
+  {
+    path: '/dream/:dreamId',
+    name: 'DreamDetail',
+    component: DreamDetailView,
+    props: true,
+    meta: {
+      title: '梦想详情',
+      parent: 'NewHome'
+    }
   },
   {
     path: '/plan',

@@ -1,0 +1,139 @@
+/* 图标字体样式 - Lucide Icons */
+@import url('https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.css');
+
+/* 图标基础样式 */
+[class^="icon-"], [class*=" icon-"] {
+  font-family: 'Lucide';
+  speak: never;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* 图标映射 */
+.icon-plus::before { content: "\e900"; }
+.icon-minus::before { content: "\e901"; }
+.icon-search::before { content: "\e902"; }
+.icon-settings::before { content: "\e903"; }
+.icon-menu::before { content: "\e904"; }
+.icon-x::before { content: "\e905"; }
+.icon-check::before { content: "\e906"; }
+.icon-arrow-left::before { content: "\e907"; }
+.icon-arrow-right::before { content: "\e908"; }
+.icon-arrow-up::before { content: "\e909"; }
+.icon-arrow-down::before { content: "\e90a"; }
+.icon-chevron-left::before { content: "\e90b"; }
+.icon-chevron-right::before { content: "\e90c"; }
+.icon-chevron-up::before { content: "\e90d"; }
+.icon-chevron-down::before { content: "\e90e"; }
+
+/* 通信和输入 */
+.icon-mic::before { content: "\e910"; }
+.icon-mic-off::before { content: "\e911"; }
+.icon-send::before { content: "\e912"; }
+.icon-keyboard::before { content: "\e913"; }
+.icon-message-circle::before { content: "\e914"; }
+.icon-phone::before { content: "\e915"; }
+.icon-mail::before { content: "\e916"; }
+
+/* 时间和日程 */
+.icon-clock::before { content: "\e920"; }
+.icon-calendar::before { content: "\e921"; }
+.icon-calendar-clock::before { content: "\e922"; }
+.icon-bell::before { content: "\e923"; }
+.icon-bell-off::before { content: "\e924"; }
+.icon-timer::before { content: "\e925"; }
+
+/* 天气 */
+.icon-sun::before { content: "\e930"; }
+.icon-cloud::before { content: "\e931"; }
+.icon-cloud-rain::before { content: "\e932"; }
+.icon-cloud-snow::before { content: "\e933"; }
+.icon-wind::before { content: "\e934"; }
+
+/* 学习和工作 */
+.icon-book::before { content: "\e940"; }
+.icon-book-open::before { content: "\e941"; }
+.icon-graduation-cap::before { content: "\e942"; }
+.icon-briefcase::before { content: "\e943"; }
+.icon-folder::before { content: "\e944"; }
+.icon-file::before { content: "\e945"; }
+.icon-edit::before { content: "\e946"; }
+
+/* 健康和运动 */
+.icon-heart::before { content: "\e950"; }
+.icon-activity::before { content: "\e951"; }
+.icon-zap::before { content: "\e952"; }
+.icon-shield::before { content: "\e953"; }
+.icon-target::before { content: "\e954"; }
+
+/* 社交和分享 */
+.icon-users::before { content: "\e960"; }
+.icon-user::before { content: "\e961"; }
+.icon-share::before { content: "\e962"; }
+.icon-share-2::before { content: "\e963"; }
+.icon-star::before { content: "\e964"; }
+
+/* 导航和位置 */
+.icon-home::before { content: "\e970"; }
+.icon-map-pin::before { content: "\e971"; }
+.icon-navigation::before { content: "\e972"; }
+.icon-compass::before { content: "\e973"; }
+
+/* 数据和分析 */
+.icon-bar-chart::before { content: "\e980"; }
+.icon-pie-chart::before { content: "\e981"; }
+.icon-trending-up::before { content: "\e982"; }
+.icon-trending-down::before { content: "\e983"; }
+.icon-analytics::before { content: "\e984"; }
+
+/* 状态和反馈 */
+.icon-alert-circle::before { content: "\e990"; }
+.icon-alert-triangle::before { content: "\e991"; }
+.icon-info::before { content: "\e992"; }
+.icon-help-circle::before { content: "\e993"; }
+.icon-eye::before { content: "\e994"; }
+.icon-eye-off::before { content: "\e995"; }
+
+/* 备用方案 - 使用 Unicode 符号 */
+.icon-clock::before { content: "🕐"; font-family: emoji; }
+.icon-calendar::before { content: "📅"; font-family: emoji; }
+.icon-bell::before { content: "🔔"; font-family: emoji; }
+.icon-sun::before { content: "☀️"; font-family: emoji; }
+.icon-cloud::before { content: "☁️"; font-family: emoji; }
+.icon-book::before { content: "📚"; font-family: emoji; }
+.icon-heart::before { content: "❤️"; font-family: emoji; }
+.icon-star::before { content: "⭐"; font-family: emoji; }
+.icon-home::before { content: "🏠"; font-family: emoji; }
+.icon-user::before { content: "👤"; font-family: emoji; }
+
+/* 简化版本 - 使用文字符号 */
+.icon-plus::before { content: "+"; font-family: monospace; font-weight: bold; }
+.icon-minus::before { content: "−"; font-family: monospace; font-weight: bold; }
+.icon-x::before { content: "×"; font-family: monospace; font-weight: bold; }
+.icon-check::before { content: "✓"; font-family: monospace; font-weight: bold; }
+.icon-arrow-left::before { content: "←"; font-family: monospace; }
+.icon-arrow-right::before { content: "→"; font-family: monospace; }
+.icon-arrow-up::before { content: "↑"; font-family: monospace; }
+.icon-arrow-down::before { content: "↓"; font-family: monospace; }
+.icon-chevron-left::before { content: "‹"; font-family: monospace; font-size: 1.2em; }
+.icon-chevron-right::before { content: "›"; font-family: monospace; font-size: 1.2em; }
+.icon-chevron-up::before { content: "‹"; font-family: monospace; font-size: 1.2em; transform: rotate(90deg); }
+.icon-chevron-down::before { content: "›"; font-family: monospace; font-size: 1.2em; transform: rotate(90deg); }
+.icon-send::before { content: "➤"; font-family: monospace; }
+.icon-mic::before { content: "🎤"; font-family: emoji; }
+.icon-keyboard::before { content: "⌨"; font-family: emoji; }
+.icon-settings::before { content: "⚙"; font-family: emoji; }
+.icon-search::before { content: "🔍"; font-family: emoji; }
+.icon-menu::before { content: "☰"; font-family: monospace; }
+
+/* 图标尺寸变体 */
+.icon-sm { font-size: 0.875rem; }
+.icon-lg { font-size: 1.25rem; }
+.icon-xl { font-size: 1.5rem; }
