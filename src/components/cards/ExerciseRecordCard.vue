@@ -12,16 +12,25 @@
       <div class="exercise-date">{{ exerciseDate }}</div>
     </div>
     <div class="exercise-icon">
-      <i :class="exerciseIcon"></i>
+      <component :is="exerciseIcon" :size="20" />
     </div>
   </div>
 </template>
 
 <script>
 import { ref, computed, onMounted } from 'vue'
+import { Activity, Waves, Bike, Dumbbell, User, Footprints } from 'lucide-vue-next'
 
 export default {
   name: 'ExerciseRecordCard',
+  components: {
+    Activity,
+    Waves,
+    Bike,
+    Dumbbell,
+    User,
+    Footprints
+  },
   props: {
     data: {
       type: Object,
@@ -53,14 +62,14 @@ export default {
     
     const exerciseIcon = computed(() => {
       const iconMap = {
-        '跑步': 'icon-activity',
-        '游泳': 'icon-waves',
-        '骑行': 'icon-bike',
-        '健身': 'icon-dumbbell',
-        '瑜伽': 'icon-user',
-        '步行': 'icon-footprints'
+        '跑步': 'Activity',
+        '游泳': 'Waves',
+        '骑行': 'Bike',
+        '健身': 'Dumbbell',
+        '瑜伽': 'User',
+        '步行': 'Footprints'
       }
-      return iconMap[exerciseType.value] || 'icon-activity'
+      return iconMap[exerciseType.value] || 'Activity'
     })
     
     const loadExerciseData = () => {

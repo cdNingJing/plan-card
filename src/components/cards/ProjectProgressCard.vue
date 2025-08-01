@@ -14,16 +14,20 @@
       <div class="project-status">{{ projectStatus }}</div>
     </div>
     <div class="progress-icon">
-      <i class="icon-briefcase"></i>
+      <Briefcase :size="20" />
     </div>
   </div>
 </template>
 
 <script>
 import { ref, computed, onMounted } from 'vue'
+import { Briefcase } from 'lucide-vue-next'
 
 export default {
   name: 'ProjectProgressCard',
+  components: {
+    Briefcase
+  },
   props: {
     data: {
       type: Object,

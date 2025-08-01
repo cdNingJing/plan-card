@@ -9,16 +9,20 @@
       <div class="exam-date">{{ examDate }}</div>
     </div>
     <div class="countdown-icon">
-      <i class="icon-calendar-clock"></i>
+      <CalendarDays :size="20" />
     </div>
   </div>
 </template>
 
 <script>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { CalendarDays } from 'lucide-vue-next'
 
 export default {
   name: 'ExamCountdownCard',
+  components: {
+    CalendarDays
+  },
   props: {
     data: {
       type: Object,

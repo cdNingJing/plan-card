@@ -164,46 +164,54 @@ export default {
         grid-row: span 2;
       }
       
-      // 特定类型卡片的特殊样式
+      // 特定类型卡片的特殊样式 - 高级配色
       &.card-time {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
+        box-shadow: 0 0.25rem 1.5rem rgba(102, 126, 234, 0.3);
       }
       
       &.card-weather {
-        background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         color: white;
+        box-shadow: 0 0.25rem 1.5rem rgba(79, 172, 254, 0.3);
       }
       
       &.card-alarm {
-        background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
         color: white;
+        box-shadow: 0 0.25rem 1.5rem rgba(250, 112, 154, 0.3);
       }
       
       &.card-calendar {
-        background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
-        color: white;
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        color: #2d3748;
+        box-shadow: 0 0.25rem 1.5rem rgba(168, 237, 234, 0.3);
       }
       
-      // 特定场景卡片样式
+      // 特定场景卡片样式 - 高级配色
       &.card-exam-countdown {
-        background: linear-gradient(135deg, #ff7675 0%, #d63031 100%);
-        color: white;
+        background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+        color: #2d3748;
+        box-shadow: 0 0.25rem 1.5rem rgba(255, 154, 158, 0.3);
       }
       
       &.card-study-progress {
-        background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%);
-        color: white;
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        color: #2d3748;
+        box-shadow: 0 0.25rem 1.5rem rgba(168, 237, 234, 0.3);
       }
       
       &.card-project-progress {
-        background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
-        color: #2d3436;
+        background: linear-gradient(135deg, #d299c2 0%, #fef9d7 100%);
+        color: #2d3748;
+        box-shadow: 0 0.25rem 1.5rem rgba(210, 153, 194, 0.3);
       }
       
       &.card-exercise-record {
-        background: linear-gradient(135deg, #55a3ff 0%, #003d82 100%);
+        background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
         color: white;
+        box-shadow: 0 0.25rem 1.5rem rgba(137, 247, 254, 0.3);
       }
     }
   }

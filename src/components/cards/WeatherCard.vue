@@ -6,16 +6,23 @@
       <div class="location">{{ location }}</div>
     </div>
     <div class="weather-icon">
-      <i :class="weatherIcon"></i>
+      <component :is="weatherIcon" :size="20" />
     </div>
   </div>
 </template>
 
 <script>
 import { ref, computed, onMounted } from 'vue'
+import { Sun, Cloud, CloudRain, CloudSnow } from 'lucide-vue-next'
 
 export default {
   name: 'WeatherCard',
+  components: {
+    Sun,
+    Cloud,
+    CloudRain,
+    CloudSnow
+  },
   props: {
     data: {
       type: Object,
@@ -33,13 +40,13 @@ export default {
     
     const weatherIcon = computed(() => {
       const iconMap = {
-        '晴朗': 'icon-sun',
-        '多云': 'icon-cloud',
-        '阴天': 'icon-cloud',
-        '雨天': 'icon-cloud-rain',
-        '雪天': 'icon-cloud-snow'
+        '晴朗': 'Sun',
+        '多云': 'Cloud',
+        '阴天': 'Cloud',
+        '雨天': 'CloudRain',
+        '雪天': 'CloudSnow'
       }
-      return iconMap[condition.value] || 'icon-sun'
+      return iconMap[condition.value] || 'Sun'
     })
     
     const loadWeatherData = async () => {

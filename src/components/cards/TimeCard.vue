@@ -5,16 +5,20 @@
       <div class="current-date">{{ currentDate }}</div>
     </div>
     <div class="time-icon">
-      <i class="icon-clock"></i>
+      <Clock :size="20" />
     </div>
   </div>
 </template>
 
 <script>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { Clock } from 'lucide-vue-next'
 
 export default {
   name: 'TimeCard',
+  components: {
+    Clock
+  },
   props: {
     data: {
       type: Object,

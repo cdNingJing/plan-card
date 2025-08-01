@@ -8,16 +8,22 @@
       </div>
     </div>
     <div class="alarm-icon">
-      <i :class="isEnabled ? 'icon-bell' : 'icon-bell-off'"></i>
+      <Bell v-if="isEnabled" :size="20" />
+      <BellOff v-else :size="20" />
     </div>
   </div>
 </template>
 
 <script>
 import { ref, onMounted } from 'vue'
+import { Bell, BellOff } from 'lucide-vue-next'
 
 export default {
   name: 'AlarmCard',
+  components: {
+    Bell,
+    BellOff
+  },
   props: {
     data: {
       type: Object,

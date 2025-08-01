@@ -1,79 +1,54 @@
 <template>
-  <div class="bottom-input-box">
+  <div class="bottom-input-box" :class="{ 'hyper-time-mode': isHyperTimeExpanded }">
     <div class="input-container">
-      <!-- 左侧功能按钮 -->
-      <div class="left-actions">
+      <!-- 语音按钮 -->
+      <div class="voice-actions">
         <button 
-          class="action-button"
-          @click="toggleVoiceInput"
-          :class="{ 'active': isVoiceMode }"
+          class="voice-button"
+          :class="{ 'listening': isListening }"
+          @mousedown="startLongPress"
+          @mouseup="endLongPress"
+          @mouseleave="endLongPress"
+          @touchstart="startLongPress"
+          @touchend="endLongPress"
+          @touchcancel="endLongPress"
         >
-          <i :class="isVoiceMode ? 'icon-mic-off' : 'icon-mic'"></i>
+          <Mic :size="18" v-if="!isListening" />
+          <MicOff :size="18" v-else />
+          
+          <!-- 语音波纹动画 -->
+          <div v-if="isListening" class="voice-ripple">
+            <div class="ripple"></div>
+            <div class="ripple"></div>
+            <div class="ripple"></div>
+          </div>
         </button>
       </div>
       
-      <!-- 输入区域 -->
+      <!-- 输入框 -->
       <div class="input-area">
-        <div v-if="isVoiceMode" class="voice-input">
-          <div class="voice-indicator" :class="{ 'listening': isListening }">
-            <div class="voice-waves">
-              <span v-for="i in 4" :key="i" class="wave"></span>
-            </div>
-            <div class="voice-text">
-              {{ isListening ? '正在聆听...' : '点击开始语音输入' }}
-            </div>
-          </div>
-        </div>
-        
-        <div v-else class="text-input">
-          <input
-            ref="textInput"
-            v-model="inputText"
-            type="text"
-            :placeholder="placeholder"
-            @keyup.enter="handleSubmit"
-            @focus="handleInputFocus"
-            @blur="handleInputBlur"
-            class="input-field"
-          />
-        </div>
+        <input
+          ref="textInput"
+          v-model="inputText"
+          type="text"
+          placeholder="输入指令或问题..."
+          @keyup.enter="handleSubmit"
+          @focus="handleInputFocus"
+          @blur="handleInputBlur"
+          class="input-field"
+        />
       </div>
       
-      <!-- 右侧功能按钮 -->
+      <!-- 右侧发送按钮 -->
       <div class="right-actions">
         <button 
-          class="action-button send-button"
+          class="send-button"
           @click="handleSubmit"
           :disabled="!canSubmit"
           :class="{ 'has-content': canSubmit }"
         >
-          <i class="icon-send"></i>
+          <Send :size="18" />
         </button>
-        
-        <button 
-          class="action-button"
-          @click="toggleInputMode"
-        >
-          <i :class="isVoiceMode ? 'icon-keyboard' : 'icon-mic'"></i>
-        </button>
-      </div>
-    </div>
-    
-    <!-- 快捷指令提示 -->
-    <div v-if="showSuggestions" class="suggestions-panel">
-      <div class="suggestions-content">
-        <div class="suggestion-title">常用指令</div>
-        <div class="suggestion-list">
-          <button
-            v-for="suggestion in suggestions"
-            :key="suggestion.id"
-            class="suggestion-item"
-            @click="selectSuggestion(suggestion)"
-          >
-            <i :class="suggestion.icon"></i>
-            <span>{{ suggestion.text }}</span>
-          </button>
-        </div>
       </div>
     </div>
   </div>
@@ -81,21 +56,32 @@
 
 <script>
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
+import { Mic, MicOff, Send } from 'lucide-vue-next'
 
 export default {
   name: 'BottomInputBox',
+  components: {
+    Mic,
+    MicOff,
+    Send
+  },
+  props: {
+    isHyperTimeExpanded: {
+      type: Boolean,
+      default: false
+    }
+  },
   emits: ['voice-command', 'text-command', 'input-focus', 'input-blur'],
   setup(props, { emit }) {
     const inputText = ref('')
-    const isVoiceMode = ref(false)
     const isListening = ref(false)
     const isFocused = ref(false)
-    const showSuggestions = ref(false)
     const textInput = ref(null)
     
     // 语音识别相关
     let recognition = null
     let recognitionTimeout = null
+    let isLongPressing = ref(false)
     
     // 快捷指令
     const suggestions = ref([
@@ -106,12 +92,8 @@ export default {
       { id: 5, text: '设置提醒事项', icon: 'icon-bell' }
     ])
     
-    const placeholder = computed(() => {
-      return isVoiceMode.value ? '点击麦克风开始语音输入...' : '输入指令或问题...'
-    })
-    
     const canSubmit = computed(() => {
-      return inputText.value.trim().length > 0 || (isVoiceMode.value && isListening.value)
+      return inputText.value.trim().length > 0
     })
     
     // 初始化语音识别
@@ -140,9 +122,11 @@ export default {
             }
           }
           
+          // 实时显示识别的文字到输入框
           if (finalTranscript) {
             inputText.value = finalTranscript
-            handleVoiceResult(finalTranscript)
+          } else if (interimTranscript) {
+            inputText.value = interimTranscript
           }
         }
         
@@ -153,94 +137,98 @@ export default {
         
         recognition.onend = () => {
           isListening.value = false
+          isLongPressing.value = false
         }
       }
     }
     
-    // 切换语音输入模式
-    const toggleVoiceInput = () => {
+    // 开始长按录音
+    const startLongPress = (e) => {
+      e.preventDefault()
+      
+      // 防止重复触发
+      if (isLongPressing.value || isListening.value) {
+        return
+      }
+      
+      isLongPressing.value = true
+      inputText.value = '' // 清空输入框
+      startListening()
+    }
+    
+    // 结束长按录音
+    const endLongPress = (e) => {
+      e.preventDefault()
+      if (isLongPressing.value) {
+        isLongPressing.value = false
+        stopListening()
+        // 长按结束后自动发送语音识别的内容
+        setTimeout(() => {
+          if (inputText.value.trim()) {
+            handleSubmit()
+          }
+        }, 100) // 稍微延迟以确保语音识别结果已更新
+      }
+    }
+    
+    // 开始语音识别
+    const startListening = () => {
       if (!recognition) {
         console.warn('浏览器不支持语音识别')
         return
       }
       
+      // 如果已经在监听，先停止
       if (isListening.value) {
         recognition.stop()
-      } else {
-        recognition.start()
-      }
-    }
-    
-    // 切换输入模式
-    const toggleInputMode = () => {
-      isVoiceMode.value = !isVoiceMode.value
-      if (!isVoiceMode.value && isListening.value) {
-        recognition?.stop()
+        return
       }
       
-      if (!isVoiceMode.value) {
-        nextTick(() => {
-          textInput.value?.focus()
-        })
+      try {
+        recognition.start()
+      } catch (error) {
+        console.error('启动语音识别失败:', error)
+        isListening.value = false
       }
     }
     
-    // 处理语音结果
-    const handleVoiceResult = (transcript) => {
-      emit('voice-command', transcript)
-      inputText.value = ''
-      isVoiceMode.value = false
+    // 停止语音识别
+    const stopListening = () => {
+      if (recognition && isListening.value) {
+        recognition.stop()
+      }
     }
+    
+    // 处理语音结果 - 不再需要单独的语音结果处理，直接通过handleSubmit发送
     
     // 处理提交
     const handleSubmit = () => {
       const text = inputText.value.trim()
       if (!text) return
       
-      if (isVoiceMode.value) {
+      // 根据来源发送不同的事件
+      if (isLongPressing.value || isListening.value) {
         emit('voice-command', text)
       } else {
         emit('text-command', text)
       }
-      
       inputText.value = ''
-      showSuggestions.value = false
     }
     
     // 输入框焦点事件
     const handleInputFocus = () => {
       isFocused.value = true
-      showSuggestions.value = true
       emit('input-focus')
     }
     
     const handleInputBlur = () => {
       isFocused.value = false
-      // 延迟隐藏建议，允许点击建议项
-      setTimeout(() => {
-        showSuggestions.value = false
-      }, 200)
       emit('input-blur')
     }
     
-    // 选择建议
-    const selectSuggestion = (suggestion) => {
-      inputText.value = suggestion.text
-      showSuggestions.value = false
-      handleSubmit()
-    }
-    
-    // 键盘事件处理
-    const handleKeydown = (event) => {
-      if (event.key === 'Escape') {
-        showSuggestions.value = false
-        textInput.value?.blur()
-      }
-    }
     
     onMounted(() => {
       initSpeechRecognition()
-      document.addEventListener('keydown', handleKeydown)
     })
     
     onUnmounted(() => {
@@ -250,25 +238,19 @@ export default {
       if (recognitionTimeout) {
         clearTimeout(recognitionTimeout)
       }
-      document.removeEventListener('keydown', handleKeydown)
     })
     
     return {
       inputText,
-      isVoiceMode,
       isListening,
       isFocused,
-      showSuggestions,
       textInput,
-      suggestions,
-      placeholder,
       canSubmit,
-      toggleVoiceInput,
-      toggleInputMode,
+      startLongPress,
+      endLongPress,
       handleSubmit,
       handleInputFocus,
-      handleInputBlur,
-      selectSuggestion
+      handleInputBlur
     }
   }
 }
@@ -278,64 +260,74 @@ export default {
 .bottom-input-box {
   position: relative;
   width: 100%;
-  background: #fff;
-  border-top: 1px solid #e0e0e0;
   
+  // 主输入容器
   .input-container {
     display: flex;
     align-items: center;
     padding: 0.75rem 1rem;
     gap: 0.75rem;
+    background: #fff;
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
     
-    .left-actions,
-    .right-actions {
-      display: flex;
-      gap: 0.5rem;
-      
-      .action-button {
+    .voice-actions {
+      .voice-button {
         width: 2.5rem;
         height: 2.5rem;
         border: none;
         border-radius: 50%;
-        background: #f5f5f5;
+        background: #f0f0f0;
         color: #666;
         cursor: pointer;
         transition: all 0.3s ease;
         display: flex;
         align-items: center;
         justify-content: center;
+        position: relative;
         
         &:hover {
-          background: #e0e0e0;
-          color: #333;
+          background: #e8e8e8;
+          transform: translateY(-1px);
         }
         
-        &.active {
-          background: #667eea;
+        &.listening {
+          background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
           color: white;
-        }
-        
-        &.send-button {
-          background: #e0e0e0;
-          color: #999;
+          animation: pulse 2s infinite;
           
-          &.has-content {
-            background: #667eea;
-            color: white;
+          .voice-ripple {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             
-            &:hover {
-              background: #5a6fd8;
+            .ripple {
+              position: absolute;
+              border: 2px solid rgba(255, 255, 255, 0.3);
+              border-radius: 50%;
+              animation: ripple 1.5s infinite;
+              
+              &:nth-child(1) {
+                width: 3rem;
+                height: 3rem;
+                margin: -1.5rem;
+              }
+              
+              &:nth-child(2) {
+                width: 3.5rem;
+                height: 3.5rem;
+                margin: -1.75rem;
+                animation-delay: 0.3s;
+              }
+              
+              &:nth-child(3) {
+                width: 4rem;
+                height: 4rem;
+                margin: -2rem;
+                animation-delay: 0.6s;
+              }
             }
           }
-          
-          &:disabled {
-            cursor: not-allowed;
-            opacity: 0.5;
-          }
-        }
-        
-        i {
-          font-size: 1.125rem;
         }
       }
     }
@@ -343,165 +335,141 @@ export default {
     .input-area {
       flex: 1;
       
-      .text-input {
-        .input-field {
-          width: 100%;
-          padding: 0.75rem 1rem;
-          border: 1px solid #e0e0e0;
-          border-radius: 1.5rem;
-          background: #f8f9fa;
-          font-size: 1rem;
-          outline: none;
-          transition: all 0.3s ease;
-          
-          &:focus {
-            border-color: #667eea;
-            background: #fff;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-          }
-          
-          &::placeholder {
-            color: #999;
-          }
+      .input-field {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: none;
+        border-radius: 1.5rem;
+        background: #f8f9fa;
+        font-size: 1rem;
+        outline: none;
+        transition: all 0.3s ease;
+        
+        &:focus {
+          background: #fff;
+        }
+        
+        &::placeholder {
+          color: #999;
         }
       }
-      
-      .voice-input {
-        .voice-indicator {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 1rem;
-          background: #f8f9fa;
-          border-radius: 1.5rem;
-          border: 1px solid #e0e0e0;
-          cursor: pointer;
-          transition: all 0.3s ease;
+    }
+    
+    .right-actions {
+      .send-button {
+        width: 2.5rem;
+        height: 2.5rem;
+        border: none;
+        border-radius: 50%;
+        background: #e0e0e0;
+        color: #999;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        
+        &.has-content {
+          background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+          color: white;
           
-          &.listening {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-color: #667eea;
-            
-            .voice-waves .wave {
-              background: white;
-            }
+          &:hover {
+            transform: translateY(-1px);
           }
-          
-          .voice-waves {
-            display: flex;
-            gap: 0.25rem;
-            margin-bottom: 0.5rem;
-            
-            .wave {
-              width: 0.25rem;
-              height: 1rem;
-              background: #667eea;
-              border-radius: 0.125rem;
-              animation: wave 1.2s infinite ease-in-out;
-              
-              &:nth-child(2) { animation-delay: 0.1s; }
-              &:nth-child(3) { animation-delay: 0.2s; }
-              &:nth-child(4) { animation-delay: 0.3s; }
-            }
-          }
-          
-          .voice-text {
-            font-size: 0.875rem;
-            opacity: 0.8;
-          }
+        }
+        
+        &:disabled {
+          cursor: not-allowed;
+          opacity: 0.5;
         }
       }
     }
   }
   
-  .suggestions-panel {
-    position: absolute;
-    bottom: 100%;
-    left: 0;
-    right: 0;
-    background: white;
-    border: 1px solid #e0e0e0;
-    border-bottom: none;
-    border-radius: 0.75rem 0.75rem 0 0;
-    box-shadow: 0 -0.25rem 1rem rgba(0, 0, 0, 0.1);
-    max-height: 12rem;
-    overflow-y: auto;
-    
-    .suggestions-content {
-      padding: 1rem;
+  // 超时间模式样式
+  &.hyper-time-mode {
+    .input-container {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
       
-      .suggestion-title {
-        font-size: 0.75rem;
-        color: #666;
-        margin-bottom: 0.75rem;
-        font-weight: 600;
+      .voice-actions .voice-button {
+        background: rgba(255, 255, 255, 0.1);
+        color: #e0e0e0;
+        
+        &:hover {
+          background: rgba(255, 255, 255, 0.15);
+        }
+        
+        &.listening {
+          background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+          color: white;
+        }
       }
       
-      .suggestion-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
+      .input-area .input-field {
+        background: rgba(255, 255, 255, 0.1);
+        color: #e0e0e0;
+        border: 1px solid rgba(255, 255, 255, 0.1);
         
-        .suggestion-item {
-          display: flex;
-          align-items: center;
-          gap: 0.75rem;
-          padding: 0.75rem;
-          background: #f8f9fa;
-          border: none;
-          border-radius: 0.5rem;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          text-align: left;
-          
-          &:hover {
-            background: #e9ecef;
-            transform: translateY(-1px);
-          }
-          
-          i {
-            font-size: 1rem;
-            color: #667eea;
-            width: 1.25rem;
-            text-align: center;
-          }
-          
-          span {
-            font-size: 0.875rem;
-            color: #333;
-          }
+        &:focus {
+          background: rgba(255, 255, 255, 0.15);
+          border-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        &::placeholder {
+          color: rgba(224, 224, 224, 0.6);
+        }
+      }
+      
+      .right-actions .send-button {
+        background: rgba(255, 255, 255, 0.1);
+        color: rgba(224, 224, 224, 0.6);
+        
+        &.has-content {
+          background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+          color: white;
         }
       }
     }
   }
 }
 
-@keyframes wave {
-  0%, 40%, 100% {
-    transform: scaleY(0.4);
+// 动画关键帧
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
   }
-  20% {
-    transform: scaleY(1);
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes ripple {
+  0% {
+    opacity: 1;
+    transform: scale(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
   }
 }
 
 // 响应式调整
 @media (max-width: 375px) {
-  .bottom-input-box .input-container {
-    padding: 0.5rem 0.75rem;
-    gap: 0.5rem;
-    
-    .left-actions,
-    .right-actions {
-      .action-button {
+  .bottom-input-box {
+    .input-container {
+      padding: 0.5rem 0.75rem;
+      gap: 0.5rem;
+      
+      .voice-actions .voice-button {
         width: 2rem;
         height: 2rem;
-        
-        i {
-          font-size: 1rem;
-        }
+      }
+      
+      .right-actions .send-button {
+        width: 2rem;
+        height: 2rem;
       }
     }
   }

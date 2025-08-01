@@ -7,7 +7,7 @@
         <DreamBlockSlider 
           :dreams="dreams" 
           @change="handleDreamChange"
-          @dream-detail="handleDreamDetail"
+          @show-hyper-time="handleShowHyperTime"
         />
       </div>
       
@@ -36,6 +36,7 @@
     <!-- 底部固定输入框 -->
     <div class="bottom-input-area">
       <BottomInputBox 
+        :is-hyper-time-expanded="isHyperTimeExpanded"
         @voice-command="handleVoiceCommand"
         @text-command="handleTextCommand"
       />
@@ -45,7 +46,6 @@
 
 <script>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import DreamBlockSlider from '@/components/DreamBlockSlider.vue'
 import CardGrid from '@/components/CardGrid.vue'
 import HyperTimeDimensionLayer from '@/components/HyperTimeDimensionLayer.vue'
@@ -60,7 +60,6 @@ export default {
     BottomInputBox
   },
   setup() {
-    const router = useRouter()
     
     // 响应式数据
     const dreams = ref([])
@@ -92,12 +91,10 @@ export default {
       // TODO: 实现文本命令处理逻辑
     }
     
-    const handleDreamDetail = (dream) => {
-      // 进入梦想详情页面
-      router.push({
-        name: 'DreamDetail',
-        params: { dreamId: dream.id.toString() }
-      })
+    const handleShowHyperTime = (dream) => {
+      // 点击梦想块时展开超时间层
+      activeDreamIndex.value = dreams.value.findIndex(d => d.id === dream.id)
+      isHyperTimeExpanded.value = true
     }
     
     const closeHyperTimeLayer = () => {
@@ -157,64 +154,185 @@ export default {
     }
     
     const loadUniversalCards = async () => {
-      // TODO: 加载通用卡片数据
+      // 加载通用卡片数据
       universalCards.value = [
-        { type: 'time', data: {} },
-        { type: 'weather', data: {} },
-        { type: 'alarm', data: {} },
-        { type: 'calendar', data: {} }
+        { 
+          type: 'time', 
+          data: {},
+          priority: 5
+        },
+        { 
+          type: 'weather', 
+          data: {
+            temperature: 22,
+            condition: '晴朗',
+            location: '北京'
+          },
+          priority: 6
+        },
+        { 
+          type: 'alarm', 
+          data: {
+            time: '07:30',
+            label: '起床闹钟',
+            enabled: true
+          },
+          priority: 7
+        },
+        { 
+          type: 'calendar', 
+          data: {
+            events: [
+              { id: 1, title: '团队会议', time: '10:00' },
+              { id: 2, title: '项目评审', time: '14:30' }
+            ]
+          },
+          priority: 8
+        }
       ]
     }
     
     const loadSpecificCards = async (dream) => {
       if (!dream) return
       
-      // TODO: 根据梦想类型加载特定卡片
+      // 根据梦想类型加载特定卡片
       const cardMapping = {
         1: [ // 孩子考哈佛
-          { type: 'exam-countdown', data: {} },
-          { type: 'study-progress', data: {} },
-          { type: 'grade-tracking', data: {} }
+          { 
+            type: 'exam-countdown', 
+            data: { 
+              name: '哈佛申请截止', 
+              date: '2025-01-01' 
+            },
+            priority: 1
+          },
+          { 
+            type: 'study-progress', 
+            data: { 
+              subject: 'SAT准备', 
+              progress: 78,
+              totalChapters: 15,
+              completedChapters: 12
+            },
+            priority: 2
+          }
         ],
         2: [ // 事业发展
-          { type: 'project-progress', data: {} },
-          { type: 'meeting-schedule', data: {} },
-          { type: 'goal-completion', data: {} }
+          { 
+            type: 'project-progress', 
+            data: { 
+              name: '管理技能提升', 
+              progress: 45,
+              totalTasks: 20,
+              completedTasks: 9,
+              dueDate: '2025-03-31'
+            },
+            priority: 1
+          }
         ],
         3: [ // 健康管理
-          { type: 'exercise-record', data: {} },
-          { type: 'diet-tracking', data: {} },
-          { type: 'health-reminder', data: {} }
+          { 
+            type: 'exercise-record', 
+            data: { 
+              type: '跑步', 
+              distance: 5.2,
+              distanceUnit: '公里',
+              duration: 28,
+              calories: 245,
+              date: new Date().toISOString()
+            },
+            priority: 1
+          }
+        ],
+        4: [ // 财务自由
+          { 
+            type: 'project-progress', 
+            data: { 
+              name: '投资学习计划', 
+              progress: 32,
+              totalTasks: 25,
+              completedTasks: 8,
+              dueDate: '2025-06-30'
+            },
+            priority: 1
+          }
+        ],
+        5: [ // 家庭和谐
+          { 
+            type: 'study-progress', 
+            data: { 
+              subject: '亲子沟通技巧', 
+              progress: 88,
+              totalChapters: 8,
+              completedChapters: 7
+            },
+            priority: 1
+          }
         ]
       }
       
       specificCards.value = cardMapping[dream.id] || []
     }
     
-    // 手势处理
+    // 手势处理 - 全局手势控制超时间层
     const setupGestures = () => {
-      // TODO: 设置下滑手势监听
       let startY = 0
+      let startX = 0
       let currentY = 0
+      let currentX = 0
+      let isScrolling = false
+      let isHorizontalSwipe = false
       
       const handleTouchStart = (e) => {
         startY = e.touches[0].clientY
+        startX = e.touches[0].clientX
+        currentY = startY
+        currentX = startX
+        isScrolling = false
+        isHorizontalSwipe = false
       }
       
       const handleTouchMove = (e) => {
         currentY = e.touches[0].clientY
-      }
-      
-      const handleTouchEnd = () => {
-        const diff = currentY - startY
-        if (diff > 100 && startY < 100) { // 从顶部向下滑动超过100px
-          isHyperTimeExpanded.value = true
+        currentX = e.touches[0].clientX
+        const diffY = currentY - startY
+        const diffX = Math.abs(currentX - startX)
+        
+        // 判断是垂直滑动还是水平滑动
+        if (Math.abs(diffY) > 10 || diffX > 10) {
+          if (diffX > Math.abs(diffY)) {
+            isHorizontalSwipe = true
+          } else {
+            isScrolling = true
+          }
         }
       }
       
-      document.addEventListener('touchstart', handleTouchStart)
-      document.addEventListener('touchmove', handleTouchMove)
-      document.addEventListener('touchend', handleTouchEnd)
+      const handleTouchEnd = () => {
+        const diffY = currentY - startY
+        const diffX = Math.abs(currentX - startX)
+        
+        if (isHyperTimeExpanded.value) {
+          // 超时间层已展开时的手势：上滑、左滑、右滑都可以关闭
+          if ((isScrolling && diffY < -50) || // 上滑超过50px
+              (isHorizontalSwipe && diffX > 80)) { // 左右滑超过80px
+            isHyperTimeExpanded.value = false
+          }
+        } else {
+          // 普通状态下的手势：下滑触发超时间层
+          if (isScrolling && diffY > 80) {
+            isHyperTimeExpanded.value = true
+          }
+        }
+        
+        isScrolling = false
+        isHorizontalSwipe = false
+      }
+      
+      // 绑定到整个文档，确保全局响应
+      document.addEventListener('touchstart', handleTouchStart, { passive: false })
+      document.addEventListener('touchmove', handleTouchMove, { passive: false })
+      document.addEventListener('touchend', handleTouchEnd, { passive: false })
     }
     
     // 生命周期
@@ -237,7 +355,7 @@ export default {
       handleDreamChange,
       handleVoiceCommand,
       handleTextCommand,
-      handleDreamDetail,
+      handleShowHyperTime,
       closeHyperTimeLayer
     }
   }
@@ -276,12 +394,12 @@ export default {
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 20, 0.95);
-    transform: translateY(100%);
-    transition: transform 0.3s ease-in-out;
+    transform: translateY(-100%); // 从上方隐藏
+    transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
     z-index: 10;
     
     &.expanded {
-      transform: translateY(0);
+      transform: translateY(0); // 从上到下滑入
     }
   }
   
@@ -292,14 +410,13 @@ export default {
     width: 100%;
     height: 4rem;
     background: #fff;
-    border-top: 1px solid #e0e0e0;
     z-index: 100;
   }
 }
 
 // 现实维度层样式
 .reality-dimension-layer {
-  background: linear-gradient(135deg, #fff5f0 0%, #ffeee6 100%); // 暖米色渐变
+  background: linear-gradient(135deg, #fff5f0 0%, #fff 80%); // 暖米色渐变
   position: relative;
   
   // 添加微妙的纹理效果
@@ -325,23 +442,7 @@ export default {
   .cards-area {
     position: relative;
     z-index: 2;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border-radius: 1.5rem 1.5rem 0 0;
     margin-top: 1rem;
-    
-    // 添加顶部装饰线
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0.5rem;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 2rem;
-      height: 0.25rem;
-      background: rgba(0, 0, 0, 0.1);
-      border-radius: 0.125rem;
-    }
   }
 }
 

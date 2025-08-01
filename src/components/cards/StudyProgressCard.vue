@@ -14,16 +14,20 @@
       <div class="study-status">{{ studyStatus }}</div>
     </div>
     <div class="progress-icon">
-      <i class="icon-book-open"></i>
+      <BookOpen :size="20" />
     </div>
   </div>
 </template>
 
 <script>
 import { ref, computed, onMounted } from 'vue'
+import { BookOpen } from 'lucide-vue-next'
 
 export default {
   name: 'StudyProgressCard',
+  components: {
+    BookOpen
+  },
   props: {
     data: {
       type: Object,

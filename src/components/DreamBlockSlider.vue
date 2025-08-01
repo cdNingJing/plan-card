@@ -76,7 +76,7 @@ export default {
       default: () => []
     }
   },
-  emits: ['change', 'dream-detail'],
+  emits: ['change', 'show-hyper-time'],
   setup(props, { emit }) {
     const sliderContainer = ref(null)
     const currentIndex = ref(0)
@@ -229,8 +229,8 @@ export default {
     // 点击块
     const handleBlockClick = (index) => {
       if (index === currentIndex.value) {
-        // 点击当前激活的块，进入梦想详情页面
-        emit('dream-detail', props.dreams[index])
+        // 点击当前激活的块，触发超时间层展开
+        emit('show-hyper-time', props.dreams[index])
         return
       }
       goToSlide(index)

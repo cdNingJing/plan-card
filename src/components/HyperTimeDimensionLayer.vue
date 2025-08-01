@@ -3,7 +3,7 @@
     <!-- 关闭按钮 -->
     <div class="close-header">
       <button class="close-button" @click="handleClose">
-        <i class="icon-chevron-down"></i>
+        <ChevronDown :size="24" />
       </button>
       <h2 class="dimension-title">{{ dream?.title }} - 超时间视图</h2>
     </div>
@@ -19,7 +19,7 @@
           :class="{ 'active': activeTab === tab.key }"
           @click="switchTab(tab.key)"
         >
-          <i :class="tab.icon"></i>
+          <component :is="tab.icon" :size="16" />
           {{ tab.label }}
         </button>
       </div>
@@ -143,9 +143,23 @@
 
 <script>
 import { ref, computed, watch } from 'vue'
+import {
+  ChevronDown,
+  Clock,
+  BarChart3,
+  TrendingUp,
+  Share2
+} from 'lucide-vue-next'
 
 export default {
   name: 'HyperTimeDimensionLayer',
+  components: {
+    ChevronDown,
+    Clock,
+    BarChart3,
+    TrendingUp,
+    Share2
+  },
   props: {
     dream: {
       type: Object,
@@ -161,10 +175,10 @@ export default {
     const activeTab = ref('history')
     
     const timelineTabs = [
-      { key: 'history', label: '历史', icon: 'icon-clock' },
-      { key: 'analysis', label: '现状', icon: 'icon-analytics' },
-      { key: 'future', label: '未来', icon: 'icon-trending-up' },
-      { key: 'connections', label: '关联', icon: 'icon-share-2' }
+      { key: 'history', label: '历史', icon: Clock },
+      { key: 'analysis', label: '现状', icon: BarChart3 },
+      { key: 'future', label: '未来', icon: TrendingUp },
+      { key: 'connections', label: '关联', icon: Share2 }
     ]
     
     // 模拟数据

@@ -17,16 +17,20 @@
     </div>
     
     <div class="calendar-icon">
-      <i class="icon-calendar"></i>
+      <Calendar :size="20" />
     </div>
   </div>
 </template>
 
 <script>
 import { ref, computed, onMounted } from 'vue'
+import { Calendar } from 'lucide-vue-next'
 
 export default {
   name: 'CalendarCard',
+  components: {
+    Calendar
+  },
   props: {
     data: {
       type: Object,
