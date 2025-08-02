@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '@/views/HomeView.vue'
 import NewHomeView from '@/views/NewHomeView.vue'
+import TaskHomeView from '@/views/TaskHomeView.vue'
 import PlanView from '@/views/PlanView.vue'
 import ProfileView from '@/views/ProfileView.vue'
 import ChatView from '@/views/ChatView.vue'
@@ -23,6 +24,15 @@ const routes = [
     component: NewHomeView,
     meta: {
       title: '新首页',
+      keepAlive: true
+    }
+  },
+  {
+    path: '/task-home',
+    name: 'TaskHome',
+    component: TaskHomeView,
+    meta: {
+      title: '任务向首页',
       keepAlive: true
     }
   },
