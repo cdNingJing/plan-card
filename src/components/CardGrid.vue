@@ -30,6 +30,14 @@ import ExamCountdownCard from './cards/ExamCountdownCard.vue'
 import StudyProgressCard from './cards/StudyProgressCard.vue'
 import ProjectProgressCard from './cards/ProjectProgressCard.vue'
 import ExerciseRecordCard from './cards/ExerciseRecordCard.vue'
+import NotesCard from './cards/NotesCard.vue'
+import MessagesCard from './cards/MessagesCard.vue'
+import PhotosCard from './cards/PhotosCard.vue'
+import MusicCard from './cards/MusicCard.vue'
+import SettingsCard from './cards/SettingsCard.vue'
+import CalculatorCard from './cards/CalculatorCard.vue'
+import MapCard from './cards/MapCard.vue'
+import BrowserCard from './cards/BrowserCard.vue'
 
 export default {
   name: 'CardGrid',
@@ -41,7 +49,15 @@ export default {
     ExamCountdownCard,
     StudyProgressCard,
     ProjectProgressCard,
-    ExerciseRecordCard
+    ExerciseRecordCard,
+    NotesCard,
+    MessagesCard,
+    PhotosCard,
+    MusicCard,
+    SettingsCard,
+    CalculatorCard,
+    MapCard,
+    BrowserCard
   },
   props: {
     activeDream: {
@@ -88,7 +104,15 @@ export default {
         'exam-countdown': 'ExamCountdownCard',
         'study-progress': 'StudyProgressCard',
         'project-progress': 'ProjectProgressCard',
-        'exercise-record': 'ExerciseRecordCard'
+        'exercise-record': 'ExerciseRecordCard',
+        'notes': 'NotesCard',
+        'messages': 'MessagesCard',
+        'photos': 'PhotosCard',
+        'music': 'MusicCard',
+        'settings': 'SettingsCard',
+        'calculator': 'CalculatorCard',
+        'map': 'MapCard',
+        'browser': 'BrowserCard'
       }
       
       return componentMap[cardType] || 'div'
@@ -212,6 +236,55 @@ export default {
         background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
         color: white;
         box-shadow: 0 0.25rem 1.5rem rgba(137, 247, 254, 0.3);
+      }
+      
+      // 新增的app风格卡片样式
+      &.card-notes {
+        background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+        color: #2d3748;
+        box-shadow: 0 0.25rem 1.5rem rgba(255, 234, 167, 0.3);
+      }
+      
+      &.card-messages {
+        background: linear-gradient(135deg, #55a3ff 0%, #003d82 100%);
+        color: white;
+        box-shadow: 0 0.25rem 1.5rem rgba(85, 163, 255, 0.3);
+      }
+      
+      &.card-photos {
+        background: linear-gradient(135deg, #ff9a56 0%, #ffad56 100%);
+        color: white;
+        box-shadow: 0 0.25rem 1.5rem rgba(255, 154, 86, 0.3);
+      }
+      
+      &.card-music {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        box-shadow: 0 0.25rem 1.5rem rgba(102, 126, 234, 0.3);
+      }
+      
+      &.card-settings {
+        background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+        color: white;
+        box-shadow: 0 0.25rem 1.5rem rgba(116, 185, 255, 0.3);
+      }
+      
+      &.card-calculator {
+        background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+        color: white;
+        box-shadow: 0 0.25rem 1.5rem rgba(253, 121, 168, 0.3);
+      }
+      
+      &.card-map {
+        background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+        color: white;
+        box-shadow: 0 0.25rem 1.5rem rgba(46, 204, 113, 0.3);
+      }
+      
+      &.card-browser {
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        color: white;
+        box-shadow: 0 0.25rem 1.5rem rgba(52, 152, 219, 0.3);
       }
     }
   }

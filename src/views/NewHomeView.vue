@@ -338,6 +338,56 @@ export default {
             ]
           },
           priority: 8
+        },
+        {
+          type: 'notes',
+          data: {
+            noteCount: 12
+          },
+          priority: 9
+        },
+        {
+          type: 'messages',
+          data: {
+            unreadCount: 3
+          },
+          priority: 10
+        },
+        {
+          type: 'photos',
+          data: {
+            photoCount: 256
+          },
+          priority: 11
+        },
+        {
+          type: 'music',
+          data: {
+            currentSong: '轻松时光'
+          },
+          priority: 12
+        },
+        {
+          type: 'settings',
+          data: {},
+          priority: 13
+        },
+        {
+          type: 'calculator',
+          data: {},
+          priority: 14
+        },
+        {
+          type: 'map',
+          data: {
+            location: '北京市'
+          },
+          priority: 15
+        },
+        {
+          type: 'browser',
+          data: {},
+          priority: 16
         }
       ]
     }
