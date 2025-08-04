@@ -429,9 +429,10 @@ const finishHorizontalSwipe = () => {
 
 // 处理垂直滑动 - 移动title和卡片
 const handleVerticalSwipe = (deltaY) => {
-  if (deltaY > 0) {
-    // 向下滑动 - 可移动内容向下移动
-    const screenHeight = window.innerHeight || 812
+  const screenHeight = window.innerHeight || 812
+  
+  if (deltaY > 0 && !isSecondScreenVisible.value) {
+    // 第一屏向下滑动 - 可移动内容向下移动
     const maxDistance = screenHeight * 0.4 // 40%屏高为完全切换的阈值
     const progress = Math.min(deltaY / maxDistance, 1)
     
@@ -449,6 +450,30 @@ const handleVerticalSwipe = (deltaY) => {
     if (progress >= 0.5) {
       isSecondScreenVisible.value = true
     }
+  } else if (deltaY < 0 && isSecondScreenVisible.value) {
+    // 第二屏向上滑动 - 可移动内容向上移动
+    const currentTranslate = verticalTranslateY.value
+    const upwardMove = Math.abs(deltaY)
+    const newTranslate = Math.max(0, currentTranslate - upwardMove)
+    
+    verticalTranslateY.value = newTranslate
+    
+    // 更新进度
+    const progress = newTranslate / screenHeight
+    pullDownProgress.value = progress
+    
+    // 如果移动到接近第一屏位置，更新可见状态
+    if (newTranslate < screenHeight * 0.5) {
+      isSecondScreenVisible.value = false
+    }
+  } else if (deltaY > 0 && isSecondScreenVisible.value) {
+    // 第二屏向下滑动 - 有边界限制，只允许少量移动
+    const currentTranslate = verticalTranslateY.value
+    const maxBoundary = screenHeight * 1.1 // 允许超出10%作为边界反馈
+    const limitedMove = Math.min(deltaY * 0.3, screenHeight * 0.1) // 限制移动幅度
+    const newTranslate = Math.min(maxBoundary, currentTranslate + limitedMove)
+    
+    verticalTranslateY.value = newTranslate
   }
 }
 
@@ -458,11 +483,17 @@ const finishVerticalSwipe = () => {
   const screenHeight = window.innerHeight || 812
   const threshold = screenHeight * 0.25 // 25%屏高作为切换阈值
   
-  if (deltaY > threshold) {
-    // 切换到第二屏
+  if (!isSecondScreenVisible.value && deltaY > threshold) {
+    // 从第一屏向下滑动超过阈值 - 切换到第二屏
+    switchToSecondScreen()
+  } else if (isSecondScreenVisible.value && deltaY < -threshold) {
+    // 从第二屏向上滑动超过阈值 - 切换到第一屏
+    switchToFirstScreen()
+  } else if (isSecondScreenVisible.value) {
+    // 第二屏的滑动没有超过阈值 - 回弹到第二屏位置
     switchToSecondScreen()
   } else {
-    // 回到第一屏
+    // 第一屏的滑动没有超过阈值 - 回到第一屏
     switchToFirstScreen()
   }
 }
