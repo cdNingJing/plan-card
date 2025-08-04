@@ -632,9 +632,21 @@ onUnmounted(() => {
   left: 0;
   width: 100%;
   height: 100vh;
-  background: white;
   z-index: 10;
   transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  
+  // 使用伪元素添加旋转的背景图片
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url('@/assets/sy.jpg') center center/cover;
+    z-index: -1; // 确保背景在内容后面
+    pointer-events: none; // 避免干扰交互
+  }
 }
 
 </style>

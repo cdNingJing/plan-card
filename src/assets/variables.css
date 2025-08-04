@@ -1,0 +1,35 @@
+/* 高端黑白灰色彩系统 */
+:root {
+  
+  /* 背景色系 */
+  --bg-primary: #ffffff;        /* 纯白背景 */
+  --bg-secondary: #fafafa;      /* 浅灰背景 */
+  --bg-tertiary: #f5f5f5;       /* 次级背景 */
+  --bg-dark: #2c2c2c;          /* 深色背景 */
+  
+  /* 文字色系 */
+  --text-primary: #1a1a1a;      /* 主要文字 - 深黑 */
+  --text-secondary: #666666;    /* 次要文字 - 中灰 */
+  --text-tertiary: #999999;     /* 辅助文字 - 浅灰 */
+  --text-inverse: #ffffff;      /* 反色文字 - 白色 */
+  
+  /* 边框和分割线 */
+  --border-medium: #d0d0d0;     /* 中等边框 */
+  --border-dark: #888888;       /* 深色边框 */
+  
+  /* 阴影系统 */
+  --shadow-light: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-heavy: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-dramatic: 0 16px 48px rgba(0, 0, 0, 0.15);
+  
+  /* 立体效果 */
+  --inset-light: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+  --inset-medium: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  --raised-light: 0 2px 4px rgba(255, 255, 255, 0.8), 0 1px 2px rgba(0, 0, 0, 0.1);
+  --raised-medium: 0 4px 8px rgba(255, 255, 255, 0.9), 0 2px 4px rgba(0, 0, 0, 0.1);
+  
+  /* 光泽效果 */
+  --gloss-light: linear-gradient(10deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 50%, rgba(0, 0, 0, 0.05) 100%);
+  --gloss-medium: linear-gradient(35deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.2) 50%, rgba(0, 0, 0, 0.1) 100%);
+}

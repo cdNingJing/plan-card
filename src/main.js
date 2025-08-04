@@ -5,6 +5,8 @@ import AppRouter from './AppRouter.vue'
 
 // 导入图标样式
 import './assets/icons.css'
+// 导入全局CSS变量
+import './assets/variables.css'
 
 // 导入Element Plus
 import ElementPlus from 'element-plus'

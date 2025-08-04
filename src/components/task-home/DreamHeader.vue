@@ -51,13 +51,13 @@ const props = defineProps({
 
 const emit = defineEmits(['setActiveDream'])
 
+
 const getDreamTitleStyle = (index) => {
   const isActive = index === props.activeDreamIndex
-  const scrollThreshold = props.containerHeight * 0.8 // 调整到80%屏高，让title更晚消失
-  const fixedThreshold = props.containerHeight * 0.85 // 85%屏高时固定在底部
+  const scrollThreshold = props.containerHeight * 0.8
+  const fixedThreshold = props.containerHeight * 0.85
   
   if (isActive && props.verticalTranslateY >= fixedThreshold) {
-    // 当达到85%屏高时，title固定在底部对话框位置
     return {
       position: 'fixed',
       bottom: '6rem',
@@ -73,7 +73,6 @@ const getDreamTitleStyle = (index) => {
       whiteSpace: 'nowrap'
     }
   } else if (!isActive && props.verticalTranslateY >= scrollThreshold) {
-    // 非激活title在80%屏高时开始变透明
     return {
       opacity: 0.5,
       transition: 'all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)'
