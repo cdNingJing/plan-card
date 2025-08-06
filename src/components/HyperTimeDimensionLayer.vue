@@ -134,7 +134,7 @@
             <div class="insights-grid">
               <div class="insight-card completion">
                 <div class="insight-icon">
-                  <BarChart3 :size="20" />
+                  <BarChart3 :size="28" />
                 </div>
                 <div class="insight-content">
                   <div class="insight-value">{{ getCompletionRate() }}%</div>
@@ -144,7 +144,7 @@
               
               <div class="insight-card interval">
                 <div class="insight-icon">
-                  <Calendar :size="20" />
+                  <Calendar :size="28" />
                 </div>
                 <div class="insight-content">
                   <div class="insight-value">{{ getAverageInterval() }}天</div>
@@ -154,7 +154,7 @@
               
               <div class="insight-card trend">
                 <div class="insight-icon">
-                  <TrendingUp :size="20" />
+                  <TrendingUp :size="28" />
                 </div>
                 <div class="insight-content">
                   <div class="insight-value">{{ getMomentumTrend() }}</div>
@@ -164,7 +164,7 @@
               
               <div class="insight-card consistency">
                 <div class="insight-icon">
-                  <Target :size="20" />
+                  <Target :size="28" />
                 </div>
                 <div class="insight-content">
                   <div class="insight-value">{{ getConsistencyScore() }}%</div>

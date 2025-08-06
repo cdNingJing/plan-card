@@ -52,13 +52,14 @@ import FixedBottomBar from '@/components/task-home/FixedBottomBar.vue'
 const dreams = ref([
   {
     id: 1,
-    title: '年底前减重20斤，重拾健康活力',
+    title: 'Weight Loss',
+    detail: '年底前减重20斤，重拾健康活力',
     cards: [
       { 
         quadrant: 'important-urgent', 
         priority: '重要紧急',
         tasks: [
-          { title: '立即停止暴饮暴食', description: '每天晚8点后禁食，戒掉奶茶、炸鸡等高热量食物，建立饮食自律' },
+          { title: '停止暴饮暴食', description: '每天晚8点后禁食，戒掉奶茶、炸鸡等高热量食物，建立饮食自律' },
           { title: '办健身房年卡', description: '本周内选定离家最近的健身房，办理年卡并预约私教课程，确保每周至少去3次' },
           { title: '买跑鞋', description: '专业跑步鞋一双' }
         ]
@@ -67,7 +68,7 @@ const dreams = ref([
         quadrant: 'important-not-urgent', 
         priority: '重要不紧急',
         tasks: [
-          { title: '学会做健康餐', description: '每周学一道低脂高蛋白菜品，掌握蒸煮炖等健康烹饪方式，逐步替代外卖依赖' },
+          { title: '学会健康餐', description: '每周学一道低脂高蛋白菜品，掌握蒸煮炖等健康烹饪方式，逐步替代外卖依赖' },
           { title: '建立运动习惯', description: '制定详细的运动时间表：周一三五跑步，周二四做力量训练，周末爬山或游泳，形成稳定的运动节奏' },
           { title: '早睡早起', description: '11点前上床睡觉' }
         ]
@@ -76,7 +77,7 @@ const dreams = ref([
         quadrant: 'not-important-urgent', 
         priority: '不重要紧急',
         tasks: [
-          { title: '处理体检异常指标', description: '尽快复查血脂和血糖偏高问题，预约营养师咨询，调整饮食结构，避免发展成慢性病' },
+          { title: '处理体检异常', description: '尽快复查血脂和血糖偏高问题，预约营养师咨询，调整饮食结构，避免发展成慢性病' },
           { title: '戒掉熬夜追剧', description: '删除手机上的视频APP' }
         ]
       },
@@ -84,7 +85,7 @@ const dreams = ref([
         quadrant: 'not-important-not-urgent', 
         priority: '不重要不紧急',
         tasks: [
-          { title: '研究减脂知识', description: '系统学习营养学基础、卡路里计算方法、基础代谢率等专业知识，建立科学的减重认知体系' },
+          { title: '学习减脂知识', description: '系统学习营养学基础、卡路里计算方法、基础代谢率等专业知识，建立科学的减重认知体系' },
           { title: '买体脂秤', description: '精准监测体重变化' }
         ]
       }
@@ -92,13 +93,14 @@ const dreams = ref([
   },
   {
     id: 2,
-    title: '3年内晋升技术主管，实现年薪50万目标',
+    title: 'Career Promotion',
+    detail: '3年内晋升技术主管，实现年薪50万目标',
     cards: [
       { 
         quadrant: 'important-urgent', 
         priority: '重要紧急',
         tasks: [
-          { title: '完成电商系统重构项目', description: '本月底前交付用户管理模块和支付系统的微服务改造，确保性能提升30%以上，为升职加薪创造条件' },
+          { title: '完成系统重构', description: '本月底前交付用户管理模块和支付系统的微服务改造，确保性能提升30%以上，为升职加薪创造条件' },
           { title: '处理线上支付bug', description: '紧急修复支付回调异常' },
           { title: '准备晋升述职', description: '整理过去一年的工作成果、技术贡献和团队管理经验，准备详细的晋升材料' }
         ]
@@ -107,8 +109,8 @@ const dreams = ref([
         quadrant: 'important-not-urgent', 
         priority: '重要不紧急',
         tasks: [
-          { title: '深度学习微服务架构', description: '系统掌握Spring Cloud、Docker、Kubernetes等核心技术，能够独立设计和实施大型分布式系统架构' },
-          { title: '建立个人技术品牌', description: '开始写技术博客，在GitHub上维护开源项目，参加技术会议分享，在行业内建立影响力' },
+          { title: '学习微服务架构', description: '系统掌握Spring Cloud、Docker、Kubernetes等核心技术，能够独立设计和实施大型分布式系统架构' },
+          { title: '建立技术品牌', description: '开始写技术博客，在GitHub上维护开源项目，参加技术会议分享，在行业内建立影响力' },
           { title: '学英语', description: '每天背50个单词' }
         ]
       },
@@ -116,7 +118,7 @@ const dreams = ref([
         quadrant: 'not-important-urgent', 
         priority: '不重要紧急',
         tasks: [
-          { title: '参加公司季度培训', description: '完成公司要求的管理培训和合规培训课程，获取相应的内部认证' },
+          { title: '参加季度培训', description: '完成公司要求的管理培训和合规培训课程，获取相应的内部认证' },
           { title: '准备部门技术分享', description: '下周三做微服务实践分享' }
         ]
       },
@@ -124,7 +126,7 @@ const dreams = ref([
         quadrant: 'not-important-not-urgent', 
         priority: '不重要不紧急',
         tasks: [
-          { title: '整理过往项目文档', description: '系统整理和归档过去两年参与的所有项目资料，包括需求文档、技术方案、代码注释等，建立完整的个人项目档案' },
+          { title: '整理项目文档', description: '系统整理和归档过去两年参与的所有项目资料，包括需求文档、技术方案、代码注释等，建立完整的个人项目档案' },
           { title: '升级开发工具', description: '更新IDE和插件版本' }
         ]
       }
@@ -132,13 +134,14 @@ const dreams = ref([
   },
   {
     id: 3,
-    title: '攒够100万首付买房',
+    title: 'Save Money',
+    detail: '攒够100万首付买房',
     cards: [
       { 
         quadrant: 'important-urgent', 
         priority: '重要紧急',
         tasks: [
-          { title: '还清所有信用卡债务', description: '优先偿清年利率18%的招行信用卡3.2万欠款，再处理建行1.8万，彻底摆脱高利息负担' },
+          { title: '还清信用卡债务', description: '优先偿清年利率18%的招行信用卡3.2万欠款，再处理建行1.8万，彻底摆脱高利息负担' },
           { title: '申请房贷预审', description: '到银行申请房贷预审批，了解可贷额度和利率，为买房做准备' }
         ]
       },
@@ -171,7 +174,8 @@ const dreams = ref([
   },
   {
     id: 4,
-    title: '2年内考取PMP证书和AWS架构师认证',
+    title: 'Get Certifications',
+    detail: '2年内考取PMP证书和AWS架构师认证',
     cards: [
       { 
         quadrant: 'important-urgent', 
@@ -210,7 +214,8 @@ const dreams = ref([
   },
   {
     id: 5,
-    title: '修复家庭关系，建立深度友谊圈',
+    title: 'Family & Friends',
+    detail: '修复家庭关系，建立深度友谊圈',
     cards: [
       { 
         quadrant: 'important-urgent', 
@@ -250,7 +255,7 @@ const dreams = ref([
 ])
 
 // 响应式状态
-const activeDreamIndex = ref(0) // 默认第一个（最左侧）为激活状态
+const activeDreamIndex = ref(4) // 默认第五个（Family & Friends）为激活状态
 const dreamTitleTranslateX = ref(0)
 const cardsTranslateX = ref(0)
 
@@ -268,6 +273,28 @@ const containerWidth = ref(window.innerWidth || 375)
 const containerHeight = ref(window.innerHeight || 812)
 const dreamTitleSpacing = ref(32) // 2rem间距，固定间距而非固定宽度
 
+// 计算标题宽度的函数
+const calculateTitleWidths = () => {
+  return dreams.value.map(dream => {
+    const tempElement = document.createElement('span')
+    tempElement.style.fontSize = '1rem'
+    tempElement.style.fontWeight = '500'
+    tempElement.style.visibility = 'hidden'
+    tempElement.style.position = 'absolute'
+    tempElement.style.whiteSpace = 'nowrap'
+    tempElement.textContent = dream.title
+    document.body.appendChild(tempElement)
+    
+    const width = tempElement.offsetWidth
+    document.body.removeChild(tempElement)
+    
+    // 返回文字宽度加上padding (0.5rem * 2 = 1rem = 16px)
+    return Math.max(width + 16, 120) // 最小宽度120px
+  })
+}
+
+
+
 
 // 设置激活的梦想
 const setActiveDream = (index) => {
@@ -278,18 +305,24 @@ const setActiveDream = (index) => {
   updateCardsPosition()
 }
 
-// 更新梦想标题位置（以左侧为主排列）- 固定间距移动
+// 更新梦想标题位置（以右侧为主排列）- 动态宽度计算
 const updateDreamTitlePosition = () => {
-  // 使用固定间距而不是动态宽度计算
-  const leftMargin = dreamTitleSpacing.value // 2rem左边距
-  const fixedTitleWidth = 260 // 固定标题宽度，约16.25rem
-  const titleSpacing = dreamTitleSpacing.value // 标题之间的固定间距
+  const rightMargin = dreamTitleSpacing.value + 48 // 增加额外的右边距，防止溢出
+  const titleSpacing = 48 // 3rem间距 (3 * 16px)
   
-  // 计算选中项之前的固定偏移距离
-  const offsetBeforeActive = activeDreamIndex.value * (fixedTitleWidth + titleSpacing)
+  // 动态计算每个标题的宽度
+  const titleWidths = calculateTitleWidths()
   
-  // 将选中的标题移动到左侧位置
-  dreamTitleTranslateX.value = leftMargin - offsetBeforeActive
+  // 计算选中项之前的动态偏移距离（从右往左计算）
+  let offsetBeforeActive = 0
+  for (let i = 0; i < activeDreamIndex.value; i++) {
+    offsetBeforeActive += titleWidths[i] + titleSpacing
+  }
+  
+  // 将选中的标题移动到右侧位置
+  // 右侧位置 = 容器宽度 - 右边距 - 选中项之前的偏移 - 选中项宽度
+  const containerWidth = window.innerWidth || 375
+  dreamTitleTranslateX.value = containerWidth - rightMargin - offsetBeforeActive - titleWidths[activeDreamIndex.value]
 }
 
 // 更新卡片位置 - 一张纸的不同区域
@@ -383,14 +416,22 @@ const handleHorizontalSwipe = (deltaX) => {
   cardsTranslateX.value = cardCurrentPosition + limitedDeltaX
   
   // 同时移动标题位置，保持同步
-  // 使用固定间距计算基础位置
-  const leftMargin = dreamTitleSpacing.value
-  const fixedTitleWidth = 260 // 固定标题宽度
-  const titleSpacing = dreamTitleSpacing.value // 标题之间的固定间距
+  // 使用动态宽度计算基础位置（右侧为主）
+  const rightMargin = dreamTitleSpacing.value
+  const titleSpacing = 48 // 3rem间距
   
-  // 计算选中项之前的固定偏移距离
-  const offsetBeforeActive = activeDreamIndex.value * (fixedTitleWidth + titleSpacing)
-  const baseTitlePosition = leftMargin - offsetBeforeActive
+  // 动态计算每个标题的宽度
+  const titleWidths = calculateTitleWidths()
+  
+  // 计算选中项之前的动态偏移距离（从右往左计算）
+  let offsetBeforeActive = 0
+  for (let i = 0; i < activeDreamIndex.value; i++) {
+    offsetBeforeActive += titleWidths[i] + titleSpacing
+  }
+  
+  // 计算基础位置（右侧为主）
+  const currentContainerWidth = window.innerWidth || 375
+  const baseTitlePosition = currentContainerWidth - rightMargin - offsetBeforeActive - titleWidths[activeDreamIndex.value]
   
   // 标题跟随手势移动，但移动幅度小一些，增加层次感
   dreamTitleTranslateX.value = baseTitlePosition + (limitedDeltaX * 0.3)

@@ -57,21 +57,21 @@ const getDreamTitleStyle = (index) => {
   const scrollThreshold = props.containerHeight * 0.8
   const fixedThreshold = props.containerHeight * 0.85
   
-  if (isActive && props.verticalTranslateY >= fixedThreshold) {
-    return {
-      position: 'fixed',
-      bottom: '6rem',
-      left: '2rem',
-      zIndex: 200,
-      color: '#333',
-      fontWeight: '700',
-      fontSize: '1.1rem',
-      transition: 'all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)',
-      maxWidth: 'calc(100vw - 4rem)',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-      whiteSpace: 'nowrap'
-    }
+     if (isActive && props.verticalTranslateY >= fixedThreshold) {
+     return {
+       position: 'fixed',
+       bottom: '6rem',
+       right: '2rem',
+       zIndex: 200,
+       color: '#333',
+       fontWeight: '700',
+       fontSize: '1.1rem',
+       transition: 'all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)',
+       maxWidth: 'calc(100vw - 4rem)',
+       overflow: 'hidden',
+       textOverflow: 'ellipsis',
+       whiteSpace: 'nowrap'
+     }
   } else if (!isActive && props.verticalTranslateY >= scrollThreshold) {
     return {
       opacity: 0.5,
@@ -93,13 +93,13 @@ const getDreamTitleStyle = (index) => {
   z-index: 20;
   overflow: hidden;
   
-  .dream-titles {
-    display: flex;
-    align-items: center;
-    height: 100%;
-    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    width: max-content;
-    justify-content: flex-start;
+     .dream-titles {
+     display: flex;
+     align-items: center;
+     height: 100%;
+     transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+     width: max-content;
+     justify-content: flex-end;
     
     .dream-title {
       display: block;
@@ -107,14 +107,14 @@ const getDreamTitleStyle = (index) => {
       line-height: 3rem;
       font-size: 1rem;
       font-weight: 500;
-      color: #999;
+      color: var(--text-secondary);
       cursor: pointer; 
       transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-      margin-right: 2rem;
-      flex-shrink: 0;
-      white-space: nowrap;
-      padding: 0 0.5rem;
-      width: 260px;
+             margin-left: 3rem;
+       flex-shrink: 0;
+       white-space: nowrap;
+       padding: 0 0.5rem;
+      min-width: 120px;
       overflow: hidden;
       text-overflow: ellipsis;
       text-align: left;

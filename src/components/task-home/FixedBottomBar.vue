@@ -9,7 +9,7 @@
     
     <!-- 默认状态 -->
     <div class="bottom-content" v-if="!isExpanded" @click="expandBottomBar">
-      <div class="bottom-text">Tap to start</div>
+      <div class="bottom-text" :class="getTextColorClass()">Tap to start</div>
     </div>
     
     <!-- 展开状态 -->
@@ -100,6 +100,18 @@ const messagesContainer = ref(null)
 const chatMessages = ref([
   { type: 'ai', content: 'hahaha' }
 ])
+
+// 根据四象限类型获取文字颜色类
+const getTextColorClass = () => {
+  // 根据垂直位置判断是第一屏还是第二屏
+  if (props.verticalTranslateY > 0) {
+    // 第二屏 - 使用白灰
+    return 'text-white-gray'
+  } else {
+    // 第一屏 - 使用黑灰
+    return 'text-black-gray'
+  }
+}
 
 // 展开底部栏
 const expandBottomBar = async () => {
@@ -272,24 +284,26 @@ const scrollToBottom = () => {
   }
   
   .dynamic-title {
-    position: absolute;
-    top: -2.7rem;
-    left: 1rem;
-    right: 1rem;
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--text-primary);
+    position: fixed;
+    bottom: 4rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    width: 80vw;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #cccccc;
     opacity: 0;
-    transform: translateY(10px);
     transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+    // text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+    text-align: center;
+    z-index: 200;
     
     &.show {
       opacity: 1;
-      transform: translateY(0);
+      transform: translateX(-50%) translateY(0);
     }
   }
   
@@ -302,13 +316,19 @@ const scrollToBottom = () => {
     .bottom-text {
       font-size: 0.75rem; // 更小的字体
       font-weight: 600;
-      color: #666666; // 灰色字体
       text-shadow: none;
       transition: all 0.2s ease;
       white-space: nowrap;
       
-      &:hover {
+      // 第一屏 - 黑灰
+      &.text-black-gray {
         color: #333333;
+      }
+      
+      // 第二屏 - 白灰
+      &.text-white-gray {
+        color: #cccccc;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
       }
     }
   }
