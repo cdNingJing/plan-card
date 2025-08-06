@@ -257,7 +257,65 @@ const dreams = ref([
 // 响应式状态
 const activeDreamIndex = ref(4) // 默认第五个（Family & Friends）为激活状态
 const dreamTitleTranslateX = ref(0)
-const cardsTranslateX = ref(0)
+
+// 预计算位置映射表 - 在页面初始化时计算，不会改变
+const dreamWorkspaceWidth = 398
+const positionMap = ref({})
+
+// 计算真实的工作区宽度（考虑内边距）
+const calculateRealWorkspaceWidth = () => {
+  // 获取容器宽度
+  const containerWidth = window.innerWidth || 375
+  
+  // 计算内边距
+  const containerPadding = 16 // .5rem = 8px, 左右各8px = 16px
+  const workspacePadding = 16 // .5rem = 8px, 左右各8px = 16px
+  const totalPadding = containerPadding + workspacePadding // 32px
+  
+  // 真实的工作区宽度 = 容器宽度 - 总内边距
+  const realWorkspaceWidth = containerWidth - totalPadding
+  
+  console.log('📐 真实工作区宽度计算:', {
+    '📱 容器宽度': containerWidth,
+    '📏 容器内边距': containerPadding,
+    '📏 工作区内边距': workspacePadding,
+    '📏 总内边距': totalPadding,
+    '📏 真实工作区宽度': realWorkspaceWidth
+  })
+  
+  return realWorkspaceWidth
+}
+
+// 初始化位置映射表
+const initializePositionMap = () => {
+  // 使用真实的工作区宽度
+  const realWorkspaceWidth = calculateRealWorkspaceWidth()
+  
+  const positions = {}
+  for (let i = 0; i < dreams.value.length; i++) {
+    positions[i] = -i * realWorkspaceWidth
+  }
+  positionMap.value = positions
+  
+  console.log('📍 位置映射表初始化:', {
+    '📏 原始工作区宽度': dreamWorkspaceWidth,
+    '📏 真实工作区宽度': realWorkspaceWidth,
+    '📊 梦想数量': dreams.value.length,
+    '🗺️ 位置映射': positions
+  })
+}
+
+// 计算初始卡片位置
+const getInitialCardsPosition = () => {
+  // 确保位置映射表已初始化
+  if (Object.keys(positionMap.value).length === 0) {
+    initializePositionMap()
+  }
+  return positionMap.value[activeDreamIndex.value] || 0
+}
+
+// 直接使用计算出的初始位置
+const cardsTranslateX = ref(getInitialCardsPosition())
 
 // 垂直移动相关
 const verticalTranslateY = ref(0) // 长方形容器的垂直位移
@@ -300,6 +358,16 @@ const calculateTitleWidths = () => {
 const setActiveDream = (index) => {
   if (index === activeDreamIndex.value) return
   
+  const fromDream = dreams.value[activeDreamIndex.value]
+  const toDream = dreams.value[index]
+  
+  console.log('🔄 梦想切换 (点击标题):', {
+    '📱 从梦想': `${fromDream.title} (索引: ${activeDreamIndex.value})`,
+    '🎯 到梦想': `${toDream.title} (索引: ${index})`,
+    '📐 位置变化': `从 ${positionMap.value[activeDreamIndex.value]}px 到 ${positionMap.value[index]}px`,
+    '🎪 新梦想详情': toDream.detail
+  })
+  
   activeDreamIndex.value = index
   updateDreamTitlePosition()
   updateCardsPosition()
@@ -325,12 +393,137 @@ const updateDreamTitlePosition = () => {
   dreamTitleTranslateX.value = containerWidth - rightMargin - offsetBeforeActive - titleWidths[activeDreamIndex.value]
 }
 
-// 更新卡片位置 - 一张纸的不同区域
+// 验证梦想索引和卡片位置对应关系
+const validateDreamCardAlignment = () => {
+  // 确保位置映射表已初始化
+  if (Object.keys(positionMap.value).length === 0) {
+    initializePositionMap()
+  }
+  
+  // 直接通过下标获取期望位置，不进行任何计算
+  const expectedPosition = positionMap.value[activeDreamIndex.value]
+  
+  if (expectedPosition === undefined) {
+    console.error('❌ 位置验证失败 - 位置映射表错误:', {
+      '🎯 请求索引': activeDreamIndex.value,
+      '🗺️ 可用索引': Object.keys(positionMap.value)
+    })
+    return false
+  }
+  
+  const currentDream = dreams.value[activeDreamIndex.value]
+  const isAligned = Math.abs(expectedPosition - cardsTranslateX.value) < 1
+  
+  console.log('✅ 基于下标位置验证:', {
+    '📱 当前梦想': `${currentDream.title} (索引: ${activeDreamIndex.value})`,
+    '🎯 期望位置': `${expectedPosition}px`,
+    '📍 实际位置': `${cardsTranslateX.value}px`,
+    '📏 位置差异': `${Math.abs(expectedPosition - cardsTranslateX.value)}px`,
+    '✅ 是否对齐': isAligned ? '✅ 是' : '❌ 否',
+    '📐 位置来源': `positionMap[${activeDreamIndex.value}] = ${expectedPosition}px`,
+    '🎪 梦想详情': currentDream.detail
+  })
+  
+  // 检查实际DOM布局
+  setTimeout(() => {
+    const dreamsContentEl = document.querySelector('.dreams-content')
+    const dreamWorkspaceEls = document.querySelectorAll('.dream-workspace')
+    
+    if (dreamsContentEl && dreamWorkspaceEls.length > 0) {
+      const realWorkspaceWidth = calculateRealWorkspaceWidth()
+      
+      console.log('实际DOM布局检查:', {
+        dreamsContentComputedWidth: getComputedStyle(dreamsContentEl).width,
+        dreamsContentOffsetWidth: dreamsContentEl.offsetWidth,
+        dreamsContentScrollWidth: dreamsContentEl.scrollWidth,
+        firstWorkspaceWidth: dreamWorkspaceEls[0]?.offsetWidth,
+        firstWorkspaceComputedWidth: getComputedStyle(dreamWorkspaceEls[0]).width,
+        firstWorkspaceClientWidth: dreamWorkspaceEls[0]?.clientWidth,
+        totalWorkspaces: dreamWorkspaceEls.length,
+        expectedTotalWidth: dreamWorkspaceEls.length * dreamWorkspaceEls[0]?.offsetWidth,
+        calculatedRealWidth: realWorkspaceWidth,
+        containerWidth: window.innerWidth,
+        containerPadding: 16,
+        workspacePadding: 16
+      })
+    }
+  }, 50)
+  
+  return Math.abs(expectedPosition - cardsTranslateX.value) < 1
+}
+
+// 更新卡片位置 - 基于预计算位置映射
 const updateCardsPosition = () => {
-  // 将整个卡片区域想象成一张长纸，我们只是在看不同的部分
-  const cardContainerWidth = containerWidth.value
-  // 平滑移动到对应的纸张区域
-  cardsTranslateX.value = -activeDreamIndex.value * cardContainerWidth
+  // 确保位置映射表已初始化
+  if (Object.keys(positionMap.value).length === 0) {
+    initializePositionMap()
+  }
+  
+  // 直接通过下标获取位置，不进行任何计算
+  const targetPosition = positionMap.value[activeDreamIndex.value]
+  
+  if (targetPosition === undefined) {
+    console.error('❌ 位置映射表错误:', {
+      '🎯 请求索引': activeDreamIndex.value,
+      '🗺️ 可用索引': Object.keys(positionMap.value)
+    })
+    return
+  }
+  
+  // 直接设置位置，不进行任何计算
+  cardsTranslateX.value = Math.round(targetPosition)
+  
+  const currentDream = dreams.value[activeDreamIndex.value]
+  
+  console.log('📍 基于下标直接定位:', {
+    '📱 当前梦想': `${currentDream.title} (索引: ${activeDreamIndex.value})`,
+    '🎯 目标位置': `${targetPosition}px`,
+    '📍 当前位置': `${cardsTranslateX.value}px`,
+    '📐 位置来源': `positionMap[${activeDreamIndex.value}] = ${targetPosition}px`,
+    '🎪 梦想详情': currentDream.detail
+  })
+  
+  // 验证位置是否正确
+  validateDreamCardAlignment()
+}
+
+// 强制还原到当前选中卡片的位置
+const forceRestoreToCurrentCard = () => {
+  // 确保位置映射表已初始化
+  if (Object.keys(positionMap.value).length === 0) {
+    initializePositionMap()
+  }
+  
+  // 直接通过下标获取位置，不进行任何计算
+  const correctPosition = positionMap.value[activeDreamIndex.value]
+  
+  if (correctPosition === undefined) {
+    console.error('❌ 强制还原失败 - 位置映射表错误:', {
+      '🎯 请求索引': activeDreamIndex.value,
+      '🗺️ 可用索引': Object.keys(positionMap.value)
+    })
+    return
+  }
+  
+  console.log('🔄 强制还原到当前卡片:', {
+    '📱 当前梦想': dreams.value[activeDreamIndex.value].title,
+    '🎯 索引': activeDreamIndex.value,
+    '📍 当前位置': `${cardsTranslateX.value}px`,
+    '🎯 正确位置': `${correctPosition}px`,
+    '📏 位置差异': `${Math.abs(cardsTranslateX.value - correctPosition)}px`,
+    '📐 位置来源': `positionMap[${activeDreamIndex.value}] = ${correctPosition}px`
+  })
+  
+  // 直接设置到正确位置，不进行任何计算
+  cardsTranslateX.value = Math.round(correctPosition)
+  
+  // 立即更新标题位置
+  updateDreamTitlePosition()
+  
+  // 强制触发位置验证
+  setTimeout(() => {
+    validateDreamCardAlignment()
+  }, 10)
 }
 
 // 手势处理
@@ -393,27 +586,103 @@ const handleTouchEnd = () => {
   isVerticalSwipe = false
 }
 
-// 处理水平滑动 - 纸张水平移动
+// 处理水平滑动 - 基于下标定位的纸张移动
 const handleHorizontalSwipe = (deltaX) => {
-  // 检查边界限制
-  const direction = deltaX > 0 ? 1 : -1 // 右滑为1，左滑为-1
-  const nextIndex = activeDreamIndex.value - direction
+  const threshold = containerWidth.value * 0.15 // 统一使用15%屏幕宽度作为切换阈值
+  const tolerance = 5 // 5px的容差
+  const effectiveThreshold = threshold - tolerance
   
-  // 如果到达边界，限制移动距离
-  let limitedDeltaX = deltaX
-  if (nextIndex < 0 && deltaX > 0) {
-    // 到达左边界，限制右滑距离
-    limitedDeltaX = Math.max(0, Math.min(deltaX, containerWidth.value * 0.3))
-  } else if (nextIndex >= dreams.value.length && deltaX < 0) {
-    // 到达右边界，限制左滑距离
-    limitedDeltaX = Math.min(0, Math.max(deltaX, -containerWidth.value * 0.3))
+  // 检查是否在边界
+  const isAtLeftBoundary = activeDreamIndex.value === 0 && deltaX > 0
+  const isAtRightBoundary = activeDreamIndex.value === dreams.value.length - 1 && deltaX < 0
+  
+  if (isAtLeftBoundary || isAtRightBoundary) {
+    // 确保位置映射表已初始化
+    if (Object.keys(positionMap.value).length === 0) {
+      initializePositionMap()
+    }
+    
+    // 直接通过下标获取位置，不进行任何计算
+    const correctPosition = positionMap.value[activeDreamIndex.value]
+    
+    if (correctPosition === undefined) {
+      console.error('❌ 边界处理失败 - 位置映射表错误:', {
+        '🎯 请求索引': activeDreamIndex.value,
+        '🗺️ 可用索引': Object.keys(positionMap.value)
+      })
+      return
+    }
+    
+    console.log('🚫 边界限制:', {
+      '📱 当前梦想': dreams.value[activeDreamIndex.value].title,
+      '🎯 边界类型': isAtLeftBoundary ? '左边界' : '右边界',
+      '📏 滑动距离': `${Math.abs(deltaX)}px`,
+      '🚫 阻止滑动': '✅ 是',
+      '📍 当前位置': `${cardsTranslateX.value}px`,
+      '🎯 强制位置': `${correctPosition}px`,
+      '📐 位置来源': `positionMap[${activeDreamIndex.value}] = ${correctPosition}px`
+    })
+    
+    // 直接设置到正确位置，不进行任何计算
+    cardsTranslateX.value = Math.round(correctPosition)
+    
+    // 立即更新标题位置
+    updateDreamTitlePosition()
+    
+    return // 直接返回，不进行任何移动
   }
   
-  // 实时跟随手指移动，像移动纸张一样
-  const cardCurrentPosition = -activeDreamIndex.value * containerWidth.value
+  // 计算滑动方向（从左到右显示上一个，从右到左显示下一个）
+  const direction = deltaX > 0 ? -1 : 1
+  const proposedIndex = activeDreamIndex.value + direction
   
-  // 临时移动卡片位置，跟随手势
-  cardsTranslateX.value = cardCurrentPosition + limitedDeltaX
+  // 检查是否可以切换
+  const canSwitch = proposedIndex >= 0 && proposedIndex < dreams.value.length
+  const targetIndex = canSwitch ? proposedIndex : activeDreamIndex.value
+  
+  // 确保位置映射表已初始化
+  if (Object.keys(positionMap.value).length === 0) {
+    initializePositionMap()
+  }
+  
+  // 直接通过下标获取位置，不进行任何计算
+  const targetPosition = positionMap.value[targetIndex]
+  const currentPosition = positionMap.value[activeDreamIndex.value]
+  
+  if (targetPosition === undefined || currentPosition === undefined) {
+    console.error('❌ 滑动位置获取失败:', {
+      '🎯 目标索引': targetIndex,
+      '📱 当前索引': activeDreamIndex.value,
+      '🗺️ 可用索引': Object.keys(positionMap.value)
+    })
+    return
+  }
+  
+  // 计算滑动进度（0-1之间）
+  const progress = Math.min(Math.abs(deltaX) / effectiveThreshold, 1)
+  
+  if (canSwitch && Math.abs(deltaX) > effectiveThreshold * 0.5) {
+    // 可以切换且滑动距离足够，进行插值计算
+    const interpolatedPosition = currentPosition + (targetPosition - currentPosition) * progress
+    cardsTranslateX.value = Math.round(interpolatedPosition)
+  } else {
+    // 其他情况，跟随手指移动但幅度较小
+    const followMove = deltaX * 0.5
+    cardsTranslateX.value = Math.round(currentPosition + followMove)
+  }
+  
+  const swipeDirection = deltaX > 0 ? '右滑' : '左滑'
+  const currentDream = dreams.value[activeDreamIndex.value]
+  
+  console.log('🔄 基于预计算位置滑动操作:', {
+    '📱 当前梦想': `${currentDream.title} (索引: ${activeDreamIndex.value})`,
+    '🎯 目标下标': targetIndex,
+    '🎯 滑动方向': swipeDirection,
+    '📏 滑动距离': `${Math.abs(deltaX)}px`,
+    '📍 当前位置': `${cardsTranslateX.value}px`,
+    '🔄 可切换': canSwitch ? '✅ 是' : '❌ 否',
+    '🎪 梦想详情': currentDream.detail
+  })
   
   // 同时移动标题位置，保持同步
   // 使用动态宽度计算基础位置（右侧为主）
@@ -434,36 +703,109 @@ const handleHorizontalSwipe = (deltaX) => {
   const baseTitlePosition = currentContainerWidth - rightMargin - offsetBeforeActive - titleWidths[activeDreamIndex.value]
   
   // 标题跟随手势移动，但移动幅度小一些，增加层次感
-  dreamTitleTranslateX.value = baseTitlePosition + (limitedDeltaX * 0.3)
+  const titleMoveDistance = (targetPosition - positionMap.value[activeDreamIndex.value]) * 0.3
+  dreamTitleTranslateX.value = baseTitlePosition + titleMoveDistance
 }
 
 // 完成水平滑动 - 纸张停靠到最近的位置
+// 完成水平滑动 - 基于下标定位决定最终位置
 const finishHorizontalSwipe = () => {
   const deltaX = touchCurrentX - touchStartX
-  const threshold = containerWidth.value * 0.2 // 20%的屏幕宽度作为阈值
-  const direction = deltaX > 0 ? 1 : -1 // 右滑为1，左滑为-1
   
-  if (Math.abs(deltaX) > threshold) {
-    let newIndex = activeDreamIndex.value - direction
+  console.log('🎯 滑动数据:', {
+    '📱 起始位置': `${touchStartX}px`,
+    '📍 结束位置': `${touchCurrentX}px`,
+    '📏 滑动距离': `${deltaX}px`,
+    '🎯 滑动方向': deltaX > 0 ? '从左到右' : '从右到左',
+    '🎯 目标方向': deltaX > 0 ? '显示上一个' : '显示下一个'
+  })
+  
+  const threshold = containerWidth.value * 0.15 // 统一使用20%屏幕宽度作为阈值
+  const direction = deltaX > 0 ? -1 : 1 // 从左到右为-1（显示上一个），从右到左为1（显示下一个）
+  
+  const swipeDirection = deltaX > 0 ? '右滑' : '左滑'
+  const currentDream = dreams.value[activeDreamIndex.value]
+  
+  console.log('✅ 滑动完成:', {
+    '📱 当前梦想': `${currentDream.title} (索引: ${activeDreamIndex.value})`,
+    '🎯 滑动方向': swipeDirection,
+    '📏 滑动距离': `${Math.abs(deltaX)}px`,
+    '🎯 切换阈值': `${threshold}px`,
+    '🎪 梦想详情': currentDream.detail
+  })
+  
+    // 添加容差，避免因为微小差异导致回弹
+  const tolerance = 5 // 5px的容差
+  const effectiveThreshold = threshold - tolerance
+  
+  // 先检查是否在边界
+  const isAtLeftBoundary = activeDreamIndex.value === 0 && deltaX > 0
+  const isAtRightBoundary = activeDreamIndex.value === dreams.value.length - 1 && deltaX < 0
+  
+  if (isAtLeftBoundary || isAtRightBoundary) {
+    // 在边界处，不进行切换，并强制还原位置
+    const correctPosition = positionMap.value[activeDreamIndex.value]
+    const currentOffset = cardsTranslateX.value - correctPosition
     
-    // 移除无缝循环，边界处理
-    if (newIndex < 0) {
-      newIndex = 0 // 到达左边界，停留在第一个
-    } else if (newIndex >= dreams.value.length) {
-      newIndex = dreams.value.length - 1 // 到达右边界，停留在最后一个
-    }
+    console.log('🎯 边界限制，不切换:', {
+      '📱 当前梦想': currentDream.title,
+      '🎯 边界类型': isAtLeftBoundary ? '左边界' : '右边界',
+      '📏 滑动距离': `${Math.abs(deltaX)}px`,
+      '🚫 阻止切换': '✅ 是',
+      '📍 当前位置': `${cardsTranslateX.value}px`,
+      '🎯 正确位置': `${correctPosition}px`,
+      '📏 位置偏移': `${currentOffset}px`
+    })
     
-    // 只有索引真的改变了才切换
-    if (newIndex !== activeDreamIndex.value) {
-      setActiveDream(newIndex)
+    // 强制还原到当前选中卡片的位置
+    forceRestoreToCurrentCard()
+    
+    return
+  }
+  
+  if (Math.abs(deltaX) > effectiveThreshold) {
+    const proposedIndex = activeDreamIndex.value + direction
+    
+    // 检查是否可以切换
+    if (proposedIndex >= 0 && proposedIndex < dreams.value.length) {
+      // 可以切换
+      const newDream = dreams.value[proposedIndex]
+      
+      console.log('🎯 切换结果:', {
+        '📱 当前梦想': `${currentDream.title} (索引: ${activeDreamIndex.value})`,
+        '🎯 目标梦想': `${newDream.title} (索引: ${proposedIndex})`,
+        '🔄 是否切换': '✅ 是',
+        '🎯 滑动方向': swipeDirection,
+        '📏 总梦想数': dreams.value.length,
+        '📍 位置变化': `从 ${positionMap.value[activeDreamIndex.value]}px 到 ${positionMap.value[proposedIndex]}px`,
+        '📏 滑动距离': `${Math.abs(deltaX)}px`,
+        '🎯 有效阈值': `${effectiveThreshold}px`
+      })
+      
+      setActiveDream(proposedIndex)
     } else {
-      // 到达边界，回弹到当前位置
-      updateCardsPosition()
+      // 到达边界，不切换
+      console.log('🎯 到达边界，不切换', {
+        '📍 当前位置': `${cardsTranslateX.value}px`,
+        '🎯 还原位置': `${positionMap.value[activeDreamIndex.value]}px`
+      })
+      
+      // 强制还原到正确位置
+      cardsTranslateX.value = Math.round(positionMap.value[activeDreamIndex.value])
       updateDreamTitlePosition()
     }
   } else {
-    // 回弹到当前位置
-    updateCardsPosition()
+    // 滑动距离不足，回弹到当前位置
+    console.log('滑动距离不足，回弹到当前位置', {
+      '📏 滑动距离': `${Math.abs(deltaX)}px`,
+      '🎯 有效阈值': `${effectiveThreshold}px`,
+      '📏 差异': `${Math.abs(deltaX) - effectiveThreshold}px`,
+      '📍 当前位置': `${cardsTranslateX.value}px`,
+      '🎯 还原位置': `${positionMap.value[activeDreamIndex.value]}px`
+    })
+    
+    // 强制还原到正确位置
+    cardsTranslateX.value = Math.round(positionMap.value[activeDreamIndex.value])
     updateDreamTitlePosition()
   }
 }
@@ -571,6 +913,10 @@ const bindEvents = () => {
   window.addEventListener('resize', () => {
     containerWidth.value = window.innerWidth
     containerHeight.value = window.innerHeight
+    
+    // 重新计算位置映射表（因为容器宽度改变了）
+    initializePositionMap()
+    
     updateDreamTitlePosition()
     updateCardsPosition()
   })
@@ -588,8 +934,27 @@ const unbindEvents = () => {
 onMounted(() => {
   containerWidth.value = window.innerWidth || 375
   containerHeight.value = window.innerHeight || 812
-  updateDreamTitlePosition()
-  updateCardsPosition()
+  
+  // 初始化位置映射表
+  initializePositionMap()
+  
+  console.log('onMounted - 初始化数据:', {
+    dreamsCount: dreams.value.length,
+    activeDreamIndex: activeDreamIndex.value,
+    activeDreamTitle: dreams.value[activeDreamIndex.value]?.title,
+    containerWidth: containerWidth.value,
+    initialCardsPosition: cardsTranslateX.value,
+    positionMapInitialized: Object.keys(positionMap.value).length > 0
+  })
+  
+  // 延迟100ms确保组件完全渲染后再设置位置
+  setTimeout(() => {
+    console.log('延迟设置位置 - 开始')
+    updateDreamTitlePosition()
+    updateCardsPosition()
+    console.log('延迟设置位置 - 完成')
+  }, 100)
+  
   bindEvents()
 })
 

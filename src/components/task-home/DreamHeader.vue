@@ -86,7 +86,7 @@ const getDreamTitleStyle = (index) => {
 <style lang="scss" scoped>
 .dream-header {
   position: absolute;
-  top: 1rem;
+  top: 0.5rem;
   left: 0;
   right: 0;
   height: 3rem;
