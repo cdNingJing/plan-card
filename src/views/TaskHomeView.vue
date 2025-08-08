@@ -535,6 +535,13 @@ let isHorizontalSwipe = false
 let isVerticalSwipe = false
 let isDragging = false
 
+// 检查是否在第一屏（主内容区域可见时）
+const isInFirstScreen = () => {
+  // 当 verticalTranslateY 接近 0 时，表示在第一屏
+  // 当 isSecondScreenVisible 为 false 时，表示在第一屏
+  return !isSecondScreenVisible.value && Math.abs(verticalTranslateY.value) < 50
+}
+
 const handleTouchStart = (e) => {
   touchStartX = e.touches[0].clientX
   touchStartY = e.touches[0].clientY
@@ -543,6 +550,14 @@ const handleTouchStart = (e) => {
   isHorizontalSwipe = false
   isVerticalSwipe = false
   isDragging = false
+  
+  // 调试日志 - 记录触摸开始时的屏幕状态
+  console.log('👆 触摸开始:', {
+    '📱 当前屏幕': isInFirstScreen() ? '第一屏' : '第二屏',
+    '📍 垂直位移': `${verticalTranslateY.value}px`,
+    '👁️ 第二屏可见': isSecondScreenVisible.value,
+    '📌 触摸位置': `(${touchStartX}, ${touchStartY})`
+  })
 }
 
 const handleTouchMove = (e) => {
@@ -556,14 +571,20 @@ const handleTouchMove = (e) => {
   if (!isDragging && (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10)) {
     isDragging = true
     if (Math.abs(deltaX) > Math.abs(deltaY)) {
-      isHorizontalSwipe = true
+      // 检查是否在第一屏 - 只有在第一屏时才允许水平滑动
+      if (isInFirstScreen()) {
+        isHorizontalSwipe = true
+      } else {
+        // 在第二屏时，将水平滑动当作垂直滑动处理
+        isVerticalSwipe = true
+      }
     } else {
       isVerticalSwipe = true
     }
   }
   
   if (isHorizontalSwipe) {
-    // 水平滑动 - 切换梦想
+    // 水平滑动 - 切换梦想（仅在第一屏生效）
     handleHorizontalSwipe(deltaX)
   } else if (isVerticalSwipe) {
     // 垂直滑动 - 移动长方形容器
@@ -586,8 +607,19 @@ const handleTouchEnd = () => {
   isVerticalSwipe = false
 }
 
-// 处理水平滑动 - 基于下标定位的纸张移动
+// 处理水平滑动 - 基于下标定位的纸张移动（仅在第一屏生效）
 const handleHorizontalSwipe = (deltaX) => {
+  // 再次确认是否在第一屏，防止状态不一致
+  if (!isInFirstScreen()) {
+    console.log('🚫 水平滑动被阻止:', {
+      '🎯 原因': '不在第一屏',
+      '📱 第二屏可见': isSecondScreenVisible.value,
+      '📍 垂直位移': `${verticalTranslateY.value}px`,
+      '🎯 滑动距离': `${Math.abs(deltaX)}px`
+    })
+    return
+  }
+  
   const threshold = containerWidth.value * 0.15 // 统一使用15%屏幕宽度作为切换阈值
   const tolerance = 5 // 5px的容差
   const effectiveThreshold = threshold - tolerance
@@ -708,8 +740,18 @@ const handleHorizontalSwipe = (deltaX) => {
 }
 
 // 完成水平滑动 - 纸张停靠到最近的位置
-// 完成水平滑动 - 基于下标定位决定最终位置
+// 完成水平滑动 - 基于下标定位决定最终位置（仅在第一屏生效）
 const finishHorizontalSwipe = () => {
+  // 再次确认是否在第一屏
+  if (!isInFirstScreen()) {
+    console.log('🚫 水平滑动完成被阻止:', {
+      '🎯 原因': '不在第一屏',
+      '📱 第二屏可见': isSecondScreenVisible.value,
+      '📍 垂直位移': `${verticalTranslateY.value}px`
+    })
+    return
+  }
+  
   const deltaX = touchCurrentX - touchStartX
   
   console.log('🎯 滑动数据:', {
@@ -850,13 +892,8 @@ const handleVerticalSwipe = (deltaY) => {
       isSecondScreenVisible.value = false
     }
   } else if (deltaY > 0 && isSecondScreenVisible.value) {
-    // 第二屏向下滑动 - 有边界限制，只允许少量移动
-    const currentTranslate = verticalTranslateY.value
-    const maxBoundary = screenHeight * 1.1 // 允许超出10%作为边界反馈
-    const limitedMove = Math.min(deltaY * 0.3, screenHeight * 0.1) // 限制移动幅度
-    const newTranslate = Math.min(maxBoundary, currentTranslate + limitedMove)
-    
-    verticalTranslateY.value = newTranslate
+    // 第二屏向下滑动 - 已禁用，不做任何处理
+    // 不执行任何移动操作，保持当前位置不变
   }
 }
 
@@ -872,8 +909,10 @@ const finishVerticalSwipe = () => {
   } else if (isSecondScreenVisible.value && deltaY < -threshold) {
     // 从第二屏向上滑动超过阈值 - 切换到第一屏
     switchToFirstScreen()
+  } else if (isSecondScreenVisible.value && deltaY > 0) {
+    switchToSecondScreen()
   } else if (isSecondScreenVisible.value) {
-    // 第二屏的滑动没有超过阈值 - 回弹到第二屏位置
+    // 第二屏的其他滑动没有超过阈值 - 回弹到第二屏位置
     switchToSecondScreen()
   } else {
     // 第一屏的滑动没有超过阈值 - 回到第一屏

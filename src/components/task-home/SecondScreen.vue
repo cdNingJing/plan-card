@@ -4,89 +4,48 @@
     :style="{ transform: `translateY(${verticalTranslateY}px)` }"
   >
     <div class="second-screen-content">
-      <!-- 纯文本内容展示 -->
-      <div class="text-content">
-        <!-- 主标题 -->
-        <div class="main-title">
-          <div class="title-icon">
-            <Target :size="20" />
-          </div>
-          <h1 class="title-text animated-text">
-            {{ currentDreamVision?.title || '探索未来的可能性' }}
-          </h1>
+      <!-- 版本选择器 -->
+      <div class="version-selector">
+        <select v-model="currentVersion" @change="handleVersionChange" class="version-dropdown">
+          <option value="v1">V1</option>
+          <option value="v2">V2</option>
+          <option value="v3">V3</option>
+        </select>
+      </div>
+
+      <!-- V1 版本内容 -->
+      <div v-if="currentVersion === 'v1'" class="version-content v1-content">
+        <!-- 顶部时钟区域 -->
+        <div class="clock-section">
+          <ExpandableTimeDisplay :is-expanded="isTimeExpanded" @click="toggleTimeExpand" />
+        </div>
+
+        <!-- 中间魔方块区域 -->
+        <div class="cube-section">
+          <ExpandableCubeDisplay ref="cubeDisplayRef" />
         </div>
         
-        <!-- 副标题 -->
-        <div class="subtitle">
-          {{ currentDreamVision?.subtitle || '每一个梦想都是新世界的开始' }}
+        <!-- 测试按钮 -->
+        <div class="test-button-section">
+          <button class="reset-button" @click="resetCube">
+            x
+          </button>
         </div>
-        
-        <!-- 愿景描述 -->
-        <div class="vision-section">
-          <div class="section-header">
-            <Sparkles :size="16" class="section-icon" />
-            <span class="section-title">未来愿景</span>
-          </div>
-          <p class="vision-text">
-            {{ currentDreamVision?.futureState || '想象一个更好的自己，从今天开始行动。这是一个充满可能性的未来，每一步都将带你更接近理想的生活状态。' }}
-          </p>
+      </div>
+
+      <!-- V2 版本内容 -->
+      <div v-else-if="currentVersion === 'v2'" class="version-content v2-content">
+        <div class="placeholder-content">
+          <h2>版本 V2</h2>
+          <p>即将推出...</p>
         </div>
-        
-        <!-- 核心洞察 -->
-        <div class="insights-section">
-          <div class="section-header">
-            <Lightbulb :size="16" class="section-icon" />
-            <span class="section-title">核心洞察</span>
-          </div>
-          <div class="insights-list">
-            <div 
-              v-for="(insight, index) in currentInsights" 
-              :key="index"
-              class="insight-item"
-              :class="{ 'highlight': insight.highlight }"
-            >
-              <div class="insight-marker">
-                <component :is="insight.icon" :size="14" />
-              </div>
-              <div class="insight-content">
-                <div class="insight-title">{{ insight.title }}</div>
-                <div class="insight-description">{{ insight.description }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- 行动要点 -->
-        <div class="actions-section">
-          <div class="section-header">
-            <Zap :size="16" class="section-icon" />
-            <span class="section-title">关键行动</span>
-          </div>
-          <div class="actions-list">
-            <div 
-              v-for="(action, index) in currentActions" 
-              :key="index"
-              class="action-item"
-              :class="{ 'priority': action.priority }"
-            >
-              <div class="action-number">{{ String(index + 1).padStart(2, '0') }}</div>
-              <div class="action-content">
-                <div class="action-title">{{ action.title }}</div>
-                <div class="action-description">{{ action.description }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- 深度思考 -->
-        <div class="reflection-section">
-          <div class="section-header">
-            <Brain :size="16" class="section-icon" />
-            <span class="section-title">深度思考</span>
-          </div>
-          <div class="reflection-content special-effect">
-            {{ currentDreamVision?.reflection || '成功不是终点，而是不断超越自己的过程。每一个选择都是在塑造未来的自己，每一次行动都在积累成长的力量。' }}
-          </div>
+      </div>
+
+      <!-- V3 版本内容 -->
+      <div v-else-if="currentVersion === 'v3'" class="version-content v3-content">
+        <div class="placeholder-content">
+          <h2>版本 V3</h2>
+          <p>敬请期待...</p>
         </div>
       </div>
     </div>
@@ -94,8 +53,12 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { Target, Sparkles, Lightbulb, Zap, Brain, TrendingUp, Clock, Users, Heart, BookOpen, Briefcase, DollarSign, Trophy, Star } from 'lucide-vue-next'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { Heart, TrendingUp, Trophy, Briefcase, Users, BookOpen, DollarSign, Star } from 'lucide-vue-next'
+import ExpandableTimeDisplay from '@/components/ExpandableTimeDisplay.vue'
+import ExpandableCubeDisplay from '@/components/ExpandableCubeDisplay.vue'
+
+
 
 const props = defineProps({
   dreams: {
@@ -342,6 +305,87 @@ const currentInsights = computed(() => {
 const currentActions = computed(() => {
   return currentDreamVision.value?.actions || []
 })
+
+// 魔方组件引用
+const cubeDisplayRef = ref(null)
+
+// 版本管理
+const STORAGE_KEY = 'plan-card-version'
+
+// 从本地存储读取版本，如果不存在则使用默认值
+const getSavedVersion = () => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    return saved && ['v1', 'v2', 'v3'].includes(saved) ? saved : 'v1'
+  } catch (error) {
+    console.warn('读取版本存储失败:', error)
+    return 'v1'
+  }
+}
+
+// 保存版本到本地存储
+const saveVersion = (version) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, version)
+    console.log(`版本 ${version} 已保存到本地存储`)
+  } catch (error) {
+    console.error('保存版本存储失败:', error)
+  }
+}
+
+const currentVersion = ref(getSavedVersion()) // 从本地存储初始化版本
+
+// 时钟展开状态
+const isTimeExpanded = ref(false)
+
+// 切换时钟展开状态
+const toggleTimeExpand = () => {
+  isTimeExpanded.value = !isTimeExpanded.value
+}
+
+// 版本切换处理
+const handleVersionChange = (event) => {
+  const newVersion = currentVersion.value
+  console.log(`切换到版本: ${newVersion}`)
+  
+  // 保存版本到本地存储
+  saveVersion(newVersion)
+  
+  // 在这里可以添加版本切换的逻辑，如数据重置、状态清理等
+  if (newVersion === 'v1') {
+    // 重置V1版本的状态
+    isTimeExpanded.value = false
+  } else if (newVersion === 'v2') {
+    // V2版本的初始化逻辑
+    console.log('初始化V2版本')
+  } else if (newVersion === 'v3') {
+    // V3版本的初始化逻辑
+    console.log('初始化V3版本')
+  }
+}
+
+// 重置魔方
+const resetCube = () => {
+  if (cubeDisplayRef.value) {
+    cubeDisplayRef.value.resetCube()
+  }
+}
+
+// 组件挂载时的初始化
+onMounted(() => {
+  console.log(`应用启动 - 加载版本: ${currentVersion.value}`)
+  
+  // 根据当前版本初始化相应的状态
+  if (currentVersion.value === 'v1') {
+    console.log('V1版本已就绪 - 包含时钟和3D魔方功能')
+  } else if (currentVersion.value === 'v2') {
+    console.log('V2版本已加载 - 功能开发中')
+  } else if (currentVersion.value === 'v3') {
+    console.log('V3版本已加载 - 功能开发中')
+  }
+})
+
+
 </script>
 
 <style lang="scss" scoped>
@@ -375,302 +419,167 @@ const currentActions = computed(() => {
     bottom: 0;
     display: flex;
     flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
     
-    .text-content {
+    // 版本选择器样式 - 精简版
+    .version-selector {
       position: absolute;
-      top: 2rem;
-      left: 1.5rem;
-      right: 1.5rem;
-      bottom: 6.5rem; // 底部预留5rem空间给按钮
-      overflow-y: auto;
-      overflow-x: hidden;
-      display: flex;
-      flex-direction: column;
-      gap: 0.8rem;
-      padding-right: 0.5rem; // 为滚动条预留空间
-      padding-bottom: 1rem; // 底部内边距，确保最后一项内容不贴边
+      top: 0.75rem;
+      left: 0.75rem;
+      z-index: 1000;
       
-      // 渐变遮罩，指示可滚动内容
-      &::after {
-        content: '';
-        position: sticky;
-        bottom: -1rem;
-        left: 0;
-        right: 0;
-        height: 2rem;
-        background: linear-gradient(to top, rgba(0, 0, 0, 0.2), transparent);
-        pointer-events: none;
-        z-index: 1;
-      }
-      
-      // 自定义滚动条 - 优化可见性
-      &::-webkit-scrollbar {
-        width: 4px;
-      }
-      
-      &::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 2px;
-        margin: 0.5rem 0; // 上下留白
-      }
-      
-      &::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.4);
-        border-radius: 2px;
-        transition: background 0.2s ease;
+      .version-dropdown {
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 0.4rem;
+        padding: 0.35rem 0.6rem;
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 0.75rem;
+        font-weight: 500;
+        cursor: pointer;
+        backdrop-filter: blur(8px);
+        transition: all 0.2s ease;
+        outline: none;
+        min-width: 70px;
         
         &:hover {
-          background: rgba(255, 255, 255, 0.6);
+          background: rgba(255, 255, 255, 0.12);
+          border-color: rgba(255, 255, 255, 0.25);
+        }
+        
+        &:focus {
+          background: rgba(255, 255, 255, 0.12);
+          border-color: rgba(59, 130, 246, 0.4);
+          box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2);
+        }
+        
+        option {
+          background: rgba(20, 20, 20, 0.95);
+          color: rgba(255, 255, 255, 0.9);
+          padding: 0.4rem;
+        }
+      }
+    }
+    
+    // 版本内容容器
+    .version-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      height: 100%;
+      
+      &.v1-content {
+        // V1版本保持原有布局
+      }
+      
+      &.v2-content, &.v3-content {
+        .placeholder-content {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100%;
+          text-align: center;
+          
+          h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 1rem;
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+          }
+          
+          p {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.7);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+          }
+        }
+      }
+    }
+    
+    // 顶部时钟区域
+    .clock-section {
+      position: absolute;
+      top: 1rem;
+      left: 50%;
+      width: 100%;
+      transform: translateX(-50%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+    
+    // 中间魔方块区域
+    .cube-section {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+    }
+    
+
+    // 测试按钮区域
+    .test-button-section {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      z-index: 20000;
+      
+      .reset-button {
+        padding: 0.75rem 1.5rem;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 0.5rem;
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        backdrop-filter: blur(10px);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        
+        &:hover {
+          background: rgba(255, 255, 255, 0.15);
+          border-color: rgba(255, 255, 255, 0.3);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
         
         &:active {
-          background: rgba(255, 255, 255, 0.7);
+          transform: translateY(0);
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
         }
       }
+    }
+    
+    // 底部信息区域
+    .info-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
       
-      // 主标题
-      .main-title {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        margin-bottom: 0.5rem;
-        
-        .title-icon {
-          color: rgba(255, 255, 255, 0.8);
-          display: flex;
-          align-items: center;
-          animation: iconGlow 3s ease-in-out infinite;
-        }
-        
-        .title-text {
-          font-size: 1.8rem;
-          font-weight: 700;
-          color: rgba(255, 255, 255, 0.95);
-          line-height: 1.2;
-          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
-          margin: 0;
-          
-          &.animated-text {
-            animation: fadeInUp 1s ease-out;
-          }
-        }
+      .dream-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.95);
+        text-align: center;
+        text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        animation: titleGlow 3s ease-in-out infinite;
       }
       
-      // 副标题
-      .subtitle {
-        font-size: 1rem;
-        font-weight: 500;
+      .dream-subtitle {
+        font-size: 1.1rem;
         color: rgba(255, 255, 255, 0.8);
-        line-height: 1.4;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-        margin-bottom: 1rem;
-      }
-      
-      // 章节通用样式
-      .section-header {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin-bottom: 1rem;
-        
-        .section-icon {
-          color: rgba(255, 255, 255, 0.7);
-          animation: iconPulse 2s ease-in-out infinite;
-        }
-        
-        .section-title {
-          font-size: 1.1rem;
-          font-weight: 600;
-          color: rgba(255, 255, 255, 0.9);
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-        }
-      }
-      
-      // 愿景区域
-      .vision-section {
-        .vision-text {
-          font-size: 0.95rem;
-          color: rgba(255, 255, 255, 0.85);
-          line-height: 1.6;
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-          margin: 0;
-        }
-      }
-      
-      // 洞察区域
-      .insights-section {
-        .insights-list {
-          display: flex;
-          flex-direction: column;
-          gap: 1rem;
-          
-          .insight-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 0.75rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            
-            &.highlight {
-              background: rgba(59, 130, 246, 0.1);
-              border-color: rgba(59, 130, 246, 0.3);
-              
-              .insight-marker {
-                color: #3b82f6;
-                animation: highlightGlow 2s ease-in-out infinite;
-              }
-            }
-            
-            .insight-marker {
-              color: rgba(255, 255, 255, 0.7);
-              flex-shrink: 0;
-              margin-top: 0.125rem;
-            }
-            
-            .insight-content {
-              flex: 1;
-              
-              .insight-title {
-                font-size: 0.9rem;
-                font-weight: 600;
-                color: rgba(255, 255, 255, 0.95);
-                margin-bottom: 0.5rem;
-                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-              }
-              
-              .insight-description {
-                font-size: 0.85rem;
-                color: rgba(255, 255, 255, 0.8);
-                line-height: 1.5;
-                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-                
-                &.expandable-text:hover {
-                  color: rgba(255, 255, 255, 0.9);
-                }
-              }
-            }
-          }
-        }
-      }
-      
-      // 行动区域
-      .actions-section {
-        .actions-list {
-          display: flex;
-          flex-direction: column;
-          gap: 1rem;
-          
-          .action-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 1rem;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 0.75rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
-            
-            &:hover {
-              background: rgba(255, 255, 255, 0.08);
-              transform: translateY(-2px);
-              box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-            }
-            
-            &.priority {
-              background: rgba(34, 197, 94, 0.1);
-              border-color: rgba(34, 197, 94, 0.3);
-              
-              .action-number {
-                background: #22c55e;
-                color: white;
-                box-shadow: 0 0 10px rgba(34, 197, 94, 0.3);
-              }
-            }
-            
-            .action-number {
-              width: 2rem;
-              height: 2rem;
-              background: rgba(255, 255, 255, 0.2);
-              color: rgba(255, 255, 255, 0.9);
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-size: 0.8rem;
-              font-weight: 600;
-              flex-shrink: 0;
-              text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-            }
-            
-            .action-content {
-              flex: 1;
-              
-              .action-title {
-                font-size: 0.9rem;
-                font-weight: 600;
-                color: rgba(255, 255, 255, 0.95);
-                margin-bottom: 0.5rem;
-                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-              }
-              
-              .action-description {
-                font-size: 0.85rem;
-                color: rgba(255, 255, 255, 0.8);
-                line-height: 1.5;
-                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-                
-                &.expandable-text:hover {
-                  color: rgba(255, 255, 255, 0.9);
-                }
-              }
-            }
-          }
-        }
-      }
-      
-      // 深度思考区域
-      .reflection-section {
-        .reflection-content {
-          font-size: 0.95rem;
-          color: rgba(255, 255, 255, 0.85);
-          line-height: 1.6;
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-          font-style: italic;
-          position: relative;
-          padding: 1.5rem;
-          background: rgba(255, 255, 255, 0.03);
-          border-radius: 1rem;
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          
-          &.special-effect {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
-            backdrop-filter: blur(10px);
-            
-            &::before {
-              content: '"';
-              position: absolute;
-              top: 0.5rem;
-              left: .7rem;
-              font-size: 2rem;
-              color: rgba(255, 255, 255, 0.3);
-              font-family: serif;
-            }
-            
-            &::after {
-              content: '"';
-              position: absolute;
-              bottom: -0.5rem;
-              right: 1.5rem;
-              font-size: 2rem;
-              color: rgba(255, 255, 255, 0.3);
-              font-family: serif;
-            }
-            
-          }
-          
-        }
+        text-align: center;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        animation: subtitleFloat 4s ease-in-out infinite;
       }
     }
   }
@@ -680,11 +589,22 @@ const currentActions = computed(() => {
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translate(-50%, 20px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes textFloat {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateY(-3px) scale(1.02);
+    opacity: 1;
   }
 }
 
@@ -727,5 +647,38 @@ const currentActions = computed(() => {
     filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6));
   }
 }
+
+
+
+@keyframes titleGlow {
+  0%, 100% {
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  }
+  50% {
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 255, 255, 0.3);
+  }
+}
+
+@keyframes subtitleFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes visionTextGlow {
+  0%, 100% {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+}
+
+
 
 </style>

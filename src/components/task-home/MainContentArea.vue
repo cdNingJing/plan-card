@@ -74,10 +74,7 @@ const props = defineProps({
     type: Number,
     required: true
   },
-  cardsTranslateX: {
-    type: Number,
-    required: true
-  }
+
 })
 
 const emit = defineEmits(['update:activeDreamIndex'])
