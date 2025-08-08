@@ -415,8 +415,8 @@ const scrollToBottom = () => {
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
       
       .icon-button {
-        width: 2rem;
-        height: 2rem;
+        width: 30px;
+        height: 30px;
         border: none;
         border-radius: 50%;
         background: #f0f0f0;

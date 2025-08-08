@@ -35,10 +35,7 @@
 
       <!-- V2 版本内容 -->
       <div v-else-if="currentVersion === 'v2'" class="version-content v2-content">
-        <div class="placeholder-content">
-          <h2>版本 V2</h2>
-          <p>即将推出...</p>
-        </div>
+        <TripleRingSystem />
       </div>
 
       <!-- V3 版本内容 -->
@@ -57,6 +54,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { Heart, TrendingUp, Trophy, Briefcase, Users, BookOpen, DollarSign, Star } from 'lucide-vue-next'
 import ExpandableTimeDisplay from '@/components/ExpandableTimeDisplay.vue'
 import ExpandableCubeDisplay from '@/components/ExpandableCubeDisplay.vue'
+import TripleRingSystem from '@/components/TripleRingSystem.vue'
 
 
 
@@ -475,7 +473,18 @@ onMounted(() => {
         // V1版本保持原有布局
       }
       
-      &.v2-content, &.v3-content {
+      &.v2-content {
+        // V2版本全屏显示三环系统
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        justify-content: flex-start;
+        align-items: flex-start;
+      }
+      
+      &.v3-content {
         .placeholder-content {
           display: flex;
           flex-direction: column;
