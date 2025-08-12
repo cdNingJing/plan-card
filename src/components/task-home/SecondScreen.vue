@@ -40,10 +40,7 @@
 
       <!-- V3 版本内容 -->
       <div v-else-if="currentVersion === 'v3'" class="version-content v3-content">
-        <div class="placeholder-content">
-          <h2>版本 V3</h2>
-          <p>敬请期待...</p>
-        </div>
+        <EChartsTimeLoom />
       </div>
     </div>
   </div>
@@ -55,6 +52,9 @@ import { Heart, TrendingUp, Trophy, Briefcase, Users, BookOpen, DollarSign, Star
 import ExpandableTimeDisplay from '@/components/ExpandableTimeDisplay.vue'
 import ExpandableCubeDisplay from '@/components/ExpandableCubeDisplay.vue'
 import TripleRingSystem from '@/components/TripleRingSystem.vue'
+import TimeSpaceLoom from '@/components/TimeSpaceLoom.vue'
+import SimpleTimeLoom from '@/components/SimpleTimeLoom.vue'
+import EChartsTimeLoom from '@/components/EChartsTimeLoom.vue'
 
 
 
@@ -72,6 +72,8 @@ const props = defineProps({
     required: true
   }
 })
+
+const emit = defineEmits(['version-changed'])
 
 // 纯文本内容数据
 const dreamVisions = {
@@ -349,6 +351,9 @@ const handleVersionChange = (event) => {
   // 保存版本到本地存储
   saveVersion(newVersion)
   
+  // 向父组件发送版本变化事件
+  emit('version-changed', newVersion)
+  
   // 在这里可以添加版本切换的逻辑，如数据重置、状态清理等
   if (newVersion === 'v1') {
     // 重置V1版本的状态
@@ -372,6 +377,9 @@ const resetCube = () => {
 // 组件挂载时的初始化
 onMounted(() => {
   console.log(`应用启动 - 加载版本: ${currentVersion.value}`)
+  
+  // 初始化时也要向父组件发送版本信息
+  emit('version-changed', currentVersion.value)
   
   // 根据当前版本初始化相应的状态
   if (currentVersion.value === 'v1') {

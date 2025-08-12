@@ -5,6 +5,7 @@
       :dreams="dreams"
       :activeDreamIndex="activeDreamIndex"
       :verticalTranslateY="verticalTranslateY"
+      @version-changed="handleVersionChange"
     />
 
     <!-- 可移动的内容区（title + 卡片） -->
@@ -321,6 +322,7 @@ const cardsTranslateX = ref(getInitialCardsPosition())
 const verticalTranslateY = ref(0) // 长方形容器的垂直位移
 const pullDownProgress = ref(0) // 下拉进度 (0-1)
 const isSecondScreenVisible = ref(false) // 第二屏是否可见
+const currentVersion = ref('v1') // 当前版本，默认为v1
 
 // 梦想文字跟随效果
 const isDreamFollowing = ref(false)
@@ -371,6 +373,12 @@ const setActiveDream = (index) => {
   activeDreamIndex.value = index
   updateDreamTitlePosition()
   updateCardsPosition()
+}
+
+// 处理版本变化
+const handleVersionChange = (version) => {
+  currentVersion.value = version
+  console.log('📱 版本已切换到:', version)
 }
 
 // 更新梦想标题位置（以右侧为主排列）- 动态宽度计算
@@ -876,7 +884,13 @@ const handleVerticalSwipe = (deltaY) => {
       isSecondScreenVisible.value = true
     }
   } else if (deltaY < 0 && isSecondScreenVisible.value) {
-    // 第二屏向上滑动 - 可移动内容向上移动
+    // 第二屏向上滑动 - 检查是否为V3版本（热力图）
+    if (currentVersion.value === 'v3') {
+      // V3版本（热力图）时禁用所有上滑动作，保持当前位置不变
+      return
+    }
+    
+    // 其他版本允许可移动内容向上移动
     const currentTranslate = verticalTranslateY.value
     const upwardMove = Math.abs(deltaY)
     const newTranslate = Math.max(0, currentTranslate - upwardMove)
@@ -907,8 +921,14 @@ const finishVerticalSwipe = () => {
     // 从第一屏向下滑动超过阈值 - 切换到第二屏
     switchToSecondScreen()
   } else if (isSecondScreenVisible.value && deltaY < -threshold) {
-    // 从第二屏向上滑动超过阈值 - 切换到第一屏
-    switchToFirstScreen()
+    // 从第二屏向上滑动超过阈值 - 检查是否为V3版本（热力图）
+    if (currentVersion.value === 'v3') {
+      // V3版本（热力图）时禁用上滑返回第一页
+      switchToSecondScreen()
+    } else {
+      // 其他版本正常切换到第一屏
+      switchToFirstScreen()
+    }
   } else if (isSecondScreenVisible.value && deltaY > 0) {
     switchToSecondScreen()
   } else if (isSecondScreenVisible.value) {
