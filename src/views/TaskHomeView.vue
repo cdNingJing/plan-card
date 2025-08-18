@@ -884,9 +884,9 @@ const handleVerticalSwipe = (deltaY) => {
       isSecondScreenVisible.value = true
     }
   } else if (deltaY < 0 && isSecondScreenVisible.value) {
-    // 第二屏向上滑动 - 检查是否为V3版本（热力图）
-    if (currentVersion.value === 'v3') {
-      // V3版本（热力图）时禁用所有上滑动作，保持当前位置不变
+    // 第二屏向上滑动 - 检查是否为V3版本（热力图）或VR版本
+    if (currentVersion.value === 'v3' || currentVersion.value === 'vr') {
+      // V3版本（热力图）和VR版本时禁用所有上滑动作，保持当前位置不变
       return
     }
     
@@ -921,9 +921,9 @@ const finishVerticalSwipe = () => {
     // 从第一屏向下滑动超过阈值 - 切换到第二屏
     switchToSecondScreen()
   } else if (isSecondScreenVisible.value && deltaY < -threshold) {
-    // 从第二屏向上滑动超过阈值 - 检查是否为V3版本（热力图）
-    if (currentVersion.value === 'v3') {
-      // V3版本（热力图）时禁用上滑返回第一页
+    // 从第二屏向上滑动超过阈值 - 检查是否为V3版本（热力图）或VR版本
+    if (currentVersion.value === 'v3' || currentVersion.value === 'vr') {
+      // V3版本（热力图）和VR版本时禁用上滑返回第一页
       switchToSecondScreen()
     } else {
       // 其他版本正常切换到第一屏

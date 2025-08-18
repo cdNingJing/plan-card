@@ -10,6 +10,8 @@
           <option value="v1">V1</option>
           <option value="v2">V2</option>
           <option value="v3">V3</option>
+          <option value="v4">V4</option>
+          <option value="vr">VR 3D</option>
         </select>
       </div>
 
@@ -42,6 +44,16 @@
       <div v-else-if="currentVersion === 'v3'" class="version-content v3-content">
         <EChartsTimeLoom />
       </div>
+
+      <!-- V4 版本内容 -->
+      <div v-else-if="currentVersion === 'v4'" class="version-content v4-content">
+        <LectureHall />
+      </div>
+
+      <!-- VR 3D 版本内容 -->
+      <div v-else-if="currentVersion === 'vr'" class="version-content vr-content">
+        <VR3DLectureHall />
+      </div>
     </div>
   </div>
 </template>
@@ -55,6 +67,8 @@ import TripleRingSystem from '@/components/TripleRingSystem.vue'
 import TimeSpaceLoom from '@/components/TimeSpaceLoom.vue'
 import SimpleTimeLoom from '@/components/SimpleTimeLoom.vue'
 import EChartsTimeLoom from '@/components/EChartsTimeLoom.vue'
+import LectureHall from '@/components/LectureHall.vue'
+import VR3DLectureHall from '@/components/VR3DLectureHall.vue'
 
 
 
@@ -316,7 +330,7 @@ const STORAGE_KEY = 'plan-card-version'
 const getSavedVersion = () => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
-    return saved && ['v1', 'v2', 'v3'].includes(saved) ? saved : 'v1'
+    return saved && ['v1', 'v2', 'v3', 'v4', 'vr'].includes(saved) ? saved : 'v1'
   } catch (error) {
     console.warn('读取版本存储失败:', error)
     return 'v1'
@@ -364,6 +378,12 @@ const handleVersionChange = (event) => {
   } else if (newVersion === 'v3') {
     // V3版本的初始化逻辑
     console.log('初始化V3版本')
+  } else if (newVersion === 'v4') {
+    // V4版本的初始化逻辑
+    console.log('初始化V4版本 - 讲座场景')
+  } else if (newVersion === 'vr') {
+    // VR版本的初始化逻辑
+    console.log('初始化VR版本 - 3D虚拟现实空间')
   }
 }
 
@@ -388,6 +408,10 @@ onMounted(() => {
     console.log('V2版本已加载 - 功能开发中')
   } else if (currentVersion.value === 'v3') {
     console.log('V3版本已加载 - 功能开发中')
+  } else if (currentVersion.value === 'v4') {
+    console.log('V4版本已加载 - 讲座场景')
+  } else if (currentVersion.value === 'vr') {
+    console.log('VR版本已加载 - 3D虚拟现实空间')
   }
 })
 
@@ -515,6 +539,28 @@ onMounted(() => {
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
           }
         }
+      }
+      
+      &.v4-content {
+        // V4版本全屏显示讲座场景
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        justify-content: flex-start;
+        align-items: flex-start;
+      }
+      
+      &.vr-content {
+        // VR版本全屏显示3D空间
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        justify-content: flex-start;
+        align-items: flex-start;
       }
     }
     
