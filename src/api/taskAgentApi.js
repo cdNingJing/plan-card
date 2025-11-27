@@ -6,7 +6,7 @@
 const TASK_AGENT_CONFIG = {
   baseURL: '', // 使用相对路径，通过Vite代理
   endpoint: '/api/ai',
-  model: 'deepseek-r1-distill-llama-70b',
+  model: 'qwen-3-235b-a22b-instruct-2507',
   apiKey: 'DlJYSkMVj1x4zoe8jZnjvxfHG6z5yGxK'
 }
 

@@ -10,13 +10,13 @@ export const AI_CONFIG = {
   api: {
     baseURL: '', // 使用相对路径，通过Vite代理
     endpoint: '/api/ai',
-    model: 'deepseek-r1-distill-llama-70b',
+    model: 'qwen-3-235b-a22b-instruct-2507',
     apiKey: 'DlJYSkMVj1x4zoe8jZnjvxfHG6z5yGxK'
   },
 
   // 模型配置
   model: {
-    name: 'deepseek-r1-distill-llama-70b',
+    name: 'qwen-3-235b-a22b-instruct-2507',
     maxTokens: 4096,
     temperature: 0.7,
     topP: 0.9,
@@ -161,11 +161,11 @@ export function resetConfig() {
     api: {
       baseURL: '', // 使用相对路径，通过Vite代理
       endpoint: '/api/ai',
-      model: 'deepseek-r1-distill-llama-70b',
+      model: 'qwen-3-235b-a22b-instruct-2507',
       apiKey: 'DlJYSkMVj1x4zoe8jZnjvxfHG6z5yGxK'
     },
     model: {
-      name: 'deepseek-r1-distill-llama-70b',
+      name: 'qwen-3-235b-a22b-instruct-2507',
       maxTokens: 4096,
       temperature: 0.7,
       topP: 0.9,
